@@ -38,6 +38,7 @@ DEFAULT_MIN_SIZE_STEP = 1
 DEFAULT_MAX_RESULTS_PER_QUERY = 500
 DEFAULT_TARGET_RESULTS_PER_QUERY = 100
 DEFAULT_RATE_LIMIT_BUFFER_SECONDS = 5
+DEFAULT_EXCLUDED_REPOS = ("maurice-herwig/respect",)
 
 
 @dataclass(frozen=True)
@@ -139,6 +140,17 @@ def parse_args() -> argparse.Namespace:
         help="GitHub code-search query without size partition. Can be passed multiple times.",
     )
     parser.add_argument(
+        "--exclude-repo",
+        action="append",
+        default=list(DEFAULT_EXCLUDED_REPOS),
+        help="GitHub repository to exclude, e.g. owner/repo. Can be passed multiple times.",
+    )
+    parser.add_argument(
+        "--include-current-repo",
+        action="store_true",
+        help="Do not automatically exclude the current origin GitHub repository.",
+    )
+    parser.add_argument(
         "--min-size",
         type=int,
         default=1,
@@ -216,6 +228,14 @@ def parse_args() -> argparse.Namespace:
         help="Reuse existing manifests and skip already-processed records.",
     )
     parser.add_argument(
+        "--refresh-before",
+        default=None,
+        help=(
+            "ISO timestamp. With --resume, processed records before this timestamp are ignored "
+            "and will be downloaded and checked again."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print planned top-level queries without calling the GitHub API.",
@@ -245,6 +265,49 @@ def progress(message: str, quiet: bool = False) -> None:
         print(message, file=sys.stderr, flush=True)
 
 
+def parse_github_repo_from_url(url: str) -> str | None:
+    stripped = url.strip()
+    patterns = [
+        r"https://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$",
+        r"git@github\.com:([^/]+/[^/]+?)(?:\.git)?$",
+    ]
+    for pattern in patterns:
+        match = re.match(pattern, stripped)
+        if match:
+            return match.group(1)
+    return None
+
+
+def detect_current_github_repo() -> str | None:
+    completed = subprocess.run(
+        ["git", "config", "--get", "remote.origin.url"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        return None
+    return parse_github_repo_from_url(completed.stdout)
+
+
+def build_excluded_repos(args: argparse.Namespace) -> set[str]:
+    excluded = {repo.lower() for repo in (args.exclude_repo or [])}
+    if not args.include_current_repo:
+        current_repo = detect_current_github_repo()
+        if current_repo:
+            excluded.add(current_repo.lower())
+    return excluded
+
+
+def apply_repo_exclusions(base_query: str, excluded_repos: set[str]) -> str:
+    query = base_query
+    for repo in sorted(excluded_repos):
+        exclusion = f"-repo:{repo}"
+        if exclusion not in query.lower():
+            query = f"{query} {exclusion}"
+    return query
+
+
 def load_dotenv(path: Path) -> None:
     if not path.is_file():
         return
@@ -259,6 +322,18 @@ def load_dotenv(path: Path) -> None:
         value = value.strip().strip('"').strip("'")
         if key and key not in os.environ:
             os.environ[key] = value
+
+
+def parse_iso_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    parsed = datetime.fromisoformat(normalized)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def parse_rate_limit_reset(exc: urllib.error.HTTPError) -> float | None:
@@ -540,7 +615,23 @@ def record_from_item(item: dict[str, Any], query: str, discovered_at: str) -> Di
     )
 
 
-def load_accepted_records(path: Path) -> set[str]:
+def record_is_fresh(data: dict[str, Any], timestamp_field: str, refresh_before: datetime | None) -> bool:
+    if refresh_before is None:
+        return True
+
+    timestamp = data.get(timestamp_field)
+    if not timestamp:
+        return False
+
+    try:
+        parsed = parse_iso_datetime(timestamp)
+    except ValueError:
+        return False
+
+    return parsed is not None and parsed >= refresh_before
+
+
+def load_accepted_records(path: Path, refresh_before: datetime | None = None) -> set[str]:
     if not path.is_file():
         return set()
 
@@ -550,11 +641,13 @@ def load_accepted_records(path: Path) -> set[str]:
             if not line.strip():
                 continue
             data = json.loads(line)
+            if not record_is_fresh(data, "accepted_at", refresh_before):
+                continue
             seen.add(data["dedupe_key"])
     return seen
 
 
-def load_processed_records(path: Path) -> set[str]:
+def load_processed_records(path: Path, refresh_before: datetime | None = None) -> set[str]:
     if not path.is_file():
         return set()
 
@@ -564,6 +657,8 @@ def load_processed_records(path: Path) -> set[str]:
             if not line.strip():
                 continue
             data = json.loads(line)
+            if not record_is_fresh(data, "processed_at", refresh_before):
+                continue
             seen.add(data["dedupe_key"])
     return seen
 
@@ -746,6 +841,9 @@ def process_candidate(
     license_cache: dict[str, dict[str, Any]],
 ) -> str:
     record = record_from_item(item, query, discovered_at)
+    if record.repository_full_name.lower() in args.excluded_repos:
+        progress(f"[candidate] skipping excluded repo {record.repository_full_name}: {record.html_url}", args.quiet)
+        return "excluded_repo"
     if record.dedupe_key in processed_keys:
         progress(f"[candidate] skipping already processed {record.html_url}", args.quiet)
         return "already_processed"
@@ -889,6 +987,7 @@ def process_query_results(
         "items": 0,
         "accepted": 0,
         "skipped": 0,
+        "excluded": 0,
         "rejected": 0,
         "errors": 0,
     }
@@ -932,6 +1031,8 @@ def process_query_results(
 
             if outcome == "accepted":
                 stats["accepted"] += 1
+            elif outcome == "excluded_repo":
+                stats["excluded"] += 1
             elif outcome == "already_processed":
                 stats["skipped"] += 1
             else:
@@ -940,13 +1041,15 @@ def process_query_results(
             progress(
                 "[candidate] totals for current query: "
                 f"items={stats['items']}, accepted={stats['accepted']}, "
-                f"rejected={stats['rejected']}, skipped={stats['skipped']}, errors={stats['errors']}",
+                f"rejected={stats['rejected']}, skipped={stats['skipped']}, "
+                f"excluded={stats['excluded']}, errors={stats['errors']}",
                 args.quiet,
             )
 
     progress(
         f"[fetch] finished query: items={stats['items']}, accepted={stats['accepted']}, "
-        f"rejected={stats['rejected']}, skipped={stats['skipped']}, errors={stats['errors']}",
+        f"rejected={stats['rejected']}, skipped={stats['skipped']}, "
+        f"excluded={stats['excluded']}, errors={stats['errors']}",
         args.quiet,
     )
     return stats
@@ -955,6 +1058,8 @@ def process_query_results(
 def main() -> int:
     args = parse_args()
     load_dotenv(Path(".env"))
+    excluded_repos = build_excluded_repos(args)
+    args.excluded_repos = excluded_repos
     accepted_dir = Path(args.output_dir)
     candidate_dir = Path(args.candidate_dir)
     work_dir = Path(args.work_dir)
@@ -963,8 +1068,9 @@ def main() -> int:
         Path(args.processed_manifest) if args.processed_manifest else accepted_dir / "processed_candidates.jsonl"
     )
     run_manifest_path = accepted_dir / "last_run_manifest.json"
+    refresh_before = parse_iso_datetime(args.refresh_before)
 
-    base_queries = args.base_query or ["extension:spectra"]
+    base_queries = [apply_repo_exclusions(query, excluded_repos) for query in (args.base_query or ["extension:spectra"])]
     size_ranges = fixed_size_ranges(args.min_size, args.max_size, args.size_step)
     planned_queries = [build_query(base_query, size_range) for base_query in base_queries for size_range in size_ranges]
     if args.dry_run:
@@ -976,16 +1082,19 @@ def main() -> int:
     candidate_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
     headers = github_headers()
-    accepted_keys = load_accepted_records(manifest_path) if args.resume else set()
-    processed_keys = load_processed_records(processed_manifest_path) if args.resume else set()
+    accepted_keys = load_accepted_records(manifest_path, refresh_before) if args.resume else set()
+    processed_keys = load_processed_records(processed_manifest_path, refresh_before) if args.resume else set()
     processed_keys.update(accepted_keys)
     discovered_at = datetime.now(timezone.utc).isoformat()
     progress(
         f"[start] discovery started with {len(base_queries)} base query/queries, "
         f"size={args.min_size}..{args.max_size}, max_step={args.size_step}, "
-        f"target_results_per_query={args.target_results_per_query}, resume={args.resume}",
+        f"target_results_per_query={args.target_results_per_query}, resume={args.resume}, "
+        f"refresh_before={refresh_before.isoformat() if refresh_before else None}",
         args.quiet,
     )
+    if excluded_repos:
+        progress(f"[start] excluded repositories: {', '.join(sorted(excluded_repos))}", args.quiet)
     if accepted_keys:
         progress(f"[resume] loaded {len(accepted_keys)} accepted record(s)", args.quiet)
     if processed_keys:
@@ -996,6 +1105,7 @@ def main() -> int:
         "items": 0,
         "accepted": 0,
         "skipped": 0,
+        "excluded": 0,
         "rejected": 0,
         "errors": 0,
     }
@@ -1060,7 +1170,7 @@ def main() -> int:
                     license_cache,
                 )
                 total_stats["queries_processed"] += 1
-                for key in ("items", "accepted", "skipped", "rejected", "errors"):
+                for key in ("items", "accepted", "skipped", "excluded", "rejected", "errors"):
                     total_stats[key] += query_stats[key]
                 processed_queries.append(
                     {
@@ -1073,7 +1183,8 @@ def main() -> int:
                     "[progress] run totals: "
                     f"queries={total_stats['queries_processed']}, items={total_stats['items']}, "
                     f"accepted={total_stats['accepted']}, rejected={total_stats['rejected']}, "
-                    f"skipped={total_stats['skipped']}, errors={total_stats['errors']}",
+                    f"skipped={total_stats['skipped']}, excluded={total_stats['excluded']}, "
+                    f"errors={total_stats['errors']}",
                     args.quiet,
                 )
 
@@ -1093,6 +1204,7 @@ def main() -> int:
         "created_at": discovered_at,
         "github_api": SEARCH_CODE_ENDPOINT,
         "base_queries": base_queries,
+        "excluded_repositories": sorted(excluded_repos),
         "size_ranges": [asdict(current_size_range) for current_size_range in size_ranges],
         "size_step": args.size_step,
         "min_size_step": args.min_size_step,
@@ -1114,12 +1226,13 @@ def main() -> int:
         "cli_timeout_seconds": args.cli_timeout,
         "rate_limit_mode": args.rate_limit_mode,
         "rate_limit_buffer_seconds": args.rate_limit_buffer_seconds,
+        "refresh_before": refresh_before.isoformat() if refresh_before else None,
         "used_github_token": bool(os.environ.get("GITHUB_TOKEN")),
     }
     write_manifest(run_manifest_path, manifest)
     progress(
         f"[done] discovery finished: accepted={total_stats['accepted']}, rejected={total_stats['rejected']}, "
-        f"skipped={total_stats['skipped']}, errors={total_stats['errors']}",
+        f"skipped={total_stats['skipped']}, excluded={total_stats['excluded']}, errors={total_stats['errors']}",
         args.quiet,
     )
     print(json.dumps(manifest, indent=2, sort_keys=True))

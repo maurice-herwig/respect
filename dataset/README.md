@@ -22,6 +22,7 @@ python dataset/discover_github_spectra.py --min-size 1 --max-size 1000000
 python dataset/discover_github_spectra.py --size-step 500
 python dataset/discover_github_spectra.py --target-results-per-query 50
 python dataset/discover_github_spectra.py --base-query "extension:spectra fork:false"
+python dataset/discover_github_spectra.py --exclude-repo owner/repo
 python dataset/discover_github_spectra.py --quiet
 ```
 
@@ -87,6 +88,34 @@ python dataset/discover_github_spectra.py --resume
 ```
 
 With `--resume`, candidates listed in `processed_candidates.jsonl` are skipped entirely. If a candidate file still exists in `dataset/candidates/` because the previous run was interrupted before processing finished, the cached file is reused instead of downloading it again.
+
+The script excludes `maurice-herwig/respect` by default and also automatically
+excludes the current GitHub `origin` repository from search results. This
+prevents an uploaded dataset from being downloaded from the same ReSpect
+repository on later runs. Add more exclusions with:
+
+```bash
+python dataset/discover_github_spectra.py --exclude-repo owner/repo
+```
+
+To include the current repository anyway:
+
+```bash
+python dataset/discover_github_spectra.py --include-current-repo
+```
+
+To refresh older results, pass an ISO timestamp. Records processed before the
+timestamp are ignored during resume and will be downloaded and checked again:
+
+```bash
+python dataset/discover_github_spectra.py --resume --refresh-before 2026-06-02T00:00:00Z
+```
+
+Timestamps without a timezone are interpreted as UTC:
+
+```bash
+python dataset/discover_github_spectra.py --resume --refresh-before 2026-06-02
+```
 
 Progress messages are printed to stderr during partitioning, downloads,
 synthesis checks, accepted-file storage, and page fetching. Use `--quiet` to
