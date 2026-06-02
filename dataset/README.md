@@ -45,7 +45,7 @@ Generate descriptions for the accepted dataset:
 python dataset/generate_nl_description.py
 ```
 
-Use a specific prompt template from `dataset/prompts.py`:
+Use a specific prompt template from `prompts.py`:
 
 ```bash
 python dataset/generate_nl_description.py --prompt-name spectra_to_english_v1
@@ -89,12 +89,14 @@ python dataset/generate_nl_description.py --prompt-file prompt.txt --temperature
 Outputs are written to `dataset/nl_descriptions/`:
 
 - `responses/<owner>/<repo>/<original-path-without-suffix>/<model-and-settings>.txt`: generated natural-language text, using the same repository/path structure as `dataset/accepted/files/`
-- `raw_responses/<description_id>.json`: raw API response
 - `descriptions.jsonl`: metadata including dataset_id, source Spectra path, model, optional generation overrides, timing, usage, prompt hashes, and response paths
 
 The response file name includes the model, prompt name, explicit generation
 settings, and a short configuration hash. This lets the dataset store multiple
 natural-language descriptions for the same Spectra file.
+
+Raw API responses are not stored by default. Use `--keep-raw-responses` to write
+them to `raw_responses/<description_id>.json`.
 
 ## Discovery
 

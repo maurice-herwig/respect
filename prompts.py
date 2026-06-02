@@ -1,4 +1,4 @@
-"""Prompt constants for dataset generation scripts."""
+"""Prompt constants for ReSpect dataset generation scripts."""
 
 DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT = (
     "You write clear, precise English natural-language descriptions for formal system specifications."
@@ -23,6 +23,8 @@ Instructions:
 - Explain the guarantees required from the system.
 - Describe initial conditions, safety requirements, liveness requirements, and next-state/update rules when they appear.
 - Keep the description faithful to the specification; do not add behavior that is not stated or implied.
+- Do not add meta-comments about missing parts of the specification, such as absent environment inputs, absent assumptions, or unspecified behavior beyond the stated requirements.
+- If the specification only contains initial conditions or partial behavior, simply describe those stated requirements without emphasizing that other requirements are missing.
 - Do not copy the Spectra code into the answer.
 - Do not discuss your translation process.
 - Write in concise but complete English prose.

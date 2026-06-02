@@ -122,10 +122,15 @@ Outputs are written to:
 
 ```text
 dataset/nl_descriptions/responses/<owner>/<repo>/<original-path-without-suffix>/<model-and-settings>.txt
-dataset/nl_descriptions/raw_responses/
 dataset/nl_descriptions/descriptions.jsonl
 ```
 
 This allows multiple natural-language descriptions for the same Spectra file,
 for example one file per model, prompt, temperature, `top_p`, and `max_tokens`
 combination.
+
+Raw API responses are not stored by default. To keep them:
+
+```powershell
+python dataset\generate_nl_description.py --keep-raw-responses
+```

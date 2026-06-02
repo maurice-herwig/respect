@@ -23,10 +23,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-try:
-    from .prompts import DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT, PROMPTS
-except ImportError:
-    from prompts import DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT, PROMPTS
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from prompts import DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT, PROMPTS
 
 
 DEFAULT_BASE_URL = "https://chat-ai.academiccloud.de/v1"
@@ -40,7 +41,7 @@ def parse_args() -> argparse.Namespace:
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--prompt", help="Prompt text to send as the user message for --single-run.")
     source.add_argument("--prompt-file", help="Path to a text file containing the user prompt for --single-run.")
-    parser.add_argument("--prompt-name", choices=sorted(PROMPTS), default="spectra_to_english_v1", help="Name of a prompt from dataset/prompts.py.")
+    parser.add_argument("--prompt-name", choices=sorted(PROMPTS), default="spectra_to_english_v1", help="Name of a prompt from prompts.py.")
     parser.add_argument("--accepted-manifest", default=DEFAULT_ACCEPTED_MANIFEST, help="Path to accepted Spectra manifest JSONL.")
     parser.add_argument("--single-run", action="store_true", help="Run only one standalone prompt request instead of the dataset mode.")
     parser.add_argument("--resume", action="store_true", help="Deprecated compatibility flag. Matching successful descriptions are skipped by default.")
@@ -63,6 +64,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-tokens", type=int, default=None, help="Override model default max_tokens.")
     parser.add_argument("--timeout", type=float, default=120.0, help="HTTP timeout in seconds.")
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument("--keep-raw-responses", action="store_true", help="Store full raw API responses as JSON files.")
     parser.add_argument("--log-file", default=None, help="Optional log file path.")
     parser.add_argument(
         "--log-level",
@@ -328,29 +330,33 @@ def write_outputs(
     raw_response: dict[str, Any],
     metadata: dict[str, Any],
     response_file: Path | None = None,
+    keep_raw_response: bool = False,
 ) -> dict[str, Any]:
     response_id = metadata["description_id"]
     responses_dir = output_dir / "responses"
     raw_dir = output_dir / "raw_responses"
     responses_dir.mkdir(parents=True, exist_ok=True)
-    raw_dir.mkdir(parents=True, exist_ok=True)
 
     if response_file is None:
         response_file = responses_dir / f"{response_id}.txt"
     else:
         response_file.parent.mkdir(parents=True, exist_ok=True)
-    raw_response_file = raw_dir / f"{response_id}.json"
+    raw_response_file = raw_dir / f"{response_id}.json" if keep_raw_response else None
     manifest_file = output_dir / "descriptions.jsonl"
 
     response_file.write_text(response_text, encoding="utf-8")
-    raw_response_file.write_text(json.dumps(raw_response, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if raw_response_file is not None:
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        raw_response_file.write_text(json.dumps(raw_response, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     LOGGER.info("Wrote response text to %s", response_file)
-    LOGGER.debug("Wrote raw response to %s", raw_response_file)
+    if raw_response_file is not None:
+        LOGGER.debug("Wrote raw response to %s", raw_response_file)
 
     manifest_record = {
         **metadata,
         "response_file": str(response_file),
-        "raw_response_file": str(raw_response_file),
+        "raw_response_file": str(raw_response_file) if raw_response_file else None,
+        "raw_response_stored": raw_response_file is not None,
         "response_sha256": sha256_text(response_text),
     }
     with manifest_file.open("a", encoding="utf-8") as handle:
@@ -444,6 +450,7 @@ def generate_one(
         raw_response=response,
         metadata=metadata,
         response_file=response_path_for_spectra_file(Path(args.output_dir), spectra_file, variant_name),
+        keep_raw_response=args.keep_raw_responses,
     )
 
 
