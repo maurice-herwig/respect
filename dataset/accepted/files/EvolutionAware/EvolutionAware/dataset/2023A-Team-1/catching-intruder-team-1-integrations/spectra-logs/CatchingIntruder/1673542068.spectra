@@ -1,0 +1,36 @@
+import "../imports/DwyerPatterns.spectra"
+spec CatchingIntruder
+define D := 7;
+type Dim = Int(0..D);
+
+sys Dim robotX0;
+sys Dim robotY0;
+sys Dim robotX1;
+sys Dim robotY1;
+
+env Dim intruderX;
+env Dim intruderY;
+
+
+predicate passEachOther(Dim x1, Dim x2, Dim y1, Dim y2):
+	x1 = next(x2) and x2 = next(x1) and y1 = next(y2) and y2 = next(y1);
+
+predicate sameLocation(Dim x1, Dim x2, Dim y1, Dim y2):
+	x1 =  x2 and y1 = y2;
+
+define staticObstaclesY := 1;
+
+gar robot0AvoidsStaticObstacles:
+	alw robotY0 != staticObstaclesY or !(robotX0 in {2,3,4,5});
+	
+gar robot1AvoidsStaticObstacles:
+	alw robotY1 != staticObstaclesY or !(robotX1 in {2,3,4,5});
+	
+gar robotsRespectEachOther:
+	alw !sameLocation(robotX0, robotX1, robotY0, robotY1) and !passEachOther(robotX0, robotX1, robotY0, robotY1);
+
+gar robot0RespectsIntruder:
+	alw !sameLocation(robotX0, intruderX, robotY0, intruderY) and !passEachOther(robotX0, intruderX, robotY0, intruderY);
+
+gar robo1RespectsIntruder:
+	alw !sameLocation(robotX1, intruderX, robotY1, intruderY) and !passEachOther(robotX1, intruderX, robotY1, intruderY);

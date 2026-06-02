@@ -1,0 +1,44 @@
+import "../imports/DwyerPatterns.spectra"
+spec CatchingIntruder
+
+// 8X8 grid 
+define D := 7;
+type Dim = Int(0..D);
+
+// two robots R0 and R1
+sys Dim robotX0;
+sys Dim robotY0;
+sys Dim robotX1;
+sys Dim robotY1;
+
+// 4 fixed obstacles 
+define 
+	obstacle1X := 2;
+	obstacle1Y := 1;
+	obstacle2X := 3;
+	obstacle2Y := 1;
+	obstacle3X := 4;
+	obstacle3Y := 1;
+	obstacle4X := 5;
+	obstacle4Y := 1;
+
+// moving intruder D
+env Dim intruderX;
+env Dim intruderY;
+
+// Initially, the two robots R0 and R1 are located at the top left and right corners respectively. 
+gar ini robotX0 = 0 & robotY0= 0;
+gar ini robotX1 = 7 & robotY1= 0;
+
+// In each state, both robots can stay in place or move to an empty adjacent cell, but they never move diagonally.
+predicate moveDist(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos); 
+  
+gar robot0Moves:
+  always ((!moveDist(robotX0)&moveDist(robotY0)) | (moveDist(robotX0)&!moveDist(robotY0)));  
+  
+gar robot1Moves:
+  always ((!moveDist(robotX1)&moveDist(robotY1)) | (moveDist(robotX1)&!moveDist(robotY1)));  
+  

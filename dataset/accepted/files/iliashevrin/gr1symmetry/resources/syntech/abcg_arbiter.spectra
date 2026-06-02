@@ -1,0 +1,40 @@
+module Abcg_arbiter
+
+define N := 10;
+define IND := N - 1;
+
+env boolean[N] request;
+sys boolean[N] grant;
+sys boolean[N] a;
+sys boolean[N] b;
+sys boolean[N] c;
+
+sys {S0, S1, S2, S3}[N] state;
+
+
+gar G forall i in Int(0..IND) . (a[i] = next(b[i])) & (b[i] = next(c[i])) & (c[i] = next(grant[i]));
+
+gar mutex : G forall i in Int(0..IND) . forall j in Int(0..IND) . (i != j) -> !(grant[i] & grant[j]);
+
+
+gar forall i in Int(0..IND) . state[i] = S0;
+  	
+gar G forall i in Int(0..IND) . (grant[i] & request[i]) -> next (state[i]=S1) ;
+  
+gar G forall i in Int(0..IND) . state[i] = S3 -> !grant[i];
+  
+gar G forall i in Int(0..IND) . (grant[i] & !request[i]) -> next (state[i]=S2) ;
+  
+gar G forall i in Int(0..IND) . (!grant[i] & !request[i] & state[i] != S0) -> next (state[i]=S3) ;
+  
+gar G forall i in Int(0..IND) . (state[i] = S0 & !grant[i]) -> next (state[i]=S0) ;
+  
+gar G forall i in Int(0..IND) . (!grant[i] & request[i]) -> next (state[i]=S0) ;
+  	
+gar no_spurious{Int(0..IND) i}: GF (state[i] = S0 | state[i] = S1 | state[i] = S3);
+
+
+@symmetry {
+	arrays: request, grant, a, b, c, state;
+	indexes: 0..IND;
+}

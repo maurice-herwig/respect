@@ -1,0 +1,44 @@
+import "../imports/DwyerPatterns.spectra"
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+/* The lambs can't be on the zero floor. */
+type DimLambX = Int(1..DX);
+type DimLambY = Int(1..DX);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+/* env variables for lamb positions and elevator position.  */
+env DimLambX lambX0;
+env DimLambY lambY0;
+env DimLambX lambX1;
+env DimLambY lambY1;
+env DimY elevatorY;
+
+/* elevatorX is always 0 */
+define elevatorX := 0;
+		atLamb0 := robotX0 = lambX0 and robotY0 = lambY0;
+		atLamb1 := robotX1 = lambX1 and robotY1 = lambY1;
+
+predicate atElevator(DimX robX, DimY robY, DimY elevY):
+	robX = 0 and robY = elevY;
+
+/* The packages movement  */
+asm lamb0DontMoveUntilRobot0IsThere:
+  always !atLamb0 -> (lambX0=next(lambX0) & lambY0=next(lambY0));  
+asm lamb2DontMoveUntilRobot1IsThere:
+  always !atLamb1 -> (lambX1=next(lambX1) & lambY1=next(lambY1));
+/* The robots and the elevator movement */
+
+/* The robot and the packages */
+
+
+
