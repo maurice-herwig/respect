@@ -1,0 +1,36 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+//define num_static_obstacles := 4;
+
+define staticObstaclesX := 2;
+//define staticObstaclesY[num_static_obstacles] := {2,3,4,5};
+
+
+predicate fixed(Dim x):
+	x = next(x);
+	
+	
+counter turn(1..3) {
+	turn = 1;
+	inc: true;
+	reset: false;
+	overflow: modulo;
+}
+	
+predicate moveDist(Dim x):
+	x - next(x) <= 1 and next(x) - x <= 1;
+	
+
+gar alw moveDist(robotX) and moveDist(robotY);
+
+gar alw (turn = 3) implies (fixed(robotX) and fixed(robotY));
+
+gar alw (robotX != staticObstaclesX) or !(robotY in {2,3,4,5});

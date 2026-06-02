@@ -1,0 +1,23 @@
+module LGS
+
+env boolean handle_up;
+env boolean handle_down;
+
+sys boolean gear_extended;
+
+assumption
+	!(!(handle_up & handle_down) & !(!handle_up & !handle_down & !(handle_up & handle_down)) & !handle_up & handle_down);
+	
+assumption
+	!(!(handle_up & handle_down) & !handle_down & !handle_up);
+	
+assumption
+	!(handle_down & handle_up);
+
+assumption
+	G(!(handle_up & handle_down));
+
+guarantee
+	G(handle_down -> next(!handle_down | gear_extended));
+guarantee
+	G(handle_up -> next(!handle_up | !gear_extended));

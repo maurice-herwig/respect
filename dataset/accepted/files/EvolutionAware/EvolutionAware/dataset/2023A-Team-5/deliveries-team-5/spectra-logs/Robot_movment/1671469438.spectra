@@ -1,0 +1,28 @@
+import "../imports/DwyerPatterns.spectra"
+
+spec Robot_movement
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+
+gar alw robotX0 - 1 <= next(robotX0) &  next(robotX0) <= robotX0 + 1;
+gar alw robotX1 - 1 <= next(robotX1) &  next(robotX1) <= robotX1 + 1;
+
+gar ini robotY0 = 0;
+gar ini robotY1 = 0;
+
+gar alw robotY0 = robotY1 -> next(robotX0) != robotX1 | next(robotX1) != robotX0; //To prevent robots switching places
+gar alw robotY0 != robotY1 | robotX0 != robotX1;  //to prevent collisions
+
+gar alw robotX0 != 0 -> next(robotY0) = robotY0;
+gar alw robotX1 != 0 -> next(robotY1) = robotY1; 

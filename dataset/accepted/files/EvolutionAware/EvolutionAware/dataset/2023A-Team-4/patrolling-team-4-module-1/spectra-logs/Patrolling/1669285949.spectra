@@ -1,0 +1,46 @@
+import "../imports/DwyerPatterns.spectra"
+spec Patrolling
+
+define DX := 4;
+define DY := 4;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+
+sys DimX robotX;
+sys DimY robotY;
+
+env DimX targetAX;
+env DimY targetAY;
+env DimX targetBX;
+env DimY targetBY;
+env DimX targetCX;
+env DimY targetCY;
+
+
+predicate stay(DimX posX, DimY posY):
+  posX = next(posX) and posY = next(posY);
+  
+asm alw stay(targetAX, targetAY);  
+asm alw stay(targetBX, targetBY);  
+asm alw stay(targetCX, targetCY);  
+  
+define atA := robotX = targetAX and robotY = targetAY;
+define atB := robotX = targetBX and robotY = targetBY;
+define atC := robotX = targetCX and robotY = targetCY;
+
+gar startLeftCorner: ini robotX = 0 and robotY = 0;
+
+gar alwEv atA;
+gar alwEv atB;
+gar alwEv atC;
+
+predicate moveDist(DimX pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);
+  
+ gar robotAlwaysMove: always (moveDist(robotX) & moveDist(robotY));
+
+
+

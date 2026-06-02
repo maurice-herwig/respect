@@ -1,0 +1,36 @@
+module Door
+
+env boolean bellpressed ;
+
+env boolean bellrings ;
+
+env boolean doorhit ;
+
+env boolean knocksound ;
+
+sys boolean dooranswered ;
+
+guarantee -- goal1
+
+G ( bellrings=true -> dooranswered=true ) ;
+
+guarantee -- goal2
+
+G ( knocksound=true -> dooranswered=true ) ;
+
+guarantee -- s_init
+
+dooranswered=false;
+
+assumption -- e_init
+
+bellrings=false & doorhit=false & bellpressed=false & knocksound=false ;
+
+assumption -- sillyassumption
+
+G ( doorhit=true -> bellrings=true ) ;
+
+assumption -- otherassumption
+
+G ( bellpressed=true -> bellrings=true ) ;
+

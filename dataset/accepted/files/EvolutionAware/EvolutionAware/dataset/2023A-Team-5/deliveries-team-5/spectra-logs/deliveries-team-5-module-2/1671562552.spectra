@@ -1,0 +1,24 @@
+spec Module2
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+env DimY elevator;
+
+asm alw elevator - 1 <= next(elevator) &  next(elevator) <= elevator + 1;
+
+asm alwEv elevator = 0;
+asm alwEv elevator = DY;
+
+
+gar alw next(robotX0) = 0 -> next(robotY0) = elevator;
+gar alw next(robotX1) = 0 -> next(robotY1) = elevator;

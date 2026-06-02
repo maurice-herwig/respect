@@ -1,0 +1,35 @@
+import "../imports/DwyerPatterns.spectra"
+spec CatchingIntruder
+define D := 7;
+type Dim = Int(0..D);
+
+sys Dim robotX0;
+sys Dim robotY0;
+sys Dim robotX1;
+sys Dim robotY1;
+
+env Dim intruderX;
+env Dim intruderY;
+
+//fixed obstacles
+define obstacle1X:=2;
+	   obstacle1Y:=1;
+	   obstacle2X:=3;
+	   obstacle2Y:=1;
+	   obstacle3X:=4;
+	   obstacle3Y:=1;
+	   obstacle4X:=5;
+	   obstacle4Y:=1;
+
+env Dim StaysCounter;
+
+asm ini StaysCounter = 0;
+
+//make sure it's a counter which resets once in a while
+asm alw next(StaysCounter) = StaysCounter + 1 | next(StaysCounter) = 0;
+
+asm alwEv StaysCounter >= 4;
+
+asm alw StaysCounter = 4 implies next(StaysCounter) = 0 & next(intruderY) = 7;
+
+

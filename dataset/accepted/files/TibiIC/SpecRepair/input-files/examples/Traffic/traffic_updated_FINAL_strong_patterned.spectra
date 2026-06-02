@@ -1,0 +1,51 @@
+spec TrafficE2
+
+env boolean carA;
+env boolean carB;
+env boolean emergency;
+
+sys boolean greenA;
+sys boolean greenB;
+
+asm no_emergency_often:
+	GF(!emergency);
+
+gar lights_not_both_red:
+	G(!greenA | !greenB);
+
+gar carA_leads_to_greenA:
+	pRespondsToS(carA ,greenA);
+
+gar carB_lead_to_greenB:
+	pRespondsToS(carB ,greenB);
+
+gar red_when_emergency:
+	G(emergency -> !greenA & !greenB);
+
+asm carA_idle_when_red:
+	G(carA & !greenA -> next(carA));
+
+asm carB_idle_when_red:
+	G(carB & !greenB -> next(carB));
+
+asm carA_moves_when_green:
+	G(carA & greenA -> next(!carA));
+
+asm carB_moves_when_green:
+	G(carB & greenB -> next(!carB));
+
+pattern pRespondsToS(s, p) {
+  var { S0, S1} state;
+
+  // initial assignments: initial state
+  ini state=S0;
+
+  // safety this and next state
+  alw ((state=S0 & ((!s) | (s & p)) & next(state=S0)) |
+  (state=S0 & (s & !p) & next(state=S1)) |
+  (state=S1 & (p) & next(state=S0)) |
+  (state=S1 & (!p) & next(state=S1)));
+
+  // equivalence of satisfaction
+  alwEv (state=S0);
+}

@@ -1,0 +1,29 @@
+import "../imports/DwyerPatterns.spectra"
+spec Patrolling
+
+define DX := 4;
+define DY := 4;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+
+sys DimX robotX;
+sys DimY robotY;
+
+//This specification will handle the robot losing power
+
+env boolean losingPower;
+
+counter turnsAtTopRight(0..4) {
+	//initiate as 0
+	turnsAtTopRight = 0;
+	//increment whenever the robot is at the top right corner
+	inc: robotX = DX & robotY = 0;
+	//reset when robot not at top right corner
+	reset: robotX != DX & robotY != DY;
+	//the robot can stay for as long as it wants, so keep overflow
+	overflow: keep;
+}
+
+gar ifLosingPowerChargeEventually:
+	trig [true]*[losingPower] |=> [true]{0,20}[turnsAtTopRight = 4];

@@ -1,0 +1,35 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define
+D := 7;
+robotAtTarget1 := (robot[0] = 0) & (robot[1] = 0);
+robotAtTarget2 := (robot[0] = 7) & (robot[1] = 7);
+robotAtTarget3 := (robot[0] = 7) & (robot[1] = 0);
+
+type Dim = Int(0..D);
+
+
+
+sys Dim[2] robot;
+
+env Dim[4][2] Obstacles;
+env Dim[3][2] targets;
+
+gar alw moveDist(robot[0]);
+gar alw moveDist(robot[1]);
+
+gar ini robot[0] = 7;
+gar ini robot[1] = 0;
+
+gar alwEv robotAtTarget1;
+gar alwEv robotAtTarget2;
+gar alwEv robotAtTarget3;
+
+predicate moveDist(Dim pos):
+	pos+1 = next (pos) |
+	pos = next (pos) |
+	pos-1 = next (pos);
+
+
+

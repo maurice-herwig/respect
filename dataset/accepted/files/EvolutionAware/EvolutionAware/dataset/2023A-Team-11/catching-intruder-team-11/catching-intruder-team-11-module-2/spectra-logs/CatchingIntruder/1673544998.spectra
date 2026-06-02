@@ -1,0 +1,24 @@
+import "../imports/DwyerPatterns.spectra"
+spec CatchingIntruder
+define D := 7;
+type Dim = Int(0..D);
+
+sys Dim robotX0;
+sys Dim robotY0;
+sys Dim robotX1;
+sys Dim robotY1;
+
+sys boolean r1ReachedGround;
+
+
+gar ini r1ReachedGround = false;
+
+
+gar alw next(robotY0) = 7 & next(robotX0) = 0 -> next(r1ReachedGround) = true;
+
+
+gar alw !(next(robotY0) = 7 & next(robotX0) = 0) -> next(r1ReachedGround) = r1ReachedGround;
+
+gar alw !r1ReachedGround implies next(robotX1) = 0 & next(robotY1) = 0;
+
+

@@ -1,0 +1,36 @@
+import "../imports/DwyerPatterns.spectra"
+/**
+ * module that describes robot's moving towards the charging place.
+ */
+spec PatrollingTeam8Module3
+
+define DX := 4;
+define DY := 4;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+
+sys DimX robotX;
+sys DimY robotY;
+
+//TODO: complete the specification
+ 
+/**
+ * once in a while robot goes to the charger
+ */
+define atCharger := robotX = 4 & robotY =0;
+gar alwEv atCharger;
+
+
+counter staysAtCharger(0..4){
+	staysAtCharger = 0;
+	inc: atCharger;
+	reset: !atCharger;
+	overflow: keep;
+}
+/**
+ * robot charges for at least 4 states
+ */
+gar robotCharges :  alw ((staysAtCharger < 4) & (atCharger)) -> next(atCharger);
+ 
+ 

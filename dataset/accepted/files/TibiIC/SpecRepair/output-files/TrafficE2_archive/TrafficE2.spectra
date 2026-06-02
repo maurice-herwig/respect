@@ -1,0 +1,35 @@
+spec TrafficE2
+
+env boolean carA;
+env boolean carB;
+env boolean emergency;
+
+sys boolean greenA;
+sys boolean greenB;
+
+assumption -- assumption0
+ GF carA;
+assumption -- assumption1
+ GF carB;
+assumption -- assumption2
+ GF !emergency;
+
+guarantee -- goal0
+ G !greenA | !greenB;
+guarantee -- goal1
+ GF greenA;
+guarantee -- goal2
+ GF greenB;
+
+guarantee -- goal3
+ G emergency -> !greenA & !greenB;
+
+assumption -- assumption3
+ G carA & !greenA -> next(carA);
+assumption -- assumption4
+ G carB & !greenB -> next(carB);
+
+assumption -- assumption5
+ G carA & greenA -> next(!carA);
+assumption -- assumption6
+ G carB & greenB -> next(!carB);

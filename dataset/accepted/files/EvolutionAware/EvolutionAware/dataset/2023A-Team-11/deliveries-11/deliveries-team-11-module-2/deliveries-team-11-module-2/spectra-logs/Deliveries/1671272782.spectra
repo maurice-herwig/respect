@@ -1,0 +1,41 @@
+import "../imports/DwyerPatterns.spectra"
+// --- 
+// --- --- ---
+// Module 2 - Packages
+
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+env DimX p0X;
+env DimY p0Y;
+env DimX p1X;
+env DimY p1Y;
+
+define r0AtPack := robotX0 = p0X & robotY0 = p0Y;
+		r1AtPack := robotX1 = p1X & robotY1 = p1Y;
+		
+predicate stayY(DimY dimy):
+next(dimy) = dimy;
+
+predicate stayX(DimX dimx):
+next(dimx) = dimx;
+
+asm alw p0Y != 0 & p1Y != 0;
+asm alw !r0AtPack implies (stayX(p0X) & stayY(p0Y));
+asm alw !r1AtPack implies (stayX(p1X) & stayY(p1Y));
+asm alw r0AtPack implies next(p0Y) != p0Y;
+asm alw r1AtPack implies next(p1Y) != p1Y;
+
+gar alwEv robotX0 = p0X & robotY0 = p0Y;
+gar alwEv robotX1 = p1X & robotY1 = p1Y;
