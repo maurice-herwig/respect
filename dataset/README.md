@@ -63,7 +63,7 @@ python dataset/discover_github_spectra.py --target-results-per-query 100 --size-
 
 Accepted files are written to `dataset/accepted/`:
 
-- `files/`: accepted `.spectra` files
+- `files/<owner>/<repo>/<original-path>.spectra`: accepted `.spectra` files grouped by GitHub repository and original path
 - `accepted_manifest.jsonl`: metadata for accepted files only
 - `last_run_manifest.json`: summary of the latest run
 

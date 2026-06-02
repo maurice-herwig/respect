@@ -555,6 +555,19 @@ def dataset_id(record: DiscoveryRecord) -> str:
     return f"{owner_repo}__{stem}__{digest}"
 
 
+def accepted_file_path(accepted_dir: Path, record: DiscoveryRecord, current_id: str) -> Path:
+    repo_parts = [safe_slug(part, 120) for part in record.repository_full_name.split("/")]
+    path_parts = [safe_slug(part, 120) for part in Path(record.path).parts]
+    relative_path = Path(*repo_parts, *path_parts)
+    if relative_path.suffix.lower() != ".spectra":
+        relative_path = relative_path.with_suffix(relative_path.suffix + ".spectra")
+
+    candidate = accepted_dir / "files" / relative_path
+    if candidate.exists():
+        return candidate.with_name(f"{candidate.stem}__{current_id[-16:]}{candidate.suffix}")
+    return candidate
+
+
 def decode_github_content(content_record: dict[str, Any]) -> bytes:
     encoding = content_record.get("encoding")
     content = content_record.get("content")
@@ -676,7 +689,7 @@ def process_candidate(
                 progress(f"[synthesis] first output line: {raw_output[0]}", args.quiet)
             return str(status or "rejected")
 
-        accepted_file = accepted_dir / "files" / f"{current_id}.spectra"
+        accepted_file = accepted_file_path(accepted_dir, record, current_id)
         accepted_file.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(candidate_file, accepted_file)
         progress(f"[accepted] stored {accepted_file}", args.quiet)
