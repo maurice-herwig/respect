@@ -4,8 +4,35 @@ DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT = (
     "You write clear, precise English natural-language descriptions for formal system specifications."
 )
 
-TEST_TRAFFIC_LIGHT_PROMPT = "Describe a simple traffic light controller in English."
+SPECTRA_TO_ENGLISH_V1 = """Spectra is a formal specification language for reactive systems. A Spectra specification 
+describes an ongoing interaction between an environment and a system. Variables declared with `env` are controlled by 
+the environment, while variables declared with `sys` are controlled by the system. Assumptions, usually written with 
+`asm`, restrict the allowed behavior of the environment. Guarantees, usually written with `gar`, define the behavior 
+that the system must satisfy whenever the environment satisfies the assumptions. Temporal operators such as 
+`ini`, `alw`, `alwEv`, and `next` describe initial conditions, safety conditions that must always hold, liveness 
+conditions that must happen infinitely often, and next-state relationships.
+
+Task:
+Translate the following Spectra specification into a clear English natural-language requirements description.
+
+Instructions:
+- Preserve the specified behavior as precisely as possible.
+- Identify the environment-controlled inputs and system-controlled outputs.
+- Explain the assumptions on the environment.
+- Explain the guarantees required from the system.
+- Describe initial conditions, safety requirements, liveness requirements, and next-state/update rules when they appear.
+- Keep the description faithful to the specification; do not add behavior that is not stated or implied.
+- Do not copy the Spectra code into the answer.
+- Do not discuss your translation process.
+- Write in concise but complete English prose.
+
+Spectra specification:
+
+```spectra
+{spectra_code}
+```
+"""
 
 PROMPTS = {
-    "test_traffic_light": TEST_TRAFFIC_LIGHT_PROMPT,
+    "spectra_to_english_v1": SPECTRA_TO_ENGLISH_V1,
 }

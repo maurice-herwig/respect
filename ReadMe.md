@@ -71,7 +71,7 @@ Accepted files are written to `dataset/accepted/`. Temporary downloads and synth
 
 ## Natural-Language Description Generation
 
-The current natural-language generation script is a standalone Academic Cloud/GWD API test. It is not connected to the Spectra dataset yet.
+The natural-language generation script reads accepted Spectra files from `dataset/accepted/accepted_manifest.jsonl`, sends one independent Academic Cloud/GWD chat-completion request per file, and stores the English descriptions with metadata.
 
 Make sure `.env` contains:
 
@@ -81,13 +81,15 @@ ACADEMIC_CLOUD_BASE_URL=https://chat-ai.academiccloud.de/v1
 ACADEMIC_CLOUD_MODEL=the_model_you_want_to_use
 ```
 
-Run a test prompt:
+Generate descriptions for the accepted Spectra dataset:
 
 ```powershell
-python dataset\generate_nl_description.py --prompt-name test_traffic_light
+python dataset\generate_nl_description.py --resume
 ```
 
-You can also pass ad-hoc prompt text or an existing prompt file:
+Each request is isolated: the script sends only the system prompt and the current file prompt, with no chat history from previous files.
+
+Run a single API test prompt:
 
 ```powershell
 python dataset\generate_nl_description.py --prompt "Describe a simple traffic light controller in English."

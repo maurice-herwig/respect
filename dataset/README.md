@@ -4,9 +4,9 @@ This directory contains scripts for building the ReSpect evaluation dataset.
 
 ## Natural-Language Generation
 
-`generate_nl_description.py` is a first standalone script for calling the
-Academic Cloud/GWD OpenAI-compatible chat-completions API. It is not connected
-to the Spectra dataset yet.
+`generate_nl_description.py` calls the Academic Cloud/GWD OpenAI-compatible
+chat-completions API for accepted Spectra files. It sends one independent
+request per file, with no chat history from previous files.
 
 Configure `.env`:
 
@@ -39,13 +39,19 @@ curl -X POST \
   --header "Content-Type: application/json"
 ```
 
-Run with a named prompt from `dataset/prompts.py`:
+Generate descriptions for the accepted dataset:
 
 ```bash
-python dataset/generate_nl_description.py --prompt-name test_traffic_light
+python dataset/generate_nl_description.py --resume
 ```
 
-You can also pass ad-hoc prompt text or an existing prompt file:
+Use a specific prompt template from `dataset/prompts.py`:
+
+```bash
+python dataset/generate_nl_description.py --prompt-name spectra_to_english_v1 --resume
+```
+
+Run a single API test prompt:
 
 ```bash
 python dataset/generate_nl_description.py --prompt "Describe a traffic light controller in English."
@@ -64,7 +70,7 @@ Outputs are written to `dataset/nl_descriptions/`:
 
 - `responses/<description_id>.txt`: generated natural-language text
 - `raw_responses/<description_id>.json`: raw API response
-- `descriptions.jsonl`: metadata including model, optional generation overrides, timing, usage, prompt hashes, and response paths
+- `descriptions.jsonl`: metadata including dataset_id, source Spectra path, model, optional generation overrides, timing, usage, prompt hashes, and response paths
 
 ## Discovery
 
