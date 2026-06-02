@@ -141,7 +141,7 @@ After natural-language descriptions have been generated, run a selected agent
 skill once per description:
 
 ```powershell
-python experiments\reconstruct_with_skill.py --skill respect-method-2 --dry-run --limit 3
+python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 3
 ```
 
 Remove `--dry-run` to start real agent processes. Experiment outputs are written
@@ -149,3 +149,11 @@ to `experiments/runs/`, which is ignored by Git.
 
 The default agent command is `codex exec --ephemeral -`, so each description is
 processed in a fresh Codex process without persisted session files.
+
+If the agent reports a final `spectra_file`, it is copied into a mirrored
+description structure, for example:
+
+```text
+dataset/nl_descriptions/responses/A/B/C.txt
+experiments/runs/respect-method-2/files/A/B/C/respect-method-2.spectra
+```

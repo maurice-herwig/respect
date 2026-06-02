@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -116,6 +117,41 @@ def sha256_text(text: str) -> str:
 def safe_path_part(value: str, max_length: int = 120) -> str:
     safe = re.sub(r"[^A-Za-z0-9._=-]+", "_", value).strip("_")
     return (safe or "value")[:max_length]
+
+
+def description_relative_stem(response_file: Path) -> Path:
+    parts = response_file.parts
+    try:
+        responses_index = parts.index("responses")
+        relative_parts = parts[responses_index + 1 :]
+    except ValueError:
+        relative_parts = (response_file.name,)
+
+    if not relative_parts:
+        return Path(safe_path_part(response_file.stem))
+
+    sanitized_parts = [safe_path_part(part) for part in relative_parts]
+    return Path(*sanitized_parts).with_suffix("")
+
+
+def resolve_reported_path(path_value: str | None) -> Path | None:
+    if not path_value:
+        return None
+    path = Path(path_value)
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    return path.resolve()
+
+
+def copy_reconstructed_spectra(parsed_result: dict[str, Any] | None, destination: Path) -> str | None:
+    source = resolve_reported_path(parsed_result.get("spectra_file") if parsed_result else None)
+    if source is None or not source.is_file():
+        return None
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if source.resolve() != destination.resolve():
+        shutil.copy2(source, destination)
+    return str(destination)
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -266,10 +302,12 @@ def process_description(
         LOGGER.info("Skipping already completed run for description_id=%s", record.get("description_id"))
         return "skipped"
 
-    run_id = current_run_key[:24]
     skill_dir = safe_path_part(args.skill)
-    run_dir = output_dir / skill_dir / "runs" / run_id
+    description_stem = description_relative_stem(response_file)
+    run_id = current_run_key[:24]
+    run_dir = output_dir / skill_dir / "runs" / description_stem
     artifacts_dir = run_dir / "artifacts"
+    reconstructed_spectra_file = output_dir / skill_dir / "files" / description_stem / f"{skill_dir}.spectra"
     artifacts_dir.mkdir(parents=True, exist_ok=True)
 
     agent_prompt = render_agent_prompt(
@@ -320,6 +358,14 @@ def process_description(
 
     finished_at = utc_now()
     duration_ms = int((time.perf_counter() - started) * 1000)
+    copied_spectra_file = None
+    if status == "success":
+        copied_spectra_file = copy_reconstructed_spectra(parsed_result, reconstructed_spectra_file)
+        if copied_spectra_file:
+            LOGGER.info("Copied reconstructed Spectra file to %s", copied_spectra_file)
+        elif not args.dry_run:
+            LOGGER.warning("Agent run succeeded but no reported spectra_file could be copied for %s", record.get("description_id"))
+
     manifest_record = {
         "run_id": run_id,
         "run_key": current_run_key,
@@ -339,6 +385,9 @@ def process_description(
         "agent_prompt_sha256": sha256_text(agent_prompt),
         "run_dir": str(run_dir),
         "artifacts_dir": str(artifacts_dir),
+        "description_relative_stem": str(description_stem),
+        "reconstructed_spectra_file": copied_spectra_file,
+        "expected_reconstructed_spectra_file": str(reconstructed_spectra_file),
         "agent_prompt_file": str(prompt_file),
         "input_description_file": str(input_file),
         "agent_stdout_file": str(stdout_file),
