@@ -2,6 +2,8 @@
 
 This directory contains scripts for building the ReSpect evaluation dataset.
 
+Workflow overview: [`dataset_workflow.svg`](dataset_workflow.svg)
+
 ## Natural-Language Generation
 
 `generate_nl_description.py` calls the Academic Cloud/GWD OpenAI-compatible

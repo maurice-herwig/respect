@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">ReSpect Dataset Construction Workflow</title>
+  <desc id="desc">Workflow diagram showing how public Spectra files are discovered on GitHub, filtered by controller synthesis, stored as an accepted dataset, and translated into natural-language descriptions with the Academic Cloud API.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2f3a4a"/>
+    </marker>
+    <style>
+      .bg { fill: #f7f8fb; }
+      .title { font: 700 30px Arial, sans-serif; fill: #172033; }
+      .subtitle { font: 400 15px Arial, sans-serif; fill: #526070; }
+      .lane { fill: #ffffff; stroke: #c9d2df; stroke-width: 1.5; }
+      .lane-title { font: 700 18px Arial, sans-serif; fill: #223047; }
+      .box { fill: #fdfefe; stroke: #8ca0b8; stroke-width: 1.6; }
+      .box-blue { fill: #eaf3ff; stroke: #4d7fb8; }
+      .box-green { fill: #eaf7ef; stroke: #4a9462; }
+      .box-amber { fill: #fff5df; stroke: #b8842f; }
+      .box-red { fill: #fff0ef; stroke: #be5a50; }
+      .box-purple { fill: #f1edff; stroke: #7b63bf; }
+      .box-title { font: 700 16px Arial, sans-serif; fill: #172033; }
+      .box-text { font: 400 13px Arial, sans-serif; fill: #334155; }
+      .mono { font: 400 12px Consolas, monospace; fill: #334155; }
+      .arrow { stroke: #2f3a4a; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .arrow-soft { stroke: #69788d; stroke-width: 1.8; stroke-dasharray: 6 5; fill: none; marker-end: url(#arrow); }
+      .note { fill: #ffffff; stroke: #d6dde8; stroke-width: 1.2; }
+      .note-text { font: 400 12px Arial, sans-serif; fill: #526070; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="760"/>
+  <text class="title" x="60" y="52">ReSpect Dataset Construction Workflow</text>
+  <text class="subtitle" x="60" y="78">Two-script pipeline for collecting realizable Spectra files and generating English natural-language descriptions.</text>
+
+  <rect class="lane" x="45" y="115" width="1110" height="250" rx="8"/>
+  <text class="lane-title" x="70" y="148">Script 1: GitHub Spectra Dataset Builder</text>
+  <text class="mono" x="70" y="170">dataset/discover_github_spectra.py</text>
+
+  <rect class="box box-blue" x="75" y="205" width="190" height="95" rx="8"/>
+  <text class="box-title" x="95" y="233">GitHub Search API</text>
+  <text class="box-text" x="95" y="258">Search public files</text>
+  <text class="mono" x="95" y="279">extension:spectra</text>
+
+  <rect class="box box-amber" x="315" y="205" width="205" height="95" rx="8"/>
+  <text class="box-title" x="335" y="233">Adaptive Partitions</text>
+  <text class="box-text" x="335" y="258">Use file-size windows</text>
+  <text class="box-text" x="335" y="279">adjusted by total_count</text>
+
+  <rect class="box box-blue" x="575" y="205" width="180" height="95" rx="8"/>
+  <text class="box-title" x="595" y="233">Download Candidate</text>
+  <text class="box-text" x="595" y="258">Fetch .spectra content</text>
+  <text class="box-text" x="595" y="279">cache only if needed</text>
+
+  <rect class="box box-purple" x="805" y="205" width="195" height="95" rx="8"/>
+  <text class="box-title" x="825" y="233">Spectra CLI Check</text>
+  <text class="box-text" x="825" y="258">Run synthesis check</text>
+  <text class="mono" x="825" y="279">status == synthesized</text>
+
+  <rect class="box box-green" x="1025" y="190" width="105" height="125" rx="8"/>
+  <text class="box-title" x="1041" y="220">Accepted</text>
+  <text class="box-text" x="1041" y="244">Store only</text>
+  <text class="box-text" x="1041" y="264">realizable</text>
+  <text class="box-text" x="1041" y="284">files</text>
+
+  <path class="arrow" d="M 265 252 L 315 252"/>
+  <path class="arrow" d="M 520 252 L 575 252"/>
+  <path class="arrow" d="M 755 252 L 805 252"/>
+  <path class="arrow" d="M 1000 252 L 1025 252"/>
+
+  <rect class="note" x="575" y="318" width="555" height="32" rx="6"/>
+  <text class="note-text" x="592" y="339">Rejected, unrealizable, syntax-error, timeout, or already-processed candidates are recorded/skipped but not accepted.</text>
+
+  <rect class="lane" x="45" y="405" width="1110" height="270" rx="8"/>
+  <text class="lane-title" x="70" y="438">Script 2: Natural-Language Description Generator</text>
+  <text class="mono" x="70" y="460">dataset/generate_nl_description.py</text>
+
+  <rect class="box box-green" x="75" y="500" width="220" height="95" rx="8"/>
+  <text class="box-title" x="95" y="528">Accepted Dataset</text>
+  <text class="mono" x="95" y="553">dataset/accepted/files/</text>
+  <text class="mono" x="95" y="574">accepted_manifest.jsonl</text>
+
+  <rect class="box box-amber" x="350" y="500" width="210" height="95" rx="8"/>
+  <text class="box-title" x="370" y="528">Prompt Rendering</text>
+  <text class="box-text" x="370" y="553">Insert Spectra code into</text>
+  <text class="mono" x="370" y="574">spectra_to_english_v1</text>
+
+  <rect class="box box-blue" x="620" y="500" width="215" height="95" rx="8"/>
+  <text class="box-title" x="640" y="528">Academic Cloud API</text>
+  <text class="box-text" x="640" y="553">One independent request</text>
+  <text class="box-text" x="640" y="574">per Spectra file</text>
+
+  <rect class="box box-green" x="890" y="500" width="220" height="95" rx="8"/>
+  <text class="box-title" x="910" y="528">NL Descriptions</text>
+  <text class="mono" x="910" y="553">responses/.../*.txt</text>
+  <text class="mono" x="910" y="574">descriptions.jsonl</text>
+
+  <path class="arrow" d="M 295 548 L 350 548"/>
+  <path class="arrow" d="M 560 548 L 620 548"/>
+  <path class="arrow" d="M 835 548 L 890 548"/>
+
+  <path class="arrow-soft" d="M 1078 315 C 1078 370, 190 370, 190 500"/>
+
+  <rect class="note" x="75" y="620" width="1035" height="36" rx="6"/>
+  <text class="note-text" x="95" y="642">Resume logic skips already processed combinations; refresh timestamps can force older accepted files or descriptions to be regenerated.</text>
+
+  <text class="subtitle" x="60" y="725">Final dataset artifacts: accepted Spectra specifications, source metadata, English descriptions, model settings, prompt hashes, and generation timestamps.</text>
+</svg>
