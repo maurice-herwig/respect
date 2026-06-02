@@ -39,15 +39,16 @@ curl -X POST \
   --header "Content-Type: application/json"
 ```
 
-Run with a direct prompt:
+Run with a named prompt from `dataset/prompts.py`:
+
+```bash
+python dataset/generate_nl_description.py --prompt-name test_traffic_light
+```
+
+You can also pass ad-hoc prompt text or an existing prompt file:
 
 ```bash
 python dataset/generate_nl_description.py --prompt "Describe a traffic light controller in English."
-```
-
-Or with a prompt file:
-
-```bash
 python dataset/generate_nl_description.py --prompt-file prompt.txt
 ```
 

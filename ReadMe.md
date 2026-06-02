@@ -68,3 +68,38 @@ python dataset\discover_github_spectra.py --resume
 ```
 
 Accepted files are written to `dataset/accepted/`. Temporary downloads and synthesis artifacts are written to `dataset/work/`, which is ignored by Git.
+
+## Natural-Language Description Generation
+
+The current natural-language generation script is a standalone Academic Cloud/GWD API test. It is not connected to the Spectra dataset yet.
+
+Make sure `.env` contains:
+
+```text
+ACADEMIC_CLOUD_API_KEY=your_academic_cloud_api_key_here
+ACADEMIC_CLOUD_BASE_URL=https://chat-ai.academiccloud.de/v1
+ACADEMIC_CLOUD_MODEL=the_model_you_want_to_use
+```
+
+Run a test prompt:
+
+```powershell
+python dataset\generate_nl_description.py --prompt-name test_traffic_light
+```
+
+You can also pass ad-hoc prompt text or an existing prompt file:
+
+```powershell
+python dataset\generate_nl_description.py --prompt "Describe a simple traffic light controller in English."
+python dataset\generate_nl_description.py --prompt-file prompt.txt
+```
+
+If `--temperature`, `--top-p`, and `--max-tokens` are omitted, the Academic Cloud model defaults are used.
+
+Outputs are written to:
+
+```text
+dataset/nl_descriptions/responses/
+dataset/nl_descriptions/raw_responses/
+dataset/nl_descriptions/descriptions.jsonl
+```
