@@ -103,6 +103,12 @@ To regenerate everything for the current configuration:
 python dataset\generate_nl_description.py --force
 ```
 
+Optional logging:
+
+```powershell
+python dataset\generate_nl_description.py --log-level DEBUG --log-file dataset\nl_descriptions\generation.log
+```
+
 Run a single API test prompt:
 
 ```powershell

@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import logging
 import os
 import re
 import sys
@@ -31,6 +32,7 @@ except ImportError:
 DEFAULT_BASE_URL = "https://chat-ai.academiccloud.de/v1"
 DEFAULT_OUTPUT_DIR = "dataset/nl_descriptions"
 DEFAULT_ACCEPTED_MANIFEST = "dataset/accepted/accepted_manifest.jsonl"
+LOGGER = logging.getLogger("generate_nl_description")
 
 
 def parse_args() -> argparse.Namespace:
@@ -61,7 +63,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-tokens", type=int, default=None, help="Override model default max_tokens.")
     parser.add_argument("--timeout", type=float, default=120.0, help="HTTP timeout in seconds.")
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument("--log-file", default=None, help="Optional log file path.")
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=("DEBUG", "INFO", "WARNING", "ERROR"),
+        help="Logging verbosity.",
+    )
     return parser.parse_args()
+
+
+def configure_logging(log_level: str, log_file: str | None) -> None:
+    handlers: list[logging.Handler] = [logging.StreamHandler(sys.stderr)]
+    if log_file:
+        log_path = Path(log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_path, encoding="utf-8"))
+
+    logging.basicConfig(
+        level=getattr(logging, log_level),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        handlers=handlers,
+    )
 
 
 def load_dotenv(path: Path) -> None:
@@ -249,6 +272,7 @@ def call_academic_cloud(
     max_tokens: int | None,
     timeout: float,
 ) -> dict[str, Any]:
+    LOGGER.debug("Preparing Academic Cloud request: model=%s base_url=%s", model, base_url)
     payload = {
         "model": model,
         "messages": [
@@ -275,10 +299,14 @@ def call_academic_cloud(
     )
 
     try:
+        LOGGER.info("Sending Academic Cloud request to %s", chat_completions_url(base_url))
         with urllib.request.urlopen(request, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
+            result = json.loads(response.read().decode("utf-8"))
+            LOGGER.info("Received Academic Cloud response")
+            return result
     except urllib.error.HTTPError as exc:
         details = exc.read().decode("utf-8", errors="replace")
+        LOGGER.error("Academic Cloud API request failed with HTTP %s: %s", exc.code, details)
         raise RuntimeError(f"Academic Cloud API request failed with HTTP {exc.code}: {details}") from exc
 
 
@@ -316,6 +344,8 @@ def write_outputs(
 
     response_file.write_text(response_text, encoding="utf-8")
     raw_response_file.write_text(json.dumps(raw_response, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    LOGGER.info("Wrote response text to %s", response_file)
+    LOGGER.debug("Wrote raw response to %s", raw_response_file)
 
     manifest_record = {
         **metadata,
@@ -325,6 +355,7 @@ def write_outputs(
     }
     with manifest_file.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(manifest_record, sort_keys=True) + "\n")
+    LOGGER.info("Appended description metadata to %s", manifest_file)
     return manifest_record
 
 
@@ -439,7 +470,7 @@ def run_single(args: argparse.Namespace, api_key: str) -> int:
 def run_dataset(args: argparse.Namespace, api_key: str) -> int:
     accepted_records = load_jsonl(Path(args.accepted_manifest))
     if not accepted_records:
-        print(f"No accepted records found in {args.accepted_manifest}.", file=sys.stderr)
+        LOGGER.error("No accepted records found in %s.", args.accepted_manifest)
         return 2
 
     refresh_before = parse_iso_datetime(args.refresh_before)
@@ -448,10 +479,9 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
     processed = 0
     skipped = 0
     errors = 0
-    print(
+    LOGGER.info(
         f"[start] accepted_records={len(accepted_records)}, existing_matching_descriptions={len(completed_keys)}, "
-        f"force={args.force}, refresh_before={refresh_before.isoformat() if refresh_before else None}",
-        file=sys.stderr,
+        f"force={args.force}, refresh_before={refresh_before.isoformat() if refresh_before else None}"
     )
 
     for record in accepted_records:
@@ -474,10 +504,10 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
         )
         if config_key in completed_keys:
             skipped += 1
-            print(f"[skip] {record.get('dataset_id')} already generated for current model/settings/prompt", file=sys.stderr)
+            LOGGER.info("[skip] %s already generated for current model/settings/prompt", record.get("dataset_id"))
             continue
 
-        print(f"[generate] {record.get('dataset_id')} from {spectra_file}", file=sys.stderr)
+        LOGGER.info("[generate] %s from %s", record.get("dataset_id"), spectra_file)
         try:
             generate_one(
                 args=args,
@@ -493,7 +523,7 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
             processed += 1
         except Exception as exc:
             errors += 1
-            print(f"[error] {record.get('dataset_id')}: {exc}", file=sys.stderr)
+            LOGGER.exception("[error] %s: %s", record.get("dataset_id"), exc)
 
     summary = {
         "accepted_records": len(accepted_records),
@@ -516,13 +546,14 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
 def main() -> int:
     load_dotenv(Path(".env"))
     args = parse_args()
+    configure_logging(args.log_level, args.log_file)
 
     api_key = os.environ.get("ACADEMIC_CLOUD_API_KEY")
     if not api_key:
-        print("Missing ACADEMIC_CLOUD_API_KEY. Add it to .env or the environment.", file=sys.stderr)
+        LOGGER.error("Missing ACADEMIC_CLOUD_API_KEY. Add it to .env or the environment.")
         return 2
     if not args.model:
-        print("Missing model. Set ACADEMIC_CLOUD_MODEL in .env or pass --model.", file=sys.stderr)
+        LOGGER.error("Missing model. Set ACADEMIC_CLOUD_MODEL in .env or pass --model.")
         return 2
 
     if args.single_run or args.prompt is not None or args.prompt_file is not None:

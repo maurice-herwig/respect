@@ -65,6 +65,12 @@ Use `--force` to regenerate all descriptions for the current configuration:
 python dataset/generate_nl_description.py --force
 ```
 
+Logging can be written to stderr and optionally to a file:
+
+```bash
+python dataset/generate_nl_description.py --log-level DEBUG --log-file dataset/nl_descriptions/generation.log
+```
+
 Run a single API test prompt:
 
 ```bash
