@@ -1,0 +1,41 @@
+import "../imports/DwyerPatterns.spectra"
+spec CatchingIntruder
+define D := 7;
+type Dim = Int(0..D);
+
+sys Dim robotX0;
+sys Dim robotY0;
+sys Dim robotX1;
+sys Dim robotY1;
+
+predicate moveDist(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);  
+
+predicate stay(Dim dim):
+	next(dim) = dim;
+
+//module 1 robot movement
+gar ini robotX0 = 0 and robotY0 = 0;
+gar ini robotX1 = 7 and robotY1 = 0;
+
+gar alw !(robotX0 = robotX1 and robotY0 = robotY1);
+
+gar alw moveDist(robotX0) and stay(robotY0) or moveDist(robotY0) and stay(robotX0) or stay(robotX0) and stay(robotY0);
+gar alw moveDist(robotX1) and stay(robotY1) or moveDist(robotY1) and stay(robotX1) or stay(robotX1) and stay(robotY1);
+
+
+counter reachedBottomLeftCorner(0..1){
+	reachedBottomLeftCorner = 0;
+	inc: robotX0 = 0 and robotY0 = 7;
+	overflow: keep;
+}
+
+gar alw !(reachedBottomLeftCorner = 1) -> stay(robotX1) and stay(robotY1);
+
+gar dontCollideRobot0:
+	alw !(robotX0 = 2 and robotY0 = 1) and !(robotX0 = 4 and robotY0 = 1)  and !(robotX0 = 3 and robotY0 = 1) and !(robotX0 = 5 and robotY0 = 1);
+	
+gar dontCollideRobot1:
+	alw !(robotX1 = 2 and robotY1 = 1) and !(robotX1 = 4 and robotY1 = 1)  and !(robotX1 = 3 and robotY1 = 1) and !(robotX1 = 5 and robotY1 = 1);

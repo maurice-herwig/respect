@@ -1,0 +1,49 @@
+import "../imports/DwyerPatterns.spectra"
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+
+
+// mock variables, just so the simulation runs in this branch
+env DimY elevatorY;
+// end of mock variables
+env DimX [2] deliveriesX;
+env DimY [2] deliveriesY;
+
+gar robot0DeliversPackage:
+  alwEv robotX0 = deliveriesX[0] and robotY0 = deliveriesY[0];
+gar robot1DeliversPackage:
+  alwEv robotX1 = deliveriesX[1] and robotY1 = deliveriesY[1];
+
+gar robot0AtRightCornerGroundFloor:
+  alwEv robotX0 = 5 and robotY0 = 5;
+gar robot1AtRightCornerGroundFloor:
+  alwEv robotX1 = 5 and robotY1 = 5;
+
+counter packagesDeliveredByRobot0(0..4) {
+	packagesDeliveredByRobot0 = 0;
+	inc: robotX0 = deliveriesX[0] and robotY0 = deliveriesY[0];
+	reset: robotX0 = 5 and robotY0 = 5;
+}
+
+counter packagesDeliveredByRobot1(0..4) {
+	packagesDeliveredByRobot1 = 0;
+	inc: robotX1 = deliveriesX[1] and robotY1 = deliveriesY[1];
+	reset: robotX1 = 5 and robotY1 = 5;
+}
+
+asm packagesNotOnGroundFloor:
+  alw deliveriesX[0] != 5 and deliveriesX[1] != 5;
+
+gar alw packagesDeliveredByRobot0 < 4 and packagesDeliveredByRobot0 < 4;
