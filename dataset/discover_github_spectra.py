@@ -97,9 +97,19 @@ def parse_args() -> argparse.Namespace:
         help="Temporary directory for downloaded candidates and synthesis output.",
     )
     parser.add_argument(
+        "--candidate-dir",
+        default="dataset/candidates",
+        help="Persistent directory for downloaded candidate .spectra files.",
+    )
+    parser.add_argument(
         "--manifest",
         default=None,
         help="Accepted manifest JSONL path. Defaults to <output-dir>/accepted_manifest.jsonl.",
+    )
+    parser.add_argument(
+        "--processed-manifest",
+        default=None,
+        help="Processed-candidate JSONL path. Defaults to <output-dir>/processed_candidates.jsonl.",
     )
     parser.add_argument(
         "--cli-wrapper",
@@ -116,6 +126,11 @@ def parse_args() -> argparse.Namespace:
         "--keep-controller-output",
         action="store_true",
         help="Keep synthesized controller artifacts for accepted files.",
+    )
+    parser.add_argument(
+        "--keep-candidate-files",
+        action="store_true",
+        help="Keep downloaded candidate files after they have been processed.",
     )
     parser.add_argument(
         "--base-query",
@@ -198,7 +213,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--resume",
         action="store_true",
-        help="Reuse an existing accepted manifest and skip already-accepted records.",
+        help="Reuse existing manifests and skip already-processed records.",
     )
     parser.add_argument(
         "--dry-run",
@@ -539,6 +554,20 @@ def load_accepted_records(path: Path) -> set[str]:
     return seen
 
 
+def load_processed_records(path: Path) -> set[str]:
+    if not path.is_file():
+        return set()
+
+    seen: set[str] = set()
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            data = json.loads(line)
+            seen.add(data["dedupe_key"])
+    return seen
+
+
 def write_manifest(path: Path, manifest: dict[str, Any]) -> None:
     path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -566,6 +595,14 @@ def accepted_file_path(accepted_dir: Path, record: DiscoveryRecord, current_id: 
     if candidate.exists():
         return candidate.with_name(f"{candidate.stem}__{current_id[-16:]}{candidate.suffix}")
     return candidate
+
+
+def candidate_cache_file_path(candidate_dir: Path, record: DiscoveryRecord, current_id: str) -> Path:
+    repo_parts = [safe_slug(part, 120) for part in record.repository_full_name.split("/")]
+    path_parts = [safe_slug(part, 120) for part in Path(record.path).parts]
+    relative_path = Path(*repo_parts, *path_parts)
+    suffix = relative_path.suffix if relative_path.suffix else ".spectra"
+    return candidate_dir / "files" / relative_path.with_name(f"{relative_path.stem}__{current_id[-16:]}{suffix}")
 
 
 def decode_github_content(content_record: dict[str, Any]) -> bytes:
@@ -685,6 +722,14 @@ def append_jsonl(path: Path, record: dict[str, Any]) -> None:
         handle.write(json.dumps(record, sort_keys=True) + "\n")
 
 
+def remove_candidate_file(candidate_file: Path, keep_candidate_files: bool, quiet: bool) -> None:
+    if keep_candidate_files or not candidate_file.exists():
+        return
+
+    candidate_file.unlink()
+    progress(f"[candidate] removed cached candidate {candidate_file}", quiet)
+
+
 def process_candidate(
     item: dict[str, Any],
     query: str,
@@ -692,20 +737,25 @@ def process_candidate(
     headers: dict[str, str],
     args: argparse.Namespace,
     accepted_dir: Path,
+    candidate_dir: Path,
     work_dir: Path,
     manifest_path: Path,
+    processed_manifest_path: Path,
     accepted_keys: set[str],
+    processed_keys: set[str],
     license_cache: dict[str, dict[str, Any]],
 ) -> str:
     record = record_from_item(item, query, discovered_at)
-    if record.dedupe_key in accepted_keys:
-        return "duplicate"
+    if record.dedupe_key in processed_keys:
+        progress(f"[candidate] skipping already processed {record.html_url}", args.quiet)
+        return "already_processed"
 
     current_id = dataset_id(record)
-    candidate_dir = work_dir / current_id
-    candidate_file = candidate_dir / f"{current_id}.spectra"
-    synthesis_dir = candidate_dir / "controller"
-    candidate_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = work_dir / current_id
+    candidate_file = candidate_cache_file_path(candidate_dir, record, current_id)
+    synthesis_dir = run_dir / "controller"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    candidate_file.parent.mkdir(parents=True, exist_ok=True)
     progress(
         f"[candidate] checking {record.html_url} "
         f"(repo={record.repository_full_name}, path={record.path}, sha={record.sha[:12]})",
@@ -713,29 +763,55 @@ def process_candidate(
     )
 
     try:
-        progress(f"[download] downloading {record.api_url}", args.quiet)
-        content = download_file_content(
-            record,
-            headers,
-            args.timeout,
-            args.rate_limit_mode,
-            args.rate_limit_buffer_seconds,
-        )
-        candidate_file.write_bytes(content)
-        progress(
-            f"[download] saved candidate {candidate_file} "
-            f"({len(content)} bytes, sha256={hashlib.sha256(content).hexdigest()[:12]})",
-            args.quiet,
-        )
+        if candidate_file.is_file():
+            content = candidate_file.read_bytes()
+            progress(
+                f"[download] using cached candidate {candidate_file} "
+                f"({len(content)} bytes, sha256={hashlib.sha256(content).hexdigest()[:12]})",
+                args.quiet,
+            )
+        else:
+            progress(f"[download] downloading {record.api_url}", args.quiet)
+            content = download_file_content(
+                record,
+                headers,
+                args.timeout,
+                args.rate_limit_mode,
+                args.rate_limit_buffer_seconds,
+            )
+            candidate_file.write_bytes(content)
+            progress(
+                f"[download] saved candidate {candidate_file} "
+                f"({len(content)} bytes, sha256={hashlib.sha256(content).hexdigest()[:12]})",
+                args.quiet,
+            )
+
         progress(f"[synthesis] running Spectra synthesis for {candidate_file}", args.quiet)
         result = run_synthesis_check(Path(args.cli_wrapper), candidate_file, synthesis_dir, args.cli_timeout)
         status = result.get("status")
         progress(f"[synthesis] status={status} for {record.html_url}", args.quiet)
 
+        content_sha256 = hashlib.sha256(content).hexdigest()
+        processed_record = {
+            **asdict(record),
+            "dataset_id": current_id,
+            "dedupe_key": record.dedupe_key,
+            "processed_at": datetime.now(timezone.utc).isoformat(),
+            "candidate_file": str(candidate_file),
+            "content_sha256": content_sha256,
+            "content_size_bytes": len(content),
+            "cli_status": status,
+            "cli_timeout_seconds": args.cli_timeout,
+            "accepted": status == "synthesized",
+        }
+
         if status != "synthesized":
             raw_output = str(result.get("raw_output", "")).splitlines()
             if raw_output:
                 progress(f"[synthesis] first output line: {raw_output[0]}", args.quiet)
+            append_jsonl(processed_manifest_path, processed_record)
+            processed_keys.add(record.dedupe_key)
+            remove_candidate_file(candidate_file, args.keep_candidate_files, args.quiet)
             return str(status or "rejected")
 
         progress(f"[license] fetching license for {record.repository_full_name}", args.quiet)
@@ -773,7 +849,8 @@ def process_candidate(
             "dedupe_key": record.dedupe_key,
             "accepted_at": datetime.now(timezone.utc).isoformat(),
             "accepted_file": str(accepted_file),
-            "content_sha256": hashlib.sha256(content).hexdigest(),
+            "candidate_file": str(candidate_file),
+            "content_sha256": content_sha256,
             "content_size_bytes": len(content),
             "cli_status": status,
             "cli_timeout_seconds": args.cli_timeout,
@@ -781,12 +858,15 @@ def process_candidate(
             **license_info,
         }
         append_jsonl(manifest_path, accepted_record)
+        append_jsonl(processed_manifest_path, {**processed_record, "accepted_file": str(accepted_file), **license_info})
         accepted_keys.add(record.dedupe_key)
+        processed_keys.add(record.dedupe_key)
+        remove_candidate_file(candidate_file, args.keep_candidate_files, args.quiet)
         progress(f"[accepted] appended manifest record for {current_id}", args.quiet)
         return "accepted"
     finally:
-        if candidate_dir.exists() and not args.keep_controller_output:
-            shutil.rmtree(candidate_dir)
+        if run_dir.exists() and not args.keep_controller_output:
+            shutil.rmtree(run_dir)
 
 
 def process_query_results(
@@ -796,16 +876,19 @@ def process_query_results(
     headers: dict[str, str],
     args: argparse.Namespace,
     accepted_dir: Path,
+    candidate_dir: Path,
     work_dir: Path,
     manifest_path: Path,
+    processed_manifest_path: Path,
     accepted_keys: set[str],
+    processed_keys: set[str],
     license_cache: dict[str, dict[str, Any]],
 ) -> dict[str, int]:
     pages = min((total_count + args.per_page - 1) // args.per_page, SEARCH_RESULT_LIMIT // args.per_page)
     stats = {
         "items": 0,
         "accepted": 0,
-        "duplicates": 0,
+        "skipped": 0,
         "rejected": 0,
         "errors": 0,
     }
@@ -834,9 +917,12 @@ def process_query_results(
                     headers,
                     args,
                     accepted_dir,
+                    candidate_dir,
                     work_dir,
                     manifest_path,
+                    processed_manifest_path,
                     accepted_keys,
+                    processed_keys,
                     license_cache,
                 )
             except Exception as exc:  # Keep the crawl moving; rejected candidates are discarded.
@@ -846,21 +932,21 @@ def process_query_results(
 
             if outcome == "accepted":
                 stats["accepted"] += 1
-            elif outcome == "duplicate":
-                stats["duplicates"] += 1
+            elif outcome == "already_processed":
+                stats["skipped"] += 1
             else:
                 stats["rejected"] += 1
 
             progress(
                 "[candidate] totals for current query: "
                 f"items={stats['items']}, accepted={stats['accepted']}, "
-                f"rejected={stats['rejected']}, duplicates={stats['duplicates']}, errors={stats['errors']}",
+                f"rejected={stats['rejected']}, skipped={stats['skipped']}, errors={stats['errors']}",
                 args.quiet,
             )
 
     progress(
         f"[fetch] finished query: items={stats['items']}, accepted={stats['accepted']}, "
-        f"rejected={stats['rejected']}, duplicates={stats['duplicates']}, errors={stats['errors']}",
+        f"rejected={stats['rejected']}, skipped={stats['skipped']}, errors={stats['errors']}",
         args.quiet,
     )
     return stats
@@ -870,8 +956,12 @@ def main() -> int:
     args = parse_args()
     load_dotenv(Path(".env"))
     accepted_dir = Path(args.output_dir)
+    candidate_dir = Path(args.candidate_dir)
     work_dir = Path(args.work_dir)
     manifest_path = Path(args.manifest) if args.manifest else accepted_dir / "accepted_manifest.jsonl"
+    processed_manifest_path = (
+        Path(args.processed_manifest) if args.processed_manifest else accepted_dir / "processed_candidates.jsonl"
+    )
     run_manifest_path = accepted_dir / "last_run_manifest.json"
 
     base_queries = args.base_query or ["extension:spectra"]
@@ -883,9 +973,12 @@ def main() -> int:
         return 0
 
     accepted_dir.mkdir(parents=True, exist_ok=True)
+    candidate_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
     headers = github_headers()
     accepted_keys = load_accepted_records(manifest_path) if args.resume else set()
+    processed_keys = load_processed_records(processed_manifest_path) if args.resume else set()
+    processed_keys.update(accepted_keys)
     discovered_at = datetime.now(timezone.utc).isoformat()
     progress(
         f"[start] discovery started with {len(base_queries)} base query/queries, "
@@ -895,12 +988,14 @@ def main() -> int:
     )
     if accepted_keys:
         progress(f"[resume] loaded {len(accepted_keys)} accepted record(s)", args.quiet)
+    if processed_keys:
+        progress(f"[resume] loaded {len(processed_keys)} processed candidate record(s)", args.quiet)
 
     total_stats = {
         "queries_processed": 0,
         "items": 0,
         "accepted": 0,
-        "duplicates": 0,
+        "skipped": 0,
         "rejected": 0,
         "errors": 0,
     }
@@ -956,13 +1051,16 @@ def main() -> int:
                     headers,
                     args,
                     accepted_dir,
+                    candidate_dir,
                     work_dir,
                     manifest_path,
+                    processed_manifest_path,
                     accepted_keys,
+                    processed_keys,
                     license_cache,
                 )
                 total_stats["queries_processed"] += 1
-                for key in ("items", "accepted", "duplicates", "rejected", "errors"):
+                for key in ("items", "accepted", "skipped", "rejected", "errors"):
                     total_stats[key] += query_stats[key]
                 processed_queries.append(
                     {
@@ -975,7 +1073,7 @@ def main() -> int:
                     "[progress] run totals: "
                     f"queries={total_stats['queries_processed']}, items={total_stats['items']}, "
                     f"accepted={total_stats['accepted']}, rejected={total_stats['rejected']}, "
-                    f"duplicates={total_stats['duplicates']}, errors={total_stats['errors']}",
+                    f"skipped={total_stats['skipped']}, errors={total_stats['errors']}",
                     args.quiet,
                 )
 
@@ -1001,10 +1099,13 @@ def main() -> int:
         "target_results_per_query": args.target_results_per_query,
         "processed_queries": processed_queries,
         "accepted_manifest_path": str(manifest_path),
+        "processed_manifest_path": str(processed_manifest_path),
         "accepted_dir": str(accepted_dir),
+        "candidate_dir": str(candidate_dir),
         "work_dir": str(work_dir),
         "stats": total_stats,
         "accepted_records_total": len(accepted_keys),
+        "processed_records_total": len(processed_keys),
         "license_cache_repositories": len(license_cache),
         "per_page": args.per_page,
         "max_results_per_query": args.max_results_per_query,
@@ -1018,7 +1119,7 @@ def main() -> int:
     write_manifest(run_manifest_path, manifest)
     progress(
         f"[done] discovery finished: accepted={total_stats['accepted']}, rejected={total_stats['rejected']}, "
-        f"duplicates={total_stats['duplicates']}, errors={total_stats['errors']}",
+        f"skipped={total_stats['skipped']}, errors={total_stats['errors']}",
         args.quiet,
     )
     print(json.dumps(manifest, indent=2, sort_keys=True))

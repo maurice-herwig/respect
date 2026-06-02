@@ -65,6 +65,7 @@ Accepted files are written to `dataset/accepted/`:
 
 - `files/<owner>/<repo>/<original-path>.spectra`: accepted `.spectra` files grouped by GitHub repository and original path
 - `accepted_manifest.jsonl`: metadata for accepted files only
+- `processed_candidates.jsonl`: metadata for all processed candidates, including rejected files
 - `last_run_manifest.json`: summary of the latest run
 
 Accepted manifest records include the GitHub search score as
@@ -77,7 +78,15 @@ Accepted manifest records include the GitHub search score as
 - `license_url`
 - `license_html_url`
 
-Temporary downloads and controller outputs are written to `dataset/work/` and removed after rejected candidates. Use `--keep-controller-output` to preserve controller artifacts for accepted files under `dataset/accepted/controllers/`.
+Downloaded candidates are written under `dataset/candidates/` while they are being checked. After a candidate has a record in `processed_candidates.jsonl`, the downloaded candidate file is removed by default to save disk space. Use `--keep-candidate-files` to preserve these downloads. Temporary synthesis output is written to `dataset/work/` and removed after each candidate unless `--keep-controller-output` is enabled.
+
+Resume behavior:
+
+```bash
+python dataset/discover_github_spectra.py --resume
+```
+
+With `--resume`, candidates listed in `processed_candidates.jsonl` are skipped entirely. If a candidate file still exists in `dataset/candidates/` because the previous run was interrupted before processing finished, the cached file is reused instead of downloading it again.
 
 Progress messages are printed to stderr during partitioning, downloads,
 synthesis checks, accepted-file storage, and page fetching. Use `--quiet` to
