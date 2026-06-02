@@ -4,7 +4,7 @@ This directory contains scripts for building the ReSpect evaluation dataset.
 
 ## Discovery
 
-`discover_github_spectra.py` discovers public `.spectra` files through the GitHub Search API. It only stores metadata returned by search; file contents are not downloaded in this step.
+`discover_github_spectra.py` discovers public `.spectra` files through the GitHub Search API. For each size window, it downloads discovered candidates, runs Spectra synthesis, and stores only files for which a controller can be synthesized.
 
 Run with a GitHub token to avoid very small unauthenticated rate limits:
 
@@ -32,6 +32,7 @@ script reads GitHub's `total_count` and adjusts the next size window:
 - dense windows become smaller, down to `--min-size-step 1`
 - sparse windows can grow back up to `--size-step`
 - windows with more than `--max-results-per-query 500` results are recursively split before fetching pages
+- each size window is downloaded and tested before the next size window is queried, so synthesis time naturally spaces out API calls
 
 For especially dense Spectra ranges, lower `--target-results-per-query`, for example:
 
@@ -60,10 +61,13 @@ If the script waits often, use less aggressive partitioning, for example:
 python dataset/discover_github_spectra.py --target-results-per-query 100 --size-step 1000
 ```
 
-Outputs are written to `dataset/discovery/`:
+Accepted files are written to `dataset/accepted/`:
 
-- `github_spectra_files.jsonl`: one discovered file record per line
-- `github_spectra_manifest.json`: query partitions and run metadata
+- `files/`: accepted `.spectra` files
+- `accepted_manifest.jsonl`: metadata for accepted files only
+- `last_run_manifest.json`: summary of the latest run
+
+Temporary downloads and controller outputs are written to `dataset/work/` and removed after rejected candidates. Use `--keep-controller-output` to preserve controller artifacts for accepted files under `dataset/accepted/controllers/`.
 
 Progress messages are printed to stderr during partitioning and page fetching.
 Use `--quiet` to disable them.

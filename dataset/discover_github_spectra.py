@@ -2,16 +2,21 @@
 """
 Discover public Spectra files through the GitHub Search API.
 
-This script performs only the discovery step. It does not download file
-contents. Results are written as JSONL plus a small manifest so later dataset
-pipeline steps can download, validate, and synthesize from a reproducible list.
+For each size partition, the script searches GitHub, downloads each discovered
+file, checks whether a controller can be synthesized with the local Spectra CLI,
+and stores only accepted .spectra files under the dataset directory.
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import json
 import os
+import re
+import shutil
+import subprocess
 import sys
 import time
 import urllib.error
@@ -83,8 +88,34 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Discover .spectra files with the GitHub Search API.")
     parser.add_argument(
         "--output-dir",
-        default="dataset/discovery",
-        help="Directory for github_spectra_files.jsonl and github_spectra_manifest.json",
+        default="dataset/accepted",
+        help="Directory for accepted .spectra files and the accepted manifest.",
+    )
+    parser.add_argument(
+        "--work-dir",
+        default="dataset/work",
+        help="Temporary directory for downloaded candidates and synthesis output.",
+    )
+    parser.add_argument(
+        "--manifest",
+        default=None,
+        help="Accepted manifest JSONL path. Defaults to <output-dir>/accepted_manifest.jsonl.",
+    )
+    parser.add_argument(
+        "--cli-wrapper",
+        default=".agents/skills/respect-method-2/scripts/run_spectra_cli.py",
+        help="Path to the Spectra CLI wrapper.",
+    )
+    parser.add_argument(
+        "--cli-timeout",
+        type=float,
+        default=120.0,
+        help="Timeout in seconds for each Spectra synthesis attempt.",
+    )
+    parser.add_argument(
+        "--keep-controller-output",
+        action="store_true",
+        help="Keep synthesized controller artifacts for accepted files.",
     )
     parser.add_argument(
         "--base-query",
@@ -167,7 +198,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--resume",
         action="store_true",
-        help="Reuse an existing JSONL output file and skip already-seen records.",
+        help="Reuse an existing accepted manifest and skip already-accepted records.",
     )
     parser.add_argument(
         "--dry-run",
@@ -494,7 +525,7 @@ def record_from_item(item: dict[str, Any], query: str, discovered_at: str) -> Di
     )
 
 
-def load_seen_records(path: Path) -> set[str]:
+def load_accepted_records(path: Path) -> set[str]:
     if not path.is_file():
         return set()
 
@@ -504,7 +535,7 @@ def load_seen_records(path: Path) -> set[str]:
             if not line.strip():
                 continue
             data = json.loads(line)
-            seen.add(f"{data['repository_full_name']}:{data['path']}:{data['sha']}")
+            seen.add(data["dedupe_key"])
     return seen
 
 
@@ -512,12 +543,232 @@ def write_manifest(path: Path, manifest: dict[str, Any]) -> None:
     path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def safe_slug(value: str, max_length: int = 80) -> str:
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "_", value).strip("_")
+    return slug[:max_length] or "spectra"
+
+
+def dataset_id(record: DiscoveryRecord) -> str:
+    digest = hashlib.sha256(record.dedupe_key.encode("utf-8")).hexdigest()[:16]
+    owner_repo = safe_slug(record.repository_full_name.replace("/", "_"), 60)
+    stem = safe_slug(Path(record.path).stem, 40)
+    return f"{owner_repo}__{stem}__{digest}"
+
+
+def decode_github_content(content_record: dict[str, Any]) -> bytes:
+    encoding = content_record.get("encoding")
+    content = content_record.get("content")
+    if encoding == "base64" and isinstance(content, str):
+        return base64.b64decode(content)
+    raise RuntimeError(f"Unsupported GitHub content response encoding: {encoding!r}")
+
+
+def download_file_content(
+    record: DiscoveryRecord,
+    headers: dict[str, str],
+    timeout: float,
+    rate_limit_mode: str,
+    rate_limit_buffer_seconds: float,
+) -> bytes:
+    content_record = request_json(
+        record.api_url,
+        headers,
+        timeout,
+        rate_limit_mode,
+        rate_limit_buffer_seconds,
+    )
+    return decode_github_content(content_record)
+
+
+def run_synthesis_check(
+    cli_wrapper: Path,
+    spectra_file: Path,
+    output_dir: Path,
+    cli_timeout: float,
+) -> dict[str, Any]:
+    command = [
+        sys.executable,
+        str(cli_wrapper),
+        "--input",
+        str(spectra_file),
+        "--synthesize",
+        "--output-dir",
+        str(output_dir),
+        "--timeout",
+        str(cli_timeout),
+    ]
+    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    stdout = completed.stdout.strip()
+    if not stdout:
+        return {
+            "status": "error",
+            "exit_code": completed.returncode,
+            "raw_output": completed.stderr.strip(),
+        }
+
+    try:
+        result = json.loads(stdout)
+    except json.JSONDecodeError:
+        return {
+            "status": "error",
+            "exit_code": completed.returncode,
+            "raw_output": stdout,
+            "stderr": completed.stderr.strip(),
+        }
+    return result
+
+
+def append_jsonl(path: Path, record: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record, sort_keys=True) + "\n")
+
+
+def process_candidate(
+    item: dict[str, Any],
+    query: str,
+    discovered_at: str,
+    headers: dict[str, str],
+    args: argparse.Namespace,
+    accepted_dir: Path,
+    work_dir: Path,
+    manifest_path: Path,
+    accepted_keys: set[str],
+) -> str:
+    record = record_from_item(item, query, discovered_at)
+    if record.dedupe_key in accepted_keys:
+        return "duplicate"
+
+    current_id = dataset_id(record)
+    candidate_dir = work_dir / current_id
+    candidate_file = candidate_dir / f"{current_id}.spectra"
+    synthesis_dir = candidate_dir / "controller"
+    candidate_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        content = download_file_content(
+            record,
+            headers,
+            args.timeout,
+            args.rate_limit_mode,
+            args.rate_limit_buffer_seconds,
+        )
+        candidate_file.write_bytes(content)
+        result = run_synthesis_check(Path(args.cli_wrapper), candidate_file, synthesis_dir, args.cli_timeout)
+        status = result.get("status")
+
+        if status != "synthesized":
+            return str(status or "rejected")
+
+        accepted_file = accepted_dir / "files" / f"{current_id}.spectra"
+        accepted_file.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(candidate_file, accepted_file)
+
+        controller_output_dir = None
+        if args.keep_controller_output:
+            controller_target = accepted_dir / "controllers" / current_id
+            if controller_target.exists():
+                shutil.rmtree(controller_target)
+            shutil.copytree(synthesis_dir, controller_target)
+            controller_output_dir = str(controller_target)
+
+        accepted_record = {
+            **asdict(record),
+            "dataset_id": current_id,
+            "dedupe_key": record.dedupe_key,
+            "accepted_at": datetime.now(timezone.utc).isoformat(),
+            "accepted_file": str(accepted_file),
+            "content_sha256": hashlib.sha256(content).hexdigest(),
+            "content_size_bytes": len(content),
+            "cli_status": status,
+            "cli_timeout_seconds": args.cli_timeout,
+            "controller_output_dir": controller_output_dir,
+        }
+        append_jsonl(manifest_path, accepted_record)
+        accepted_keys.add(record.dedupe_key)
+        return "accepted"
+    finally:
+        if candidate_dir.exists() and not args.keep_controller_output:
+            shutil.rmtree(candidate_dir)
+
+
+def process_query_results(
+    query: str,
+    total_count: int,
+    discovered_at: str,
+    headers: dict[str, str],
+    args: argparse.Namespace,
+    accepted_dir: Path,
+    work_dir: Path,
+    manifest_path: Path,
+    accepted_keys: set[str],
+) -> dict[str, int]:
+    pages = min((total_count + args.per_page - 1) // args.per_page, SEARCH_RESULT_LIMIT // args.per_page)
+    stats = {
+        "items": 0,
+        "accepted": 0,
+        "duplicates": 0,
+        "rejected": 0,
+        "errors": 0,
+    }
+    progress(f"[fetch] total_count={total_count}, pages={pages}, query={query}", args.quiet)
+
+    for page in range(1, pages + 1):
+        progress(f"[fetch] page {page}/{pages} for {query}", args.quiet)
+        data = search_page(
+            query,
+            page,
+            args.per_page,
+            headers,
+            args.timeout,
+            args.rate_limit_mode,
+            args.rate_limit_buffer_seconds,
+        )
+        time.sleep(args.sleep_seconds)
+
+        for item in data.get("items", []):
+            stats["items"] += 1
+            try:
+                outcome = process_candidate(
+                    item,
+                    query,
+                    discovered_at,
+                    headers,
+                    args,
+                    accepted_dir,
+                    work_dir,
+                    manifest_path,
+                    accepted_keys,
+                )
+            except Exception as exc:  # Keep the crawl moving; rejected candidates are discarded.
+                stats["errors"] += 1
+                progress(f"[candidate] error while processing {item.get('html_url')}: {exc}", args.quiet)
+                continue
+
+            if outcome == "accepted":
+                stats["accepted"] += 1
+            elif outcome == "duplicate":
+                stats["duplicates"] += 1
+            else:
+                stats["rejected"] += 1
+
+            progress(
+                "[candidate] totals for current query: "
+                f"items={stats['items']}, accepted={stats['accepted']}, "
+                f"rejected={stats['rejected']}, duplicates={stats['duplicates']}, errors={stats['errors']}",
+                args.quiet,
+            )
+
+    return stats
+
+
 def main() -> int:
     args = parse_args()
     load_dotenv(Path(".env"))
-    output_dir = Path(args.output_dir)
-    records_path = output_dir / "github_spectra_files.jsonl"
-    manifest_path = output_dir / "github_spectra_manifest.json"
+    accepted_dir = Path(args.output_dir)
+    work_dir = Path(args.work_dir)
+    manifest_path = Path(args.manifest) if args.manifest else accepted_dir / "accepted_manifest.jsonl"
+    run_manifest_path = accepted_dir / "last_run_manifest.json"
 
     base_queries = args.base_query or ["extension:spectra"]
     size_ranges = fixed_size_ranges(args.min_size, args.max_size, args.size_step)
@@ -527,9 +778,10 @@ def main() -> int:
             print(query)
         return 0
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    accepted_dir.mkdir(parents=True, exist_ok=True)
+    work_dir.mkdir(parents=True, exist_ok=True)
     headers = github_headers()
-    seen = load_seen_records(records_path) if args.resume else set()
+    accepted_keys = load_accepted_records(manifest_path) if args.resume else set()
     discovered_at = datetime.now(timezone.utc).isoformat()
     progress(
         f"[start] discovery started with {len(base_queries)} base query/queries, "
@@ -537,73 +789,94 @@ def main() -> int:
         f"target_results_per_query={args.target_results_per_query}, resume={args.resume}",
         args.quiet,
     )
-    if seen:
-        progress(f"[resume] loaded {len(seen)} existing record(s)", args.quiet)
+    if accepted_keys:
+        progress(f"[resume] loaded {len(accepted_keys)} accepted record(s)", args.quiet)
 
-    partitioned_queries: list[tuple[str, int]] = []
+    total_stats = {
+        "queries_processed": 0,
+        "items": 0,
+        "accepted": 0,
+        "duplicates": 0,
+        "rejected": 0,
+        "errors": 0,
+    }
+    processed_queries: list[dict[str, Any]] = []
+
     for base_query in base_queries:
-        progress(f"[base-query] partitioning {base_query}", args.quiet)
-        partitioned_queries.extend(
-            discover_adaptive_queries(
-                base_query=base_query,
-                minimum=args.min_size,
-                maximum=args.max_size,
-                initial_step=args.size_step,
-                min_step=args.min_size_step,
-                target_results_per_query=args.target_results_per_query,
-                headers=headers,
-                timeout=args.timeout,
-                rate_limit_mode=args.rate_limit_mode,
-                rate_limit_buffer_seconds=args.rate_limit_buffer_seconds,
-                sleep_seconds=args.sleep_seconds,
-                max_results_per_query=args.max_results_per_query,
-                max_depth=args.max_depth,
-                quiet=args.quiet,
-            )
-        )
-        progress(
-            f"[base-query] finished partitioning {base_query}; "
-            f"total executable query partitions so far: {len(partitioned_queries)}",
-            args.quiet,
-        )
+        progress(f"[base-query] processing {base_query}", args.quiet)
+        start = args.min_size
+        step = args.size_step
 
-    written = 0
-    duplicate_count = 0
-    mode = "a" if args.resume else "w"
-    progress(f"[fetch] fetching result pages for {len(partitioned_queries)} query partition(s)", args.quiet)
-    with records_path.open(mode, encoding="utf-8") as output:
-        for query_index, (query, total_count) in enumerate(partitioned_queries, start=1):
-            pages = min((total_count + args.per_page - 1) // args.per_page, SEARCH_RESULT_LIMIT // args.per_page)
+        while start <= args.max_size:
+            end = min(start + step - 1, args.max_size)
+            current_range = SizeRange(start, end)
+            query = build_query(base_query, current_range)
+            progress(f"[partition] probing {query}", args.quiet)
+            first_page = search_page(
+                query,
+                1,
+                1,
+                headers,
+                args.timeout,
+                args.rate_limit_mode,
+                args.rate_limit_buffer_seconds,
+            )
+            total_count = int(first_page.get("total_count", 0))
             progress(
-                f"[fetch] query {query_index}/{len(partitioned_queries)}: total_count={total_count}, "
-                f"pages={pages}, query={query}",
+                f"[partition] total_count={total_count} for {query}; downloading and testing this window before moving on",
                 args.quiet,
             )
-            for page in range(1, pages + 1):
-                progress(f"[fetch] query {query_index}/{len(partitioned_queries)} page {page}/{pages}", args.quiet)
-                data = search_page(
-                    query,
-                    page,
-                    args.per_page,
-                    headers,
-                    args.timeout,
-                    args.rate_limit_mode,
-                    args.rate_limit_buffer_seconds,
-                )
-                time.sleep(args.sleep_seconds)
+            time.sleep(args.sleep_seconds)
 
-                for item in data.get("items", []):
-                    record = record_from_item(item, query, discovered_at)
-                    if record.dedupe_key in seen:
-                        duplicate_count += 1
-                        continue
-                    seen.add(record.dedupe_key)
-                    output.write(json.dumps(asdict(record), sort_keys=True) + "\n")
-                    written += 1
-                progress(
-                    f"[fetch] totals so far: written={written}, duplicates={duplicate_count}, unique={len(seen)}",
-                    args.quiet,
+            leaf_queries = [(query, total_count)]
+            if total_count > args.max_results_per_query and current_range.can_split():
+                leaf_queries = discover_queries(
+                    base_query=base_query,
+                    size_range=current_range,
+                    headers=headers,
+                    timeout=args.timeout,
+                    rate_limit_mode=args.rate_limit_mode,
+                    rate_limit_buffer_seconds=args.rate_limit_buffer_seconds,
+                    sleep_seconds=args.sleep_seconds,
+                    max_results_per_query=args.max_results_per_query,
+                    max_depth=args.max_depth,
+                    quiet=args.quiet,
                 )
+
+            for leaf_query, leaf_total_count in leaf_queries:
+                query_stats = process_query_results(
+                    leaf_query,
+                    leaf_total_count,
+                    discovered_at,
+                    headers,
+                    args,
+                    accepted_dir,
+                    work_dir,
+                    manifest_path,
+                    accepted_keys,
+                )
+                total_stats["queries_processed"] += 1
+                for key in ("items", "accepted", "duplicates", "rejected", "errors"):
+                    total_stats[key] += query_stats[key]
+                processed_queries.append(
+                    {
+                        "query": leaf_query,
+                        "total_count": leaf_total_count,
+                        "stats": query_stats,
+                    }
+                )
+
+            next_step = adjust_next_size_step(
+                current_step=step,
+                total_count=total_count,
+                target_results_per_query=args.target_results_per_query,
+                min_step=args.min_size_step,
+                max_step=args.size_step,
+            )
+            if next_step != step:
+                progress(f"[partition] next size step adjusted from {step} to {next_step}", args.quiet)
+            step = next_step
+            start = end + 1
 
     manifest = {
         "created_at": discovered_at,
@@ -613,24 +886,25 @@ def main() -> int:
         "size_step": args.size_step,
         "min_size_step": args.min_size_step,
         "target_results_per_query": args.target_results_per_query,
-        "partitioned_queries": [
-            {"query": query, "total_count": total_count} for query, total_count in partitioned_queries
-        ],
-        "records_path": str(records_path),
-        "records_written_this_run": written,
-        "duplicates_skipped_this_run": duplicate_count,
-        "unique_records_total": len(seen),
+        "processed_queries": processed_queries,
+        "accepted_manifest_path": str(manifest_path),
+        "accepted_dir": str(accepted_dir),
+        "work_dir": str(work_dir),
+        "stats": total_stats,
+        "accepted_records_total": len(accepted_keys),
         "per_page": args.per_page,
         "max_results_per_query": args.max_results_per_query,
         "sleep_seconds": args.sleep_seconds,
         "timeout_seconds": args.timeout,
+        "cli_timeout_seconds": args.cli_timeout,
         "rate_limit_mode": args.rate_limit_mode,
         "rate_limit_buffer_seconds": args.rate_limit_buffer_seconds,
         "used_github_token": bool(os.environ.get("GITHUB_TOKEN")),
     }
-    write_manifest(manifest_path, manifest)
+    write_manifest(run_manifest_path, manifest)
     progress(
-        f"[done] discovery finished: written={written}, duplicates={duplicate_count}, unique={len(seen)}",
+        f"[done] discovery finished: accepted={total_stats['accepted']}, rejected={total_stats['rejected']}, "
+        f"duplicates={total_stats['duplicates']}, errors={total_stats['errors']}",
         args.quiet,
     )
     print(json.dumps(manifest, indent=2, sort_keys=True))

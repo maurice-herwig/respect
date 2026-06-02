@@ -20,7 +20,7 @@ The `.env` file is ignored by Git and should not be committed.
 
 ## GitHub Spectra Discovery
 
-The first dataset step discovers public `.spectra` files through the GitHub Search API. It stores metadata only; file contents are not downloaded in this step.
+The dataset script discovers public `.spectra` files through the GitHub Search API. For each size window, it downloads discovered candidates, checks whether Spectra can synthesize a controller, and stores only accepted files.
 
 Run:
 
@@ -35,4 +35,4 @@ python dataset\discover_github_spectra.py --dry-run
 python dataset\discover_github_spectra.py --resume
 ```
 
-Discovery outputs are written to `dataset/discovery/`, which is ignored by Git.
+Accepted files are written to `dataset/accepted/`. Temporary downloads and synthesis artifacts are written to `dataset/work/`, which is ignored by Git.
