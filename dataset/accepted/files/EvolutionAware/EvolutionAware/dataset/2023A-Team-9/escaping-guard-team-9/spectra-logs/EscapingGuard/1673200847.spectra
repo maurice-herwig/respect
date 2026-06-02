@@ -1,0 +1,55 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+type guardDim = Int(0..6);
+
+sys Dim robotX;
+sys Dim robotY;
+
+define T1X:=0;
+	   T1Y:=0;
+	   T2X:=7;
+	   T2Y:=7;
+	   T3X:=0;
+	   T3Y:=7;
+
+define obstacle1X:=2;
+	   obstacle1Y:=2;
+	   obstacle2X:=2;
+	   obstacle2Y:=3;
+	   obstacle3X:=2;
+	   obstacle3Y:=4;
+	   obstacle4X:=2;
+	   obstacle4Y:=5;
+	   
+define atT1:= robotX = T1X & robotY = T1Y;
+	   atT2:= robotX = T2X & robotY = T2Y;
+	   atT3:= robotX = T3X & robotY = T3Y;
+
+	   
+predicate moveDist(Dim pos):
+	pos+1 = next(pos) |
+	pos   = next(pos) |
+	pos-1 = next(pos);  
+
+
+env guardDim guardX;
+env guardDim guardY;
+
+
+gar ini robotX = 7;
+gar ini robotY = 0;
+
+gar alw moveDist(robotX) & moveDist(robotY);
+
+gar alwEv atT1;
+gar alwEv atT2;
+gar alwEv atT3;
+
+gar alw !(robotX = obstacle1X and robotY = obstacle1Y);
+gar alw !(robotX = obstacle2X and robotY = obstacle2Y);
+gar alw !(robotX = obstacle3X and robotY = obstacle3Y);
+gar alw !(robotX = obstacle4X and robotY = obstacle4Y);

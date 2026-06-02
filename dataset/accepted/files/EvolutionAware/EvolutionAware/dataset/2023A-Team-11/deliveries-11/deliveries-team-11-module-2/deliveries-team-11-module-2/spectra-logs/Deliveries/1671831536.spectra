@@ -1,0 +1,58 @@
+import "../imports/DwyerPatterns.spectra"
+
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+env DimX p0X;
+env DimY p0Y;
+env DimX p1X;
+env DimY p1Y;
+
+define r0AtPack := robotX0 = p0X & robotY0 = p0Y;
+		r1AtPack := robotX1 = p1X & robotY1 = p1Y;
+		r0AtCorner := robotX0 = 5 & robotY0 = 5;
+		r1AtCorner := robotX1 = 5 & robotY1 = 5;
+		
+predicate stayY(DimY dimy):
+next(dimy) = dimy;
+
+predicate stayX(DimX dimx):
+next(dimx) = dimx;
+
+
+
+asm alw !r0AtPack | r0Count >= 3 implies (stayX(p0X) & stayY(p0Y));
+asm alw !r1AtPack | r1Count >= 3 implies (stayX(p1X) & stayY(p1Y));
+asm alw r0AtPack & r0Count < 3 implies next(p0Y) != p0Y & next(p0Y) != 5;
+asm alw r1AtPack & r1Count < 3 implies next(p1Y) != p1Y & next(p1Y) != 5;
+
+counter r0Count(0..3){
+	r0Count = 0;
+	inc: r0AtPack;
+	reset: r0AtCorner;
+	overflow: false;
+}
+
+counter r1Count(0..3){
+	r1Count = 0;
+	inc: r1AtPack;
+	reset: r1AtCorner;
+	overflow: false;
+}
+
+
+
+
+
+

@@ -1,0 +1,35 @@
+import "../imports/DwyerPatterns.spectra"
+spec CatchingIntruder
+define D := 7;
+type Dim = Int(0..D);
+
+sys Dim robotX0;
+sys Dim robotY0;
+sys Dim robotX1;
+sys Dim robotY1;
+
+//initial positions of two robots
+gar ini robotX0 = 0 & robotY0 = 0;
+gar ini robotX1 = 7 & robotY1 = 0;
+
+env Dim intruderX;
+env Dim intruderY;
+
+//initially, robot is at the bottom row
+asm ini intruderY = 7;
+
+//the robots movement
+predicate moveDist(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);  
+
+predicate stay(Dim dim):
+next(dim) = dim;
+
+// make sure the robots only move to ajacent cell, but not diagonally
+gar alw (moveDist(robotX0) & stay(robotY0)) | (moveDist(robotY0) & stay(robotX0)) | (stay(robotX0) & stay(robotY0));
+gar alw (moveDist(robotX1) & stay(robotY1)) | (moveDist(robotY1) & stay(robotX1)) | (stay(robotX1) & stay(robotY1));
+
+// make sure also intruder moves the same way
+asm alw (moveDist(intruderX) & stay(intruderY)) | (moveDist(intruderY) & stay(intruderX)) | (stay(intruderX) & stay(intruderY));
