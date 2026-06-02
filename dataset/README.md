@@ -2,6 +2,69 @@
 
 This directory contains scripts for building the ReSpect evaluation dataset.
 
+## Natural-Language Generation
+
+`generate_nl_description.py` is a first standalone script for calling the
+Academic Cloud/GWD OpenAI-compatible chat-completions API. It is not connected
+to the Spectra dataset yet.
+
+Configure `.env`:
+
+```text
+ACADEMIC_CLOUD_API_KEY=<token>
+ACADEMIC_CLOUD_BASE_URL=https://chat-ai.academiccloud.de/v1
+ACADEMIC_CLOUD_MODEL=meta-llama-3.1-8b-instruct
+```
+
+Useful model examples from the GWDG documentation:
+
+```text
+meta-llama-3.1-8b-instruct
+llama-3.3-70b-instruct
+qwen3-coder-30b-a3b-instruct
+qwen3.5-27b
+qwen3.5-122b-a10b
+mistral-large-3-675b-instruct-2512
+devstral-2-123b-instruct-2512
+deepseek-r1-distill-llama-70b
+```
+
+The currently available models can be queried from Academic Cloud:
+
+```bash
+curl -X POST \
+  --url https://chat-ai.academiccloud.de/v1/models \
+  --header "Accept: application/json" \
+  --header "Authorization: Bearer <api_key>" \
+  --header "Content-Type: application/json"
+```
+
+Run with a direct prompt:
+
+```bash
+python dataset/generate_nl_description.py --prompt "Describe a traffic light controller in English."
+```
+
+Or with a prompt file:
+
+```bash
+python dataset/generate_nl_description.py --prompt-file prompt.txt
+```
+
+If `--temperature`, `--top-p`, or `--max-tokens` are omitted, they are not sent
+to the API and the Academic Cloud model defaults are used. Pass them only when
+you want an explicit override:
+
+```bash
+python dataset/generate_nl_description.py --prompt-file prompt.txt --temperature 0.2 --top-p 1.0 --max-tokens 2000
+```
+
+Outputs are written to `dataset/nl_descriptions/`:
+
+- `responses/<description_id>.txt`: generated natural-language text
+- `raw_responses/<description_id>.json`: raw API response
+- `descriptions.jsonl`: metadata including model, optional generation overrides, timing, usage, prompt hashes, and response paths
+
 ## Discovery
 
 `discover_github_spectra.py` discovers public `.spectra` files through the GitHub Search API. For each size window, it downloads discovered candidates, runs Spectra synthesis, and stores only files for which a controller can be synthesized.
