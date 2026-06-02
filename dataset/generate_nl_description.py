@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Standalone Academic Cloud/GWD chat-completion call for generating natural-language text.
+Generate natural-language descriptions with the Academic Cloud/GWD API.
 
-This first version is intentionally not connected to the Spectra dataset yet. It
-takes a prompt from the command line or a prompt file, calls an OpenAI-compatible
-Academic Cloud endpoint, and stores the generated text plus request metadata.
+The main mode reads accepted Spectra files from the dataset manifest and sends
+one independent chat-completion request per file. A standalone prompt mode is
+kept for API tests.
 """
 
 from __future__ import annotations
@@ -21,18 +21,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from prompts import DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT
+from prompts import DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT, PROMPTS
 
 
 DEFAULT_BASE_URL = "https://chat-ai.academiccloud.de/v1"
 DEFAULT_OUTPUT_DIR = "dataset/nl_descriptions"
+DEFAULT_ACCEPTED_MANIFEST = "dataset/accepted/accepted_manifest.jsonl"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate one natural-language description via Academic Cloud.")
-    source = parser.add_mutually_exclusive_group(required=True)
-    source.add_argument("--prompt", help="Prompt text to send as the user message.")
-    source.add_argument("--prompt-file", help="Path to a text file containing the user prompt.")
+    parser = argparse.ArgumentParser(description="Generate natural-language descriptions via Academic Cloud.")
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--prompt", help="Prompt text to send as the user message for --single-run.")
+    source.add_argument("--prompt-file", help="Path to a text file containing the user prompt for --single-run.")
+    parser.add_argument("--prompt-name", choices=sorted(PROMPTS), default="spectra_to_english_v1", help="Name of a prompt from dataset/prompts.py.")
+    parser.add_argument("--accepted-manifest", default=DEFAULT_ACCEPTED_MANIFEST, help="Path to accepted Spectra manifest JSONL.")
+    parser.add_argument("--single-run", action="store_true", help="Run only one standalone prompt request instead of the dataset mode.")
+    parser.add_argument("--resume", action="store_true", help="Skip dataset entries that already have a successful matching description.")
+    parser.add_argument("--limit", type=int, default=None, help="Maximum number of dataset entries to process.")
     parser.add_argument("--system-prompt", default=DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT, help="System message for the model.")
     parser.add_argument("--model", default=os.environ.get("ACADEMIC_CLOUD_MODEL"), help="Model name.")
     parser.add_argument(
@@ -76,10 +82,69 @@ def chat_completions_url(base_url: str) -> str:
 
 
 def read_prompt(args: argparse.Namespace) -> tuple[str, str | None]:
+    if args.prompt_name is not None:
+        return PROMPTS[args.prompt_name], None
     if args.prompt is not None:
         return args.prompt, None
     prompt_path = Path(args.prompt_file)
     return prompt_path.read_text(encoding="utf-8"), str(prompt_path)
+
+
+def render_prompt(template: str, spectra_code: str | None = None) -> str:
+    if "{spectra_code}" in template:
+        if spectra_code is None:
+            raise RuntimeError("Selected prompt requires Spectra code, but no Spectra file was provided.")
+        return template.format(spectra_code=spectra_code)
+    return template
+
+
+def load_jsonl(path: Path) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    if not path.is_file():
+        return records
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            records.append(json.loads(line))
+    return records
+
+
+def generation_config_key(
+    *,
+    dataset_id: str | None,
+    prompt_name: str | None,
+    prompt_sha256: str,
+    system_prompt_sha256: str,
+    model: str,
+    temperature: float | None,
+    top_p: float | None,
+    max_tokens: int | None,
+) -> str:
+    return sha256_text(
+        json.dumps(
+            {
+                "dataset_id": dataset_id,
+                "prompt_name": prompt_name,
+                "prompt_sha256": prompt_sha256,
+                "system_prompt_sha256": system_prompt_sha256,
+                "model": model,
+                "temperature": temperature,
+                "top_p": top_p,
+                "max_tokens": max_tokens,
+            },
+            sort_keys=True,
+        )
+    )
+
+
+def load_completed_generation_keys(output_dir: Path) -> set[str]:
+    manifest_file = output_dir / "descriptions.jsonl"
+    keys: set[str] = set()
+    for record in load_jsonl(manifest_file):
+        if record.get("api_status") == "success" and record.get("generation_config_key"):
+            keys.add(record["generation_config_key"])
+    return keys
 
 
 def call_academic_cloud(
@@ -169,19 +234,17 @@ def write_outputs(
     return manifest_record
 
 
-def main() -> int:
-    load_dotenv(Path(".env"))
-    args = parse_args()
-
-    api_key = os.environ.get("ACADEMIC_CLOUD_API_KEY")
-    if not api_key:
-        print("Missing ACADEMIC_CLOUD_API_KEY. Add it to .env or the environment.", file=sys.stderr)
-        return 2
-    if not args.model:
-        print("Missing model. Set ACADEMIC_CLOUD_MODEL in .env or pass --model.", file=sys.stderr)
-        return 2
-
-    user_prompt, prompt_file = read_prompt(args)
+def generate_one(
+    *,
+    args: argparse.Namespace,
+    api_key: str,
+    user_prompt: str,
+    prompt_name: str | None,
+    prompt_file: str | None,
+    dataset_record: dict[str, Any] | None,
+    spectra_file: str | None,
+    spectra_sha256: str | None,
+) -> dict[str, Any]:
     request_started_at = utc_now()
     started = time.perf_counter()
     response = call_academic_cloud(
@@ -199,19 +262,23 @@ def main() -> int:
     duration_ms = int((time.perf_counter() - started) * 1000)
     response_text = extract_response_text(response)
 
-    description_id = sha256_text(
-        json.dumps(
-            {
-                "model": args.model,
-                "system_prompt": args.system_prompt,
-                "user_prompt_sha256": sha256_text(user_prompt),
-                "request_started_at": request_started_at,
-            },
-            sort_keys=True,
-        )
-    )[:24]
+    prompt_sha256 = sha256_text(user_prompt)
+    system_prompt_sha = sha256_text(args.system_prompt)
+    dataset_id = dataset_record.get("dataset_id") if dataset_record else None
+    config_key = generation_config_key(
+        dataset_id=dataset_id,
+        prompt_name=prompt_name,
+        prompt_sha256=prompt_sha256,
+        system_prompt_sha256=system_prompt_sha,
+        model=args.model,
+        temperature=args.temperature,
+        top_p=args.top_p,
+        max_tokens=args.max_tokens,
+    )
+    description_id = config_key[:24]
     metadata = {
         "description_id": description_id,
+        "generation_config_key": config_key,
         "provider": "academic_cloud_gwd",
         "base_url": args.base_url,
         "model": args.model,
@@ -221,9 +288,16 @@ def main() -> int:
         "used_model_default_temperature": args.temperature is None,
         "used_model_default_top_p": args.top_p is None,
         "used_model_default_max_tokens": args.max_tokens is None,
-        "system_prompt_sha256": sha256_text(args.system_prompt),
-        "user_prompt_sha256": sha256_text(user_prompt),
+        "system_prompt_sha256": system_prompt_sha,
+        "user_prompt_sha256": prompt_sha256,
+        "prompt_name": prompt_name,
         "prompt_file": prompt_file,
+        "dataset_id": dataset_id,
+        "source_spectra_file": spectra_file,
+        "source_spectra_sha256": spectra_sha256,
+        "source_repository_full_name": dataset_record.get("repository_full_name") if dataset_record else None,
+        "source_path": dataset_record.get("path") if dataset_record else None,
+        "thread_isolation": "independent_chat_completion_request",
         "request_started_at": request_started_at,
         "response_received_at": response_received_at,
         "duration_ms": duration_ms,
@@ -231,14 +305,118 @@ def main() -> int:
         "finish_reason": (response.get("choices") or [{}])[0].get("finish_reason"),
         "usage": response.get("usage"),
     }
-    manifest_record = write_outputs(
+    return write_outputs(
         output_dir=Path(args.output_dir),
         response_text=response_text,
         raw_response=response,
         metadata=metadata,
     )
+
+
+def run_single(args: argparse.Namespace, api_key: str) -> int:
+    if args.prompt_name and args.prompt is None and args.prompt_file is None:
+        user_prompt = render_prompt(PROMPTS[args.prompt_name])
+        prompt_file = None
+    else:
+        user_prompt, prompt_file = read_prompt(args)
+    manifest_record = generate_one(
+        args=args,
+        api_key=api_key,
+        user_prompt=user_prompt,
+        prompt_name=args.prompt_name,
+        prompt_file=prompt_file,
+        dataset_record=None,
+        spectra_file=None,
+        spectra_sha256=None,
+    )
     print(json.dumps(manifest_record, indent=2, sort_keys=True))
     return 0
+
+
+def run_dataset(args: argparse.Namespace, api_key: str) -> int:
+    accepted_records = load_jsonl(Path(args.accepted_manifest))
+    if not accepted_records:
+        print(f"No accepted records found in {args.accepted_manifest}.", file=sys.stderr)
+        return 2
+
+    completed_keys = load_completed_generation_keys(Path(args.output_dir)) if args.resume else set()
+    template = PROMPTS[args.prompt_name]
+    processed = 0
+    skipped = 0
+    errors = 0
+
+    for record in accepted_records:
+        if args.limit is not None and processed >= args.limit:
+            break
+
+        spectra_file = Path(record["accepted_file"])
+        spectra_code = spectra_file.read_text(encoding="utf-8")
+        user_prompt = render_prompt(template, spectra_code=spectra_code)
+        spectra_sha256 = sha256_text(spectra_code)
+        config_key = generation_config_key(
+            dataset_id=record.get("dataset_id"),
+            prompt_name=args.prompt_name,
+            prompt_sha256=sha256_text(user_prompt),
+            system_prompt_sha256=sha256_text(args.system_prompt),
+            model=args.model,
+            temperature=args.temperature,
+            top_p=args.top_p,
+            max_tokens=args.max_tokens,
+        )
+        if config_key in completed_keys:
+            skipped += 1
+            print(f"[skip] {record.get('dataset_id')} already generated for current model/settings/prompt", file=sys.stderr)
+            continue
+
+        print(f"[generate] {record.get('dataset_id')} from {spectra_file}", file=sys.stderr)
+        try:
+            generate_one(
+                args=args,
+                api_key=api_key,
+                user_prompt=user_prompt,
+                prompt_name=args.prompt_name,
+                prompt_file=None,
+                dataset_record=record,
+                spectra_file=str(spectra_file),
+                spectra_sha256=spectra_sha256,
+            )
+            completed_keys.add(config_key)
+            processed += 1
+        except Exception as exc:
+            errors += 1
+            print(f"[error] {record.get('dataset_id')}: {exc}", file=sys.stderr)
+
+    summary = {
+        "accepted_records": len(accepted_records),
+        "generated": processed,
+        "skipped": skipped,
+        "errors": errors,
+        "output_dir": args.output_dir,
+        "model": args.model,
+        "prompt_name": args.prompt_name,
+        "temperature": args.temperature,
+        "top_p": args.top_p,
+        "max_tokens": args.max_tokens,
+    }
+    print(json.dumps(summary, indent=2, sort_keys=True))
+    return 0 if errors == 0 else 1
+
+
+def main() -> int:
+    load_dotenv(Path(".env"))
+    args = parse_args()
+
+    api_key = os.environ.get("ACADEMIC_CLOUD_API_KEY")
+    if not api_key:
+        print("Missing ACADEMIC_CLOUD_API_KEY. Add it to .env or the environment.", file=sys.stderr)
+        return 2
+    if not args.model:
+        print("Missing model. Set ACADEMIC_CLOUD_MODEL in .env or pass --model.", file=sys.stderr)
+        return 2
+
+    if args.single_run or args.prompt is not None or args.prompt_file is not None:
+        return run_single(args, api_key)
+    return run_dataset(args, api_key)
 
 
 if __name__ == "__main__":
