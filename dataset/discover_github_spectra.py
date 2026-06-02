@@ -77,7 +77,7 @@ class DiscoveryRecord:
     repository_api_url: str
     repository_default_branch: str | None
     repository_fork: bool | None
-    score: float | None
+    github_ranking_score: float | None
 
     @property
     def dedupe_key(self) -> str:
@@ -521,7 +521,7 @@ def record_from_item(item: dict[str, Any], query: str, discovered_at: str) -> Di
         repository_api_url=repository["url"],
         repository_default_branch=repository.get("default_branch"),
         repository_fork=repository.get("fork"),
-        score=item.get("score"),
+        github_ranking_score=item.get("score"),
     )
 
 
@@ -593,6 +593,54 @@ def download_file_content(
     return decode_github_content(content_record)
 
 
+def fetch_repo_license(
+    record: DiscoveryRecord,
+    headers: dict[str, str],
+    timeout: float,
+    rate_limit_mode: str,
+    rate_limit_buffer_seconds: float,
+    license_cache: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    if record.repository_full_name in license_cache:
+        return license_cache[record.repository_full_name]
+
+    license_url = f"{record.repository_api_url}/license"
+    try:
+        data = request_json(
+            license_url,
+            headers,
+            timeout,
+            rate_limit_mode,
+            rate_limit_buffer_seconds,
+        )
+    except RuntimeError as exc:
+        text = str(exc)
+        if "HTTP 404" in text:
+            info = {
+                "license_found": False,
+                "license_key": None,
+                "license_name": None,
+                "license_spdx_id": None,
+                "license_url": license_url,
+                "license_html_url": None,
+            }
+            license_cache[record.repository_full_name] = info
+            return info
+        raise
+
+    license_data = data.get("license") or {}
+    info = {
+        "license_found": True,
+        "license_key": license_data.get("key"),
+        "license_name": license_data.get("name"),
+        "license_spdx_id": license_data.get("spdx_id"),
+        "license_url": license_data.get("url"),
+        "license_html_url": data.get("html_url"),
+    }
+    license_cache[record.repository_full_name] = info
+    return info
+
+
 def run_synthesis_check(
     cli_wrapper: Path,
     spectra_file: Path,
@@ -647,6 +695,7 @@ def process_candidate(
     work_dir: Path,
     manifest_path: Path,
     accepted_keys: set[str],
+    license_cache: dict[str, dict[str, Any]],
 ) -> str:
     record = record_from_item(item, query, discovered_at)
     if record.dedupe_key in accepted_keys:
@@ -689,6 +738,21 @@ def process_candidate(
                 progress(f"[synthesis] first output line: {raw_output[0]}", args.quiet)
             return str(status or "rejected")
 
+        progress(f"[license] fetching license for {record.repository_full_name}", args.quiet)
+        license_info = fetch_repo_license(
+            record,
+            headers,
+            args.timeout,
+            args.rate_limit_mode,
+            args.rate_limit_buffer_seconds,
+            license_cache,
+        )
+        progress(
+            f"[license] license_found={license_info['license_found']} "
+            f"spdx={license_info['license_spdx_id']} for {record.repository_full_name}",
+            args.quiet,
+        )
+
         accepted_file = accepted_file_path(accepted_dir, record, current_id)
         accepted_file.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(candidate_file, accepted_file)
@@ -714,6 +778,7 @@ def process_candidate(
             "cli_status": status,
             "cli_timeout_seconds": args.cli_timeout,
             "controller_output_dir": controller_output_dir,
+            **license_info,
         }
         append_jsonl(manifest_path, accepted_record)
         accepted_keys.add(record.dedupe_key)
@@ -734,6 +799,7 @@ def process_query_results(
     work_dir: Path,
     manifest_path: Path,
     accepted_keys: set[str],
+    license_cache: dict[str, dict[str, Any]],
 ) -> dict[str, int]:
     pages = min((total_count + args.per_page - 1) // args.per_page, SEARCH_RESULT_LIMIT // args.per_page)
     stats = {
@@ -771,6 +837,7 @@ def process_query_results(
                     work_dir,
                     manifest_path,
                     accepted_keys,
+                    license_cache,
                 )
             except Exception as exc:  # Keep the crawl moving; rejected candidates are discarded.
                 stats["errors"] += 1
@@ -838,6 +905,7 @@ def main() -> int:
         "errors": 0,
     }
     processed_queries: list[dict[str, Any]] = []
+    license_cache: dict[str, dict[str, Any]] = {}
 
     for base_query in base_queries:
         progress(f"[base-query] processing {base_query}", args.quiet)
@@ -891,6 +959,7 @@ def main() -> int:
                     work_dir,
                     manifest_path,
                     accepted_keys,
+                    license_cache,
                 )
                 total_stats["queries_processed"] += 1
                 for key in ("items", "accepted", "duplicates", "rejected", "errors"):
@@ -936,6 +1005,7 @@ def main() -> int:
         "work_dir": str(work_dir),
         "stats": total_stats,
         "accepted_records_total": len(accepted_keys),
+        "license_cache_repositories": len(license_cache),
         "per_page": args.per_page,
         "max_results_per_query": args.max_results_per_query,
         "sleep_seconds": args.sleep_seconds,

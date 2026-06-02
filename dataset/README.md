@@ -67,6 +67,16 @@ Accepted files are written to `dataset/accepted/`:
 - `accepted_manifest.jsonl`: metadata for accepted files only
 - `last_run_manifest.json`: summary of the latest run
 
+Accepted manifest records include the GitHub search score as
+`github_ranking_score` and repository license metadata:
+
+- `license_found`
+- `license_key`
+- `license_name`
+- `license_spdx_id`
+- `license_url`
+- `license_html_url`
+
 Temporary downloads and controller outputs are written to `dataset/work/` and removed after rejected candidates. Use `--keep-controller-output` to preserve controller artifacts for accepted files under `dataset/accepted/controllers/`.
 
 Progress messages are printed to stderr during partitioning, downloads,
