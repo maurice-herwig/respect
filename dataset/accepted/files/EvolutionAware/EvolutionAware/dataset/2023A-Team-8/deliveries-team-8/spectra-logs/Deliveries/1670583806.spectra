@@ -1,0 +1,61 @@
+import "../imports/DwyerPatterns.spectra"
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+
+env Coord elevatorY;
+env DimX lamp_A_X;
+env DimY lamp_A_Y;
+env DimX lamp_B_X;
+env DimY lamp_B_Y;
+
+/**
+ * moving between floors using elevator
+ */
+ 
+ //robots starts on the ground floor
+ gar ini robotY0 = 0;
+ gar ini robotY1 = 0;
+ 
+ // starting point of the elevator
+//asm ini elevatorY=0;
+//
+//predicate moveElevator(Coord pos):
+//  pos+1 = next(pos) |
+//  pos-1 = next(pos); 
+//
+//// The elevator moves just one floor up or down in every step. 
+//asm alw  moveElevator(elevatorY);
+
+// checks if robots in elevator
+define inElevatorA := (robotX0=0) & (robotY0=elevatorY);
+define inElevatorB := (robotX1=0) & (robotY1=elevatorY);
+
+// when robot is in the elevator it can only moves with the elevator or to stay in the same floor
+// we assumed that robot can't stay in the elevator column if it is not in the elevator 
+predicate moveInElevator (DimX robX, DimY robY, Coord elevatorY):
+	((robY = next(robY)) & (robX+1 = next(robX))) |
+	(next(elevatorY) = next(robY) &  (robX=0));
+
+gar alw inElevatorA -> moveInElevator(robotX0,robotY0, elevatorY );
+gar alw inElevatorB -> moveInElevator(robotX1,robotY1, elevatorY );
+
+
+
+
+
+
+
+
+

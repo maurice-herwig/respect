@@ -1,0 +1,17 @@
+The Arbiter system interacts with its environment through four boolean variables: two environment-controlled inputs `a`, `r1`, and `r2`, and two system-controlled outputs `g1` and `g2`. 
+
+The environment is assumed to behave in such a way that whenever `g2` is false, `a` is true. 
+
+The system must guarantee the following behavior: 
+- Whenever `r1` is true, the system must eventually respond with `g1` being true.
+- Whenever `r2` is true, the system must eventually respond with `g2` being true.
+- If `a` is false, then both `g1` and `g2` must be false.
+- At all times, either `g1` or `g2` (but not both) must be false.
+
+Initially, the system is in a state where it is ready to respond to requests. 
+The system's response to requests follows a specific pattern: 
+- When a request is not present, the system remains in the ready state.
+- When a request is present and the system responds, it remains in the ready state.
+- When a request is present and the system does not respond, it moves to a pending state.
+- From the pending state, if the system responds, it returns to the ready state; otherwise, it remains in the pending state.
+- The system must infinitely often be in the ready state.

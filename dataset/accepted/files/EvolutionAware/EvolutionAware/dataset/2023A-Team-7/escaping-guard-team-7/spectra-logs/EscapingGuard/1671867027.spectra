@@ -1,0 +1,68 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+// the positions of guardX and guardY refer to the top left corner of the guard's square figure
+env Dim guardX;
+env Dim guardY;
+
+define
+	atTarget1 := (robotX = 0) and (robotY = 0);
+	atTarget2 := (robotX = 0) and (robotY = D);
+	atTarget3 := (robotX = D) and (robotY = D);
+	atStart := (robotX = D) and (robotY = 0);
+
+counter turnsCnt(0..3) {
+	// initialize at 0
+	turnsCnt = 0;
+	
+	// increment always
+	inc: turnsCnt < 3;
+
+	// reset to 0 when turnsCnt is 3
+	reset: turnsCnt = 3;
+	
+	overflow: false;
+}
+
+predicate moveDist(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos); 
+  
+predicate stationaryPos(Dim posX, Dim posY):
+	(posX = next(posX)) and (posY = next(posY));
+
+gar robotMoves:
+  always moveDist(robotX) & moveDist(robotY);
+
+gar robotRespectsEnvironmentTurn:
+	always turnsCnt = 0 -> stationaryPos(robotX, robotY);
+
+asm guardMoves:
+	always moveDist(guardX) & moveDist(guardY);
+	
+asm guardRespectsRobotsTurn:
+	always turnsCnt != 0 -> stationaryPos(guardX, guardY);
+
+gar robotInitAtStart:
+	ini atStart;
+	
+asm guardInitAtTopLeft:
+	ini (guardX = 0) and (guardY = 0);
+
+// robot always eventually visits all targets
+gar visitsTarget1:
+	alwEv atTarget1;
+	
+gar visitsTarget2:
+	alwEv atTarget2;
+	
+gar visitsTarget3:
+	alwEv atTarget3;

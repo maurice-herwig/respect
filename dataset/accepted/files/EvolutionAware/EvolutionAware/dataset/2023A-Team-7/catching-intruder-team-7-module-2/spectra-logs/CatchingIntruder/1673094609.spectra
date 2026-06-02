@@ -1,0 +1,53 @@
+import "../imports/DwyerPatterns.spectra"
+spec CatchingIntruder
+define D := 7;
+type Dim = Int(0..D);
+
+sys Dim robotX0;
+sys Dim robotY0;
+sys Dim robotX1;
+sys Dim robotY1;
+
+env Dim intruderX;
+env Dim intruderY;
+
+predicate moveDist(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);
+  
+predicate stationaryDim(Dim pos):
+	pos = next(pos);
+  
+  
+/* Basic Movement Requirements */
+gar robot0Moves:
+  always (moveDist(robotX0) and moveDist(robotY0)) and (stationaryDim(robotX0) or stationaryDim(robotY0)); 
+  
+gar robot1Moves:
+  always (moveDist(robotX1) and moveDist(robotY1)) and (stationaryDim(robotX1) or stationaryDim(robotY1)); 
+  
+asm intruderMoves:
+  always (moveDist(intruderX) and moveDist(intruderY)) and (stationaryDim(intruderX) or stationaryDim(intruderY));
+  
+/* Initial Position Requirements */
+
+gar robot0Init:
+	ini (robotX0 = 0) and (robotY0 = 0);
+	
+gar robot1Init:
+	ini (robotX1 = 7) and (robotY1 = 0);
+	
+asm intruderInit:
+	ini (intruderY = 7);
+	
+/* MODULE 2 - Obstacles */
+
+predicate atObstacle(Dim x, Dim y):
+	(y = 1) and ((x = 2) or (x = 3) or (x = 4) or (x = 5));
+
+gar robotsAvoidObstacles:
+	always !atObstacle(robotX0, robotY0) and !atObstacle(robotX1, robotY1);
+
+asm intruderAvoidsObstacles:
+	always !atObstacle(intruderX, intruderY);

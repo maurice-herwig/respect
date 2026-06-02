@@ -1,0 +1,39 @@
+import "DwyerPatterns.spectra"
+
+spec Robot
+
+define NumObstacles := 14;
+define DX := 7;
+define DY := 7;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+
+sys DimX robotX;
+sys DimY robotY;
+
+sys {UP, DOWN, LEFT, RIGHT, STAY} move;
+gar alw move=UP implies (next(robotY) = robotY - 1) & (next(robotX) = robotX);
+gar alw move=DOWN implies (next(robotY) = robotY + 1) & (next(robotX) = robotX);
+gar alw move=LEFT implies (next(robotY) = robotY) & (next(robotX) = robotX - 1);
+gar alw move=RIGHT implies (next(robotY) = robotY) & (next(robotX) = robotX + 1);
+gar alw move=STAY implies (next(robotY) = robotY) & (next(robotX) = robotX);
+//initial state
+gar ini (robotX=0) & (robotY=0);
+//only move inside the board
+gar alw (robotX=0 implies move!=LEFT) &
+		(robotX=DX implies move!=RIGHT) &
+		(robotY=0 implies move!=UP) &
+		(robotY=DY implies move!=DOWN);
+//stay away from the obstacles
+gar alw ((robotX=1)&(robotY<7) implies move!=RIGHT) &
+		((robotX=2)&(robotY=7) implies move!=UP) &
+		((robotX=3)&(robotY<7) implies move!=LEFT) &
+		((robotX=4)&(robotY>0) implies move!=RIGHT) &
+		((robotX=6)&(robotY>0) implies move!=LEFT) &
+		((robotX=5)&(robotY=0) implies move!=DOWN);
+		
+//stay when done
+gar alw ((robotX = DX) & (robotY = DY)) implies next(move) = STAY;
+//make sure we get to the end
+gar alwEv (robotX=DX)&(robotY=DY);

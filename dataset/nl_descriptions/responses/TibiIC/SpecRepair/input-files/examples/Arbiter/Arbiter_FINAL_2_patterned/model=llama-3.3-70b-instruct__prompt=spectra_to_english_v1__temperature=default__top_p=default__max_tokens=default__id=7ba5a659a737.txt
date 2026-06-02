@@ -1,0 +1,16 @@
+The Arbiter system interacts with its environment through four boolean variables: two environment-controlled inputs `a`, `r1`, and `r2`, and two system-controlled outputs `g1` and `g2`. 
+
+The environment is assumed to periodically set `a` to true, indicating that the system should respond to this signal. 
+
+The system guarantees the following behavior: 
+- Whenever `r1` is true, the system will eventually set `g1` to true.
+- Whenever `r2` is true, the system will eventually set `g2` to true.
+- As long as `a` is false, the system will keep both `g1` and `g2` false.
+- At any given time, the system will not set both `g1` and `g2` to true simultaneously.
+
+Initially, the system is in a state where it is ready to respond to requests from the environment. 
+The system's behavior can be described by a state machine with two states. 
+In the initial state, if a request is not present or if a request is present and granted, the system remains in this state. 
+If a request is present and not granted, the system transitions to the next state. 
+In this next state, if the grant is given, the system returns to the initial state; otherwise, it remains in this state. 
+The system will infinitely often return to its initial state, ensuring that it periodically resets and is ready to respond to new requests.

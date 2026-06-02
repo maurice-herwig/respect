@@ -1,0 +1,47 @@
+import "../imports/DwyerPatterns.spectra"
+spec CatchingIntruder
+define D := 7;
+type Dim = Int(0..D);
+
+sys Dim robotX0;
+sys Dim robotY0;
+sys Dim robotX1;
+sys Dim robotY1;
+
+//module 2 intruder movement
+env Dim intruderX;
+env Dim intruderY;
+
+predicate moveDist(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);
+
+
+predicate stay(Dim dim):
+	next(dim) = dim;
+	
+
+asm intruderStartBottom:
+	ini intruderY = 7;
+
+type four = Int(0..4);
+env four dontMove;
+asm ini dontMove = 0;
+
+asm intruderMustInfinitelyManyTimesStayinPlaceFor4Times:
+	alwEv dontMove = 4;
+
+//intruder movement counter
+asm alw !stay(intruderX) and stay(intruderY) -> next(dontMove) = 0;
+asm alw stay(intruderX) and stay(intruderY) -> next(dontMove) = dontMove + 1;
+
+//don't collide with obstacles just like the robots
+asm dontCollideIntruder:
+	alw !(intruderX = 2 and intruderY = 1) and !(intruderX = 4 and intruderY = 1)  and !(intruderX = 3 and intruderY = 1) and !(intruderX = 5 and intruderY = 1);
+	
+asm intruderMovement:
+	alw dontMove != 4 ->  (moveDist(intruderY) and stay(intruderX)) or (moveDist(intruderX) and stay(intruderY)) or (stay(intruderX) and stay(intruderY));
+	
+asm intruderAppearsAtBottom:
+	alw dontMove = 4 -> next(intruderY) = 7 and !(stay(intruderX) and stay(intruderY));

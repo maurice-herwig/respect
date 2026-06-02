@@ -1,0 +1,63 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+//module 4 - robot never touches guard
+env Dim guardX; 
+env Dim guardY; //these will hold the coordinates for the top left corner of the guard
+
+gar robotDoesntTouchGuard:
+	alw (robotX != guardX | robotY != guardY)
+	& (robotX != guardX+1 | robotY != guardY)
+	& (robotX != guardX | robotY != guardY+1)
+	& (robotX != guardX+1 | robotY != guardY+1);
+	
+	
+predicate moveDist(Dim pos):
+	pos+1= next(pos) | pos= next(pos) | pos-1= next(pos);
+	
+predicate staysInPlace(Dim posx, Dim posy):
+	posx = next(posx) & posy = next(posy);
+	
+monitor Int(0..2) turnNum {
+	ini turnNum = 0;
+	alw ((turnNum = 0 -> next(turnNum) = 1) 
+		& (turnNum = 1 -> next(turnNum) = 2)
+		& (turnNum = 2 -> next(turnNum) = 0));
+}
+
+asm guardMovesOneTurnOutOfThree:
+	alw ((turnNum = 0 | turnNum = 1) -> staysInPlace(guardX, guardY)
+	& moveDist(guardX) & moveDist(guardY));
+	
+asm guardMovesInDirectionOfRobot:
+	alw ((turnNum = 2 & (robotX > guardX + 1)) -> next(guardX) = guardX + 1)
+	& ((turnNum = 2 & (robotY > guardY + 1)) -> next(guardY) = guardY + 1)
+	& ((turnNum = 2 & (robotX < guardX)) -> next(guardX) = guardX - 1)
+	& ((turnNum = 2 & (robotX < guardY)) -> next(guardY) = guardY - 1);
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

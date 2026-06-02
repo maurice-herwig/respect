@@ -1,0 +1,62 @@
+import "../imports/DwyerPatterns.spectra"
+// --- 
+// --- --- ---
+// Module 1 - Movement
+
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+env DimY elvY;
+define elvX := 0;
+
+asm alwEv elvY = 0;
+asm alwEv elvY = 5;
+
+gar ini robotY0 = 0;
+gar ini robotY1 = 0;
+
+predicate samePlace(DimX x1, DimY y1, DimX x2, DimY y2):
+	x1 = x2 & y1 = y2;
+	
+gar alw !samePlace(robotX0, robotY0, robotX1, robotY1);
+
+predicate moveDistX(DimX pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);  
+  
+predicate moveDistY(DimY pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);  
+  
+predicate stayY(DimY dimy):
+next(dimy) = dimy;
+
+predicate stayX(DimX dimx):
+next(dimx) = dimx;
+
+define r0atElv := robotX0 = elvX & robotY0 =  elvY;
+		r1atElv := robotX1 = elvX & robotY1 =  elvY;
+		move0WithElv := next(robotY0) = next(elvY) & next(robotX0) = elvX;
+		move1WithElv := next(robotY1) = next(elvY) & next(robotX1) = elvX;
+				
+gar alw !r0atElv implies moveDistX(robotX0) & stayY(robotY0);
+gar alw r0atElv implies (move0WithElv) | (moveDistX(robotX0) & stayY(robotY0));
+gar alw !r1atElv implies moveDistX(robotX1) & stayY(robotY1);
+gar alw r1atElv implies (move1WithElv) | (moveDistX(robotX0) & stayY(robotY0));
+		
+
+
+

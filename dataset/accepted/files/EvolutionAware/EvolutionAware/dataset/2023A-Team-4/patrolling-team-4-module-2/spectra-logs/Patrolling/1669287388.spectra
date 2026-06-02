@@ -1,0 +1,52 @@
+import "../imports/DwyerPatterns.spectra"
+spec Patrolling
+
+define DX := 4;
+define DY := 4;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+
+sys DimX robotX;
+sys DimY robotY;
+
+env DimX Obstacle1X;
+env DimY Obstacle1Y;
+env DimX Obstacle2X;
+env DimY Obstacle2Y;
+env DimX Obstacle3X;
+env DimY Obstacle3Y;
+env DimX Obstacle4X;
+env DimY Obstacle4Y;
+env DimX Obstacle5X;
+env DimY Obstacle5Y;
+
+asm alw Obstacle1X = 1;
+asm alw Obstacle1Y = 1;
+asm alw Obstacle2X = 3;
+asm alw Obstacle2Y = 3;
+asm alw Obstacle3X = 2;
+asm alw Obstacle3Y = 1;
+asm alw Obstacle4X = 0;
+asm alw Obstacle4Y = 3;
+asm alw Obstacle5X = 3;
+asm alw Obstacle5Y = 4;
+
+predicate moveDist(DimX pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);
+  
+ gar robotAlwaysMove: always (moveDist(robotX) & moveDist(robotY));
+ 
+ predicate robotNotHittingObstacles(DimX robX, DimY robY, DimX obsX, DimY obsY):
+ 	robX != obsX and robY != obsY;
+ 
+ gar alw robotNotHittingObstacles(robotX, robotY, Obstacle1X, Obstacle1Y);
+ gar alw robotNotHittingObstacles(robotX, robotY, Obstacle2X, Obstacle2Y);
+ gar alw robotNotHittingObstacles(robotX, robotY, Obstacle3X, Obstacle3Y);
+ gar alw robotNotHittingObstacles(robotX, robotY, Obstacle4X, Obstacle4Y);
+ gar alw robotNotHittingObstacles(robotX, robotY, Obstacle5X, Obstacle5Y);
+ 
+ 
+ 	
