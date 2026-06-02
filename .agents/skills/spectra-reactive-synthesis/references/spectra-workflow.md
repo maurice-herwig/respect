@@ -105,8 +105,8 @@ gar alwEv carB & greenB;
 
 ## Useful Local Sources
 
-- `examples/A1_firstController/TrafficA1.spectra`
-- `examples/A2_unrealizability/TrafficA2b.spectra`
-- `examples/L1_firstSpec/`
-- `examples/L2_defsArrays/`
-- `examples/L3_patterns/`
+- `assets/examples/A1_firstController/TrafficA1.spectra`
+- `assets/examples/A2_unrealizability/TrafficA2b.spectra`
+- `assets/examples/L1_firstSpec/`
+- `assets/examples/L2_defsArrays/`
+- `assets/examples/L3_patterns/`
