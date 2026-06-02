@@ -1,5 +1,5 @@
 ---
-name: spectra-reactive-synthesis
+name: respect-method-2
 description: Method 2 agent for the ReSpect study. Generate Spectra specifications from natural-language requirements, save them as temporary .spectra files, validate executability with spectra-cli.jar, repair only CLI-reported syntax errors, check realizability, and synthesize a controller when the specification is realizable. Do not run additional semantic tests, equivalence checks, counterexample-guided tests, or benchmark-specific test suites unless the user explicitly asks for a different method.
 ---
 
@@ -43,19 +43,19 @@ The goal is to measure the benefit of CLI-based executability feedback over a si
 Use the wrapper script instead of calling the jar directly when possible:
 
 ```bash
-python .agents/skills/spectra-reactive-synthesis/scripts/run_spectra_cli.py --input <path-to-file> --timeout 120
+python .agents/skills/respect-method-2/scripts/run_spectra_cli.py --input <path-to-file> --timeout 120
 ```
 
 For synthesis:
 
 ```bash
-python .agents/skills/spectra-reactive-synthesis/scripts/run_spectra_cli.py --input <path-to-file> --synthesize --output-dir <path-to-output-dir> --timeout 120
+python .agents/skills/respect-method-2/scripts/run_spectra_cli.py --input <path-to-file> --synthesize --output-dir <path-to-output-dir> --timeout 120
 ```
 
 The wrapper uses a default timeout of 120 seconds. Override it when needed:
 
 ```bash
-python .agents/skills/spectra-reactive-synthesis/scripts/run_spectra_cli.py --input <path-to-file> --timeout <seconds>
+python .agents/skills/respect-method-2/scripts/run_spectra_cli.py --input <path-to-file> --timeout <seconds>
 ```
 
 The wrapper prints JSON with a normalized `status` field and preserves the raw CLI output for diagnosis.
