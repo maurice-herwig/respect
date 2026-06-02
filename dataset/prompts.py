@@ -16,6 +16,7 @@ Task:
 Translate the following Spectra specification into a clear English natural-language requirements description.
 
 Instructions:
+- Write the description the way a human would naturally describe the intended reactive-system behavior.
 - Preserve the specified behavior as precisely as possible.
 - Identify the environment-controlled inputs and system-controlled outputs.
 - Explain the assumptions on the environment.
