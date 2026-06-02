@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -21,7 +22,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from prompts import DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT, PROMPTS
+try:
+    from .prompts import DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT, PROMPTS
+except ImportError:
+    from prompts import DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT, PROMPTS
 
 
 DEFAULT_BASE_URL = "https://chat-ai.academiccloud.de/v1"
@@ -147,6 +151,57 @@ def load_completed_generation_keys(output_dir: Path) -> set[str]:
     return keys
 
 
+def safe_path_part(value: str, max_length: int = 120) -> str:
+    safe = re.sub(r"[^A-Za-z0-9._=-]+", "_", value).strip("_")
+    return (safe or "value")[:max_length]
+
+
+def generation_variant_name(
+    *,
+    model: str,
+    prompt_name: str | None,
+    temperature: float | None,
+    top_p: float | None,
+    max_tokens: int | None,
+    generation_config_key: str,
+) -> str:
+    parts = [
+        f"model={safe_path_part(model, 80)}",
+        f"prompt={safe_path_part(prompt_name or 'adhoc', 60)}",
+        f"temperature={temperature if temperature is not None else 'default'}",
+        f"top_p={top_p if top_p is not None else 'default'}",
+        f"max_tokens={max_tokens if max_tokens is not None else 'default'}",
+        f"id={generation_config_key[:12]}",
+    ]
+    return "__".join(parts)
+
+
+def response_path_for_spectra_file(
+    output_dir: Path,
+    spectra_file: str | None,
+    variant_name: str | None = None,
+) -> Path | None:
+    if spectra_file is None:
+        return None
+
+    source = Path(spectra_file)
+    parts = source.parts
+    try:
+        files_index = parts.index("files")
+    except ValueError:
+        return None
+
+    relative_parts = parts[files_index + 1 :]
+    if not relative_parts:
+        return None
+
+    source_relative_path = Path(*relative_parts)
+    spectra_name_dir = source_relative_path.with_suffix("")
+    file_name = f"{variant_name or source_relative_path.stem}.txt"
+    relative_path = spectra_name_dir / file_name
+    return output_dir / "responses" / relative_path
+
+
 def call_academic_cloud(
     *,
     api_key: str,
@@ -209,6 +264,7 @@ def write_outputs(
     response_text: str,
     raw_response: dict[str, Any],
     metadata: dict[str, Any],
+    response_file: Path | None = None,
 ) -> dict[str, Any]:
     response_id = metadata["description_id"]
     responses_dir = output_dir / "responses"
@@ -216,7 +272,10 @@ def write_outputs(
     responses_dir.mkdir(parents=True, exist_ok=True)
     raw_dir.mkdir(parents=True, exist_ok=True)
 
-    response_file = responses_dir / f"{response_id}.txt"
+    if response_file is None:
+        response_file = responses_dir / f"{response_id}.txt"
+    else:
+        response_file.parent.mkdir(parents=True, exist_ok=True)
     raw_response_file = raw_dir / f"{response_id}.json"
     manifest_file = output_dir / "descriptions.jsonl"
 
@@ -305,11 +364,20 @@ def generate_one(
         "finish_reason": (response.get("choices") or [{}])[0].get("finish_reason"),
         "usage": response.get("usage"),
     }
+    variant_name = generation_variant_name(
+        model=args.model,
+        prompt_name=prompt_name,
+        temperature=args.temperature,
+        top_p=args.top_p,
+        max_tokens=args.max_tokens,
+        generation_config_key=config_key,
+    )
     return write_outputs(
         output_dir=Path(args.output_dir),
         response_text=response_text,
         raw_response=response,
         metadata=metadata,
+        response_file=response_path_for_spectra_file(Path(args.output_dir), spectra_file, variant_name),
     )
 
 

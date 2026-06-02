@@ -101,7 +101,11 @@ If `--temperature`, `--top-p`, and `--max-tokens` are omitted, the Academic Clou
 Outputs are written to:
 
 ```text
-dataset/nl_descriptions/responses/
+dataset/nl_descriptions/responses/<owner>/<repo>/<original-path-without-suffix>/<model-and-settings>.txt
 dataset/nl_descriptions/raw_responses/
 dataset/nl_descriptions/descriptions.jsonl
 ```
+
+This allows multiple natural-language descriptions for the same Spectra file,
+for example one file per model, prompt, temperature, `top_p`, and `max_tokens`
+combination.

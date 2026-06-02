@@ -68,9 +68,13 @@ python dataset/generate_nl_description.py --prompt-file prompt.txt --temperature
 
 Outputs are written to `dataset/nl_descriptions/`:
 
-- `responses/<description_id>.txt`: generated natural-language text
+- `responses/<owner>/<repo>/<original-path-without-suffix>/<model-and-settings>.txt`: generated natural-language text, using the same repository/path structure as `dataset/accepted/files/`
 - `raw_responses/<description_id>.json`: raw API response
 - `descriptions.jsonl`: metadata including dataset_id, source Spectra path, model, optional generation overrides, timing, usage, prompt hashes, and response paths
+
+The response file name includes the model, prompt name, explicit generation
+settings, and a short configuration hash. This lets the dataset store multiple
+natural-language descriptions for the same Spectra file.
 
 ## Discovery
 
