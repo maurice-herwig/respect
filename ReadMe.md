@@ -84,10 +84,24 @@ ACADEMIC_CLOUD_MODEL=the_model_you_want_to_use
 Generate descriptions for the accepted Spectra dataset:
 
 ```powershell
-python dataset\generate_nl_description.py --resume
+python dataset\generate_nl_description.py
 ```
 
 Each request is isolated: the script sends only the system prompt and the current file prompt, with no chat history from previous files.
+
+Existing successful descriptions for the same Spectra content, model, prompt,
+and explicit parameter settings are skipped automatically. To refresh older
+descriptions:
+
+```powershell
+python dataset\generate_nl_description.py --refresh-before 2026-06-02T00:00:00Z
+```
+
+To regenerate everything for the current configuration:
+
+```powershell
+python dataset\generate_nl_description.py --force
+```
 
 Run a single API test prompt:
 

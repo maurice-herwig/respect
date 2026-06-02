@@ -41,7 +41,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prompt-name", choices=sorted(PROMPTS), default="spectra_to_english_v1", help="Name of a prompt from dataset/prompts.py.")
     parser.add_argument("--accepted-manifest", default=DEFAULT_ACCEPTED_MANIFEST, help="Path to accepted Spectra manifest JSONL.")
     parser.add_argument("--single-run", action="store_true", help="Run only one standalone prompt request instead of the dataset mode.")
-    parser.add_argument("--resume", action="store_true", help="Skip dataset entries that already have a successful matching description.")
+    parser.add_argument("--resume", action="store_true", help="Deprecated compatibility flag. Matching successful descriptions are skipped by default.")
+    parser.add_argument("--force", action="store_true", help="Regenerate descriptions even if a matching successful description already exists.")
+    parser.add_argument(
+        "--refresh-before",
+        default=None,
+        help="ISO timestamp. Existing descriptions before this timestamp are treated as stale and regenerated.",
+    )
     parser.add_argument("--limit", type=int, default=None, help="Maximum number of dataset entries to process.")
     parser.add_argument("--system-prompt", default=DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT, help="System message for the model.")
     parser.add_argument("--model", default=os.environ.get("ACADEMIC_CLOUD_MODEL"), help="Model name.")
@@ -75,6 +81,18 @@ def load_dotenv(path: Path) -> None:
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def parse_iso_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    parsed = datetime.fromisoformat(normalized)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def sha256_text(text: str) -> str:
@@ -142,11 +160,28 @@ def generation_config_key(
     )
 
 
-def load_completed_generation_keys(output_dir: Path) -> set[str]:
+def record_is_fresh(record: dict[str, Any], refresh_before: datetime | None) -> bool:
+    if refresh_before is None:
+        return True
+    timestamp = record.get("response_received_at") or record.get("request_started_at")
+    if not timestamp:
+        return False
+    try:
+        parsed = parse_iso_datetime(timestamp)
+    except ValueError:
+        return False
+    return parsed is not None and parsed >= refresh_before
+
+
+def load_completed_generation_keys(output_dir: Path, refresh_before: datetime | None = None) -> set[str]:
     manifest_file = output_dir / "descriptions.jsonl"
     keys: set[str] = set()
     for record in load_jsonl(manifest_file):
-        if record.get("api_status") == "success" and record.get("generation_config_key"):
+        if (
+            record.get("api_status") == "success"
+            and record.get("generation_config_key")
+            and record_is_fresh(record, refresh_before)
+        ):
             keys.add(record["generation_config_key"])
     return keys
 
@@ -407,11 +442,17 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
         print(f"No accepted records found in {args.accepted_manifest}.", file=sys.stderr)
         return 2
 
-    completed_keys = load_completed_generation_keys(Path(args.output_dir)) if args.resume else set()
+    refresh_before = parse_iso_datetime(args.refresh_before)
+    completed_keys = set() if args.force else load_completed_generation_keys(Path(args.output_dir), refresh_before)
     template = PROMPTS[args.prompt_name]
     processed = 0
     skipped = 0
     errors = 0
+    print(
+        f"[start] accepted_records={len(accepted_records)}, existing_matching_descriptions={len(completed_keys)}, "
+        f"force={args.force}, refresh_before={refresh_before.isoformat() if refresh_before else None}",
+        file=sys.stderr,
+    )
 
     for record in accepted_records:
         if args.limit is not None and processed >= args.limit:
@@ -465,6 +506,8 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
         "temperature": args.temperature,
         "top_p": args.top_p,
         "max_tokens": args.max_tokens,
+        "force": args.force,
+        "refresh_before": refresh_before.isoformat() if refresh_before else None,
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0 if errors == 0 else 1

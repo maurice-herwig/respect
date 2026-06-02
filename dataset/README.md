@@ -42,13 +42,27 @@ curl -X POST \
 Generate descriptions for the accepted dataset:
 
 ```bash
-python dataset/generate_nl_description.py --resume
+python dataset/generate_nl_description.py
 ```
 
 Use a specific prompt template from `dataset/prompts.py`:
 
 ```bash
-python dataset/generate_nl_description.py --prompt-name spectra_to_english_v1 --resume
+python dataset/generate_nl_description.py --prompt-name spectra_to_english_v1
+```
+
+Existing successful descriptions for the same Spectra content, model, prompt,
+and explicit generation settings are skipped automatically. Use a timestamp to
+refresh older descriptions:
+
+```bash
+python dataset/generate_nl_description.py --refresh-before 2026-06-02T00:00:00Z
+```
+
+Use `--force` to regenerate all descriptions for the current configuration:
+
+```bash
+python dataset/generate_nl_description.py --force
 ```
 
 Run a single API test prompt:
