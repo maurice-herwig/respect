@@ -1,0 +1,50 @@
+spec Module2
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+env DimY elevator;
+
+asm alw elevator - 1 <= next(elevator) &  next(elevator) <= elevator + 1;
+
+asm alwEv elevator = 0;
+asm alwEv elevator = DY;
+
+
+gar alw robotX0 = 0 -> robotY0 = elevator;
+gar alw robotX1 = 0 -> robotY1 = elevator;
+
+gar ini robotX0 = 1;
+gar ini robotX1 = 3;
+gar alwEv robotY1 = 0 & robotX1 = 4;
+
+predicate stayX(DimX x):
+    x = next(x);
+
+predicate stayY(DimY y):
+    y = next(y);
+
+
+gar alw robotX0 - 1 <= next(robotX0) &  next(robotX0) <= robotX0 + 1;
+gar alw robotX1 - 1 <= next(robotX1) &  next(robotX1) <= robotX1 + 1;
+
+gar ini robotY0 = DY;
+gar ini robotY1 = DY;
+
+gar alw robotY0 = robotY1 -> next(robotX0) != robotX1 | next(robotX1) != robotX0; //To prevent robots switching places
+gar alw robotY0 != robotY1 | robotX0 != robotX1;  //to prevent collisions
+
+gar alw robotX0 != 0 -> stayY(robotY0);
+gar alw robotX1 != 0 -> stayY(robotY1);
+
+gar alw stayX(robotX0) | stayY(robotY0);
+gar alw stayX(robotX1) | stayY(robotY1);

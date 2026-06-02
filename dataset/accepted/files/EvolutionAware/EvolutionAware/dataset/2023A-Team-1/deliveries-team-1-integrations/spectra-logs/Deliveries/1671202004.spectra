@@ -1,0 +1,44 @@
+import "../imports/DwyerPatterns.spectra"
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+define elevatorX := 0;
+env DimY elevatorY;
+// mock variables, just so the simulation runs in this branch
+env DimX [2] deliveriesX;
+env DimY [2] deliveriesY;
+// end of mock variables
+
+gar ini robotY0 = 5 and robotY1 = 5;
+
+predicate moveDistX(DimX pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);
+
+predicate moveDistY(DimY pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);
+
+gar robotMoveDist:
+  alw moveDistX(robotX0) and moveDistY(robotY0) and
+      moveDistX(robotX1) and moveDistY(robotY1);
+
+asm elveatorMoveDist:
+  alw moveDistY(elevatorY);
+
+gar moveBetweenFloorsWithElevator:
+  alw (robotY0 != next(robotY0) implies (robotY0 = elevatorY and robotX0 = 0 and next(robotX0) = elevatorX)) and
+      (robotY1 != next(robotY1) implies (robotY1 = elevatorY and robotX1 = 0 and next(robotX1) = elevatorX));

@@ -134,3 +134,15 @@ Raw API responses are not stored by default. To keep them:
 ```powershell
 python dataset\generate_nl_description.py --keep-raw-responses
 ```
+
+## Skill-Based Reconstruction Experiments
+
+After natural-language descriptions have been generated, run a selected agent
+skill once per description:
+
+```powershell
+python experiments\reconstruct_with_skill.py --skill respect-method-2 --dry-run --limit 3
+```
+
+Remove `--dry-run` to start real agent processes. Experiment outputs are written
+to `experiments/runs/`, which is ignored by Git.

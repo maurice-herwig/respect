@@ -1,0 +1,49 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+// obstacles
+//define num_static_obstacles := 4;
+define staticObstaclesX := 2;
+//define staticObstaclesY[num_static_obstacles] := {2,3,4,5};
+
+
+// Stage 1: robot starting location
+gar robotStartLocation:
+	ini robotX = 7 and robotY = 0;
+
+// Stage 2: robot moving distance
+predicate moveDist(Dim x):
+	x - next(x) <= 1 and next(x) - x <= 1;
+
+
+gar robotLegalMovement:
+	alw moveDist(robotX) and moveDist(robotY);
+
+// Stage 3: avoid static obstacles
+gar avoidStaticObstacles:
+	alw (robotX != staticObstaclesX) or !(robotY in {2,3,4,5});
+	
+
+// Stage 4: Reach all targets
+define num_targets := 3;
+define targetsX[num_targets] := {0,7,0};
+define targetsY[num_targets] := {0,7,7};
+
+predicate robotAtTarget(Int(0..(num_targets-1)) i):
+	robotX = targetsX[i] and robotY = targetsY[i];
+
+gar reachTarget0:
+	alwEv robotAtTarget(0);
+
+gar reachTarget1:
+	alwEv robotAtTarget(1);
+
+gar reachTarget2:
+	alwEv robotAtTarget(2);

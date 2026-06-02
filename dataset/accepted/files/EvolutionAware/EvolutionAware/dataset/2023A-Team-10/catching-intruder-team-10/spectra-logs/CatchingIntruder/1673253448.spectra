@@ -1,0 +1,38 @@
+import "../imports/DwyerPatterns.spectra"
+spec CatchingIntruder
+
+define D := 7;
+robot0AtButtomLeftCorner:= (robotX0 = 0) & (robotY0 = 7);
+robot1AtStartingPoint := (robotX1 = 7) & (robotY1 = 0);
+
+type Dim = Int(0..D);
+
+sys Dim robotX0;
+sys Dim robotY0;
+sys Dim robotX1;
+sys Dim robotY1;
+
+gar ini robotX0 = 0 & robotY0 = 0;
+gar ini robot1AtStartingPoint;
+
+gar alw notAtObstacles(robotX0, robotY0);
+gar alw notAtObstacles(robotX1, robotY1);
+gar alw notColliding(robotX0, robotY0, robotX1, robotY1);
+
+gar alw (moveDist(robotX0) & robotY0 = next(robotY0)) | (moveDist(robotY0) & robotX0 = next(robotX0));
+gar alw ONCE(robotX0 = 0 & robotY0 = 7) -> (moveDist(robotX1) & robotY1 = next(robotY1)) | (moveDist(robotY1) & robotX1 = next(robotX1));
+
+//gar alw P_is_true_before_R(robot1AtStartingPoint, robot0AtButtomLeftCorner);
+
+predicate notAtObstacles(Dim x, Dim y):
+	((x != 2) | (y != 1)) & ((x != 3) | (y != 1)) &
+	((x != 4) | (y != 1)) & ((x != 5) | (y != 1));
+	
+predicate notColliding(Dim x1, Dim y1, Dim x2, Dim y2):
+	(x1 != x2) | (y1 != y2);
+
+predicate moveDist(Dim pos):
+	pos+1 = next (pos) |
+	pos-1 = next (pos);
+
+

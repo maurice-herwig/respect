@@ -1,0 +1,62 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+//defining fixed obstacles locations 
+define fixedObstacle1X:=2;
+	   fixedObstacle1Y:=2;
+	   fixedObstacle2X:=2;
+	   fixedObstacle2Y:=3;
+	   fixedObstacle3X:=2;
+	   fixedObstacle3Y:=4;
+	   fixedObstacle4X:=2;
+	   fixedObstacle4Y:=5;
+	
+	 
+//defining fixed target locations  
+define fixedT1X:=0;
+	   fixedT1Y:=0;
+	   fixedT2X:=0;
+	   fixedT2Y:=7;
+	   fixedT3X:=7;
+	   fixedT3Y:=7;
+
+//defining the guard by it's left corner
+env Dim guardLeftCornerX;
+env Dim guardLeftCornerY;
+
+//initial state of the robot
+gar ini robotX = 7;
+gar ini robotY = 0;
+
+//initial state of the guard is at the left corner 
+asm ini guardLeftCornerX = 0;
+asm ini guardLeftCornerY = 0;
+
+//moves
+predicate moveDist(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);  
+  
+  
+predicate stayY(Dim dimy):
+next(dimy) = dimy;
+
+define atT1:= robotX = fixedT1X & robotY = fixedT1Y;
+	   atT2:= robotX = fixedT2X & robotY = fixedT2Y;
+	   atT3:= robotX = fixedT3X & robotY = fixedT3Y;
+	   
+//the robot must infinitely often visit three targets in every run
+gar alwEv atT1;
+gar alwEv atT2;
+gar alwEv atT3;
+
+
+

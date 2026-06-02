@@ -1,0 +1,57 @@
+import "../imports/DwyerPatterns.spectra"
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+//first module - adding the elements
+//env variables
+env DimX lamp0X;
+env DimY lamp0Y;
+env DimX lamp1X;
+env DimY lamp1Y;
+
+env DimY elevator;
+
+predicate moveDistX(DimX pos):
+	pos+1 = next(pos) or
+	pos   = next(pos) or
+	pos-1 = next(pos);
+  
+predicate moveDistY(DimY pos):
+	pos+1 = next(pos) or
+	pos   = next(pos) or
+	pos-1 = next(pos);
+	
+predicate elevatorMoveDistY(DimY pos):
+	pos+1 = next(pos) or
+	pos-1 = next(pos);
+
+//Elevator movement module	
+asm movingElevaotrOnlyOnY:
+	alw moveDistX(elevator);
+	
+asm alwEv elevator = 0;
+asm alwEv elevator = DY;
+
+//Robots movement module
+gar robot0MovesOneStepAtATime:
+	alw moveDistX(robotX0);
+
+gar robot1MovesOneStepAtATime:
+	alw moveDistX(robotX1);
+	
+gar robotMovesVerticalyOnlyOnElevator:
+	alw robotX0 = 0 -> robotY0 = elevator;
+	
+gar robotCantMoveVerticallyWithoutElevator:
+	alw robotX0 != 0 -> next(robotY0) = robotY0;
