@@ -69,5 +69,6 @@ Accepted files are written to `dataset/accepted/`:
 
 Temporary downloads and controller outputs are written to `dataset/work/` and removed after rejected candidates. Use `--keep-controller-output` to preserve controller artifacts for accepted files under `dataset/accepted/controllers/`.
 
-Progress messages are printed to stderr during partitioning and page fetching.
-Use `--quiet` to disable them.
+Progress messages are printed to stderr during partitioning, downloads,
+synthesis checks, accepted-file storage, and page fetching. Use `--quiet` to
+disable them.

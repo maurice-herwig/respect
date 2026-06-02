@@ -644,8 +644,14 @@ def process_candidate(
     candidate_file = candidate_dir / f"{current_id}.spectra"
     synthesis_dir = candidate_dir / "controller"
     candidate_dir.mkdir(parents=True, exist_ok=True)
+    progress(
+        f"[candidate] checking {record.html_url} "
+        f"(repo={record.repository_full_name}, path={record.path}, sha={record.sha[:12]})",
+        args.quiet,
+    )
 
     try:
+        progress(f"[download] downloading {record.api_url}", args.quiet)
         content = download_file_content(
             record,
             headers,
@@ -654,15 +660,26 @@ def process_candidate(
             args.rate_limit_buffer_seconds,
         )
         candidate_file.write_bytes(content)
+        progress(
+            f"[download] saved candidate {candidate_file} "
+            f"({len(content)} bytes, sha256={hashlib.sha256(content).hexdigest()[:12]})",
+            args.quiet,
+        )
+        progress(f"[synthesis] running Spectra synthesis for {candidate_file}", args.quiet)
         result = run_synthesis_check(Path(args.cli_wrapper), candidate_file, synthesis_dir, args.cli_timeout)
         status = result.get("status")
+        progress(f"[synthesis] status={status} for {record.html_url}", args.quiet)
 
         if status != "synthesized":
+            raw_output = str(result.get("raw_output", "")).splitlines()
+            if raw_output:
+                progress(f"[synthesis] first output line: {raw_output[0]}", args.quiet)
             return str(status or "rejected")
 
         accepted_file = accepted_dir / "files" / f"{current_id}.spectra"
         accepted_file.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(candidate_file, accepted_file)
+        progress(f"[accepted] stored {accepted_file}", args.quiet)
 
         controller_output_dir = None
         if args.keep_controller_output:
@@ -671,6 +688,7 @@ def process_candidate(
                 shutil.rmtree(controller_target)
             shutil.copytree(synthesis_dir, controller_target)
             controller_output_dir = str(controller_target)
+            progress(f"[accepted] stored controller output {controller_target}", args.quiet)
 
         accepted_record = {
             **asdict(record),
@@ -686,6 +704,7 @@ def process_candidate(
         }
         append_jsonl(manifest_path, accepted_record)
         accepted_keys.add(record.dedupe_key)
+        progress(f"[accepted] appended manifest record for {current_id}", args.quiet)
         return "accepted"
     finally:
         if candidate_dir.exists() and not args.keep_controller_output:
@@ -759,6 +778,11 @@ def process_query_results(
                 args.quiet,
             )
 
+    progress(
+        f"[fetch] finished query: items={stats['items']}, accepted={stats['accepted']}, "
+        f"rejected={stats['rejected']}, duplicates={stats['duplicates']}, errors={stats['errors']}",
+        args.quiet,
+    )
     return stats
 
 
@@ -864,6 +888,13 @@ def main() -> int:
                         "total_count": leaf_total_count,
                         "stats": query_stats,
                     }
+                )
+                progress(
+                    "[progress] run totals: "
+                    f"queries={total_stats['queries_processed']}, items={total_stats['items']}, "
+                    f"accepted={total_stats['accepted']}, rejected={total_stats['rejected']}, "
+                    f"duplicates={total_stats['duplicates']}, errors={total_stats['errors']}",
+                    args.quiet,
                 )
 
             next_step = adjust_next_size_step(
