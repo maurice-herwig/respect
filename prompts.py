@@ -42,26 +42,7 @@ PROMPTS = {
 
 AGENT_RECONSTRUCTION_V1 = """Use $$${skill_name}.
 
-Convert the natural-language requirements below into a Spectra specification.
-
-Important constraints for this run:
-- Treat the provided natural-language requirements as the only source of behavior.
-- Use the selected skill workflow exactly as instructed by the skill.
-- Store every generated file for this run under this directory:
-  {run_dir}
-- Store final Spectra code, intermediate drafts, CLI outputs, and controller artifacts under that run directory.
-- Do not write generated artifacts outside the run directory.
-- At the end, print a single JSON object with these fields:
-  - cli_status
-  - repair_loops
-  - timeout_seconds
-  - spectra_file
-  - controller_output_dir
-  - notes
-
-Natural-language requirements:
-
-{natural_language_description}
+${natural_language_description}
 """
 
 AGENT_RECONSTRUCTION_PROMPTS = {

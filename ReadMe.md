@@ -146,3 +146,6 @@ python experiments\reconstruct_with_skill.py --skill respect-method-2 --dry-run 
 
 Remove `--dry-run` to start real agent processes. Experiment outputs are written
 to `experiments/runs/`, which is ignored by Git.
+
+The default agent command is `codex exec --ephemeral -`, so each description is
+processed in a fresh Codex process without persisted session files.

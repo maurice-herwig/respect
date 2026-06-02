@@ -23,21 +23,25 @@ python experiments\reconstruct_with_skill.py --skill respect-method-2
 The default command is:
 
 ```text
-codex exec --prompt-file {prompt_file}
+codex exec --ephemeral -
 ```
+
+`--ephemeral` prevents Codex from persisting session files for the invocation,
+and `-` reads the prompt from stdin. The script starts a separate process for
+each description.
 
 If your Codex CLI uses a different invocation, pass it explicitly:
 
 ```powershell
 python experiments\reconstruct_with_skill.py `
   --skill respect-method-2 `
-  --agent-command "codex exec --prompt-file {prompt_file}"
+  --agent-command "codex exec --ephemeral -"
 ```
 
 Generated experiment artifacts are written to `experiments/runs/`, which is
 ignored by Git.
 
-Each run stores:
+Each run stores the prompt and captured agent output:
 
 - `input_description.txt`
 - `agent_prompt.txt`

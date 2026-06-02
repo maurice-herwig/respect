@@ -34,7 +34,7 @@ from prompts import AGENT_RECONSTRUCTION_PROMPTS
 
 DEFAULT_DESCRIPTIONS_MANIFEST = "dataset/nl_descriptions/descriptions.jsonl"
 DEFAULT_OUTPUT_DIR = "experiments/runs"
-DEFAULT_AGENT_COMMAND = "codex exec --prompt-file {prompt_file}"
+DEFAULT_AGENT_COMMAND = "codex exec --ephemeral -"
 LOGGER = logging.getLogger("reconstruct_with_skill")
 
 
@@ -47,7 +47,8 @@ def parse_args() -> argparse.Namespace:
         "--agent-command",
         default=DEFAULT_AGENT_COMMAND,
         help=(
-            "Command used to start a fresh agent process. Use {prompt_file} as placeholder. "
+            "Command used to start a fresh agent process. The prompt is passed via stdin unless "
+            "the command contains {prompt_file}. "
             f"Default: {DEFAULT_AGENT_COMMAND!r}"
         ),
     )
@@ -209,17 +210,18 @@ def extract_last_json_object(text: str) -> dict[str, Any] | None:
     return None
 
 
-def build_command(agent_command: str, prompt_file: Path) -> str:
+def build_command(agent_command: str, prompt_file: Path) -> tuple[str, bool]:
     if "{prompt_file}" in agent_command:
-        return agent_command.format(prompt_file=str(prompt_file))
-    return f'{agent_command} "{prompt_file}"'
+        return agent_command.format(prompt_file=str(prompt_file)), False
+    return agent_command, True
 
 
-def run_agent(command: str, timeout: float) -> subprocess.CompletedProcess[str]:
+def run_agent(command: str, prompt_text: str, pass_prompt_on_stdin: bool, timeout: float) -> subprocess.CompletedProcess[str]:
     LOGGER.info("Starting fresh agent process: %s", command)
     return subprocess.run(
         command,
         cwd=REPO_ROOT,
+        input=prompt_text if pass_prompt_on_stdin else None,
         capture_output=True,
         text=True,
         check=False,
@@ -285,7 +287,7 @@ def process_description(
     write_text(prompt_file, agent_prompt)
     write_text(input_file, natural_language_description)
 
-    command = build_command(args.agent_command, prompt_file)
+    command, pass_prompt_on_stdin = build_command(args.agent_command, prompt_file)
     started_at = utc_now()
     started = time.perf_counter()
 
@@ -300,7 +302,7 @@ def process_description(
         write_text(stderr_file, "")
     else:
         try:
-            completed = run_agent(command, args.timeout)
+            completed = run_agent(command, agent_prompt, pass_prompt_on_stdin, args.timeout)
             exit_code = completed.returncode
             write_text(stdout_file, completed.stdout)
             write_text(stderr_file, completed.stderr)
@@ -331,6 +333,7 @@ def process_description(
         "source_path": record.get("source_path"),
         "agent_command": args.agent_command,
         "resolved_agent_command": command,
+        "prompt_passed_on_stdin": pass_prompt_on_stdin,
         "agent_model": args.agent_model,
         "agent_prompt_name": args.agent_prompt_name,
         "agent_prompt_sha256": sha256_text(agent_prompt),
