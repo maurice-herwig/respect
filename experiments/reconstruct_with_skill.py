@@ -350,14 +350,13 @@ def process_description(
     description_stem = description_relative_stem(response_file)
     run_id = current_run_key[:24]
     run_dir = output_dir / description_stem / skill_dir
-    artifacts_dir = run_dir / "artifacts"
     reconstructed_spectra_file = run_dir / f"{skill_dir}.spectra"
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    run_dir.mkdir(parents=True, exist_ok=True)
 
     agent_prompt = render_agent_prompt(
         template=agent_template,
         skill=args.skill,
-        run_dir=artifacts_dir,
+        run_dir=run_dir,
         natural_language_description=natural_language_description,
     )
     prompt_file = run_dir / "agent_prompt.txt"
@@ -390,7 +389,7 @@ def process_description(
             write_text(stderr_file, completed.stderr)
             parsed_result = extract_agent_result(completed.stdout)
             if parsed_result is not None:
-                parsed_result_file.write_text(json.dumps(parsed_result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+                parsed_result.pop("controller_output_dir", None)
             status = "success" if completed.returncode == 0 else "agent_error"
         except subprocess.TimeoutExpired as exc:
             status = "timeout"
@@ -406,9 +405,14 @@ def process_description(
     if status == "success":
         copied_spectra_file = copy_reconstructed_spectra(parsed_result, reconstructed_spectra_file)
         if copied_spectra_file:
+            if parsed_result is not None:
+                parsed_result["original_reported_spectra_file"] = parsed_result.get("spectra_file")
+                parsed_result["spectra_file"] = copied_spectra_file
             LOGGER.info("Copied reconstructed Spectra file to %s", copied_spectra_file)
         elif not args.dry_run:
             LOGGER.warning("Agent run succeeded but no reported spectra_file could be copied for %s", record.get("description_id"))
+    if parsed_result is not None:
+        parsed_result_file.write_text(json.dumps(parsed_result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     manifest_record = {
         "run_id": run_id,
@@ -428,7 +432,6 @@ def process_description(
         "agent_prompt_name": args.agent_prompt_name,
         "agent_prompt_sha256": sha256_text(agent_prompt),
         "run_dir": str(run_dir),
-        "artifacts_dir": str(artifacts_dir),
         "description_relative_stem": str(description_stem),
         "reconstructed_spectra_file": copied_spectra_file,
         "expected_reconstructed_spectra_file": str(reconstructed_spectra_file),
@@ -441,7 +444,6 @@ def process_description(
         "reported_cli_status": parsed_result.get("cli_status") if parsed_result else None,
         "reported_repair_loops": parsed_result.get("repair_loops") if parsed_result else None,
         "reported_spectra_file": parsed_result.get("spectra_file") if parsed_result else None,
-        "reported_controller_output_dir": parsed_result.get("controller_output_dir") if parsed_result else None,
         "timeout_seconds": args.timeout,
         "run_started_at": started_at,
         "run_finished_at": finished_at,

@@ -1,0 +1,30 @@
+import "../imports/DwyerPatterns.spectra"
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+gar ini robotY0 = 5 and robotY1 = 5;
+
+predicate moveDistX(DimX pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);
+
+predicate moveDistY(DimY pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);
+
+gar robotMoveDist:
+  alw moveDistX(robotX0) and moveDistY(robotY0) and
+      moveDistX(robotX1) and moveDistY(robotY1);
