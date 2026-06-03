@@ -138,25 +138,40 @@ python dataset\generate_nl_description.py --keep-raw-responses
 ## Skill-Based Reconstruction Experiments
 
 After natural-language descriptions have been generated, run a selected agent
-skill once per description:
+skill once per description from the repository root:
 
 ```powershell
-python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 3
+python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 2
+```
+
+If your IDE starts the process with `experiments` as the working directory, use
+the script name without the leading folder:
+
+```powershell
+python reconstruct_with_skill.py --skill respect-method-2 --limit 4
 ```
 
 Remove `--dry-run` to start real agent processes. Experiment outputs are written
 to `experiments/runs/`, which is ignored by Git.
 
 The default agent command is
-`codex exec --ephemeral --sandbox workspace-write --ask-for-approval never -`,
+`codex --ask-for-approval never exec --ephemeral --sandbox danger-full-access -`,
 so each description is processed in a fresh Codex process without persisted
-session files while still allowing the skill to access repository files and run
-the local Spectra CLI workflow.
+session files while allowing the skill to access repository files and run the
+local Spectra CLI workflow. The full-access sandbox setting is used because the
+nested Windows workspace sandbox can fail before local validation commands start.
 
 If the agent reports a final `spectra_file`, it is copied into a mirrored
 description structure, for example:
 
 ```text
 dataset/nl_descriptions/responses/A/B/C.txt
-experiments/runs/respect-method-2/files/A/B/C/respect-method-2.spectra
+experiments/runs/files/A/B/C/respect-method-2.spectra
+```
+
+Run artifacts such as `agent_prompt.txt`, `agent_stdout.txt`, and
+`agent_stderr.txt` are stored under:
+
+```text
+experiments/runs/A/B/C/respect-method-2/
 ```

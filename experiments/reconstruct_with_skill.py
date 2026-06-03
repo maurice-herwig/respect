@@ -35,7 +35,7 @@ from prompts import AGENT_RECONSTRUCTION_PROMPTS
 
 DEFAULT_DESCRIPTIONS_MANIFEST = "dataset/nl_descriptions/descriptions.jsonl"
 DEFAULT_OUTPUT_DIR = "experiments/runs"
-DEFAULT_AGENT_COMMAND = "codex exec --ephemeral -"
+DEFAULT_AGENT_COMMAND = "codex --ask-for-approval never exec --ephemeral --sandbox danger-full-access -"
 LOGGER = logging.getLogger("reconstruct_with_skill")
 
 
@@ -246,6 +246,40 @@ def extract_last_json_object(text: str) -> dict[str, Any] | None:
     return None
 
 
+def normalize_result_value(value: str) -> Any:
+    stripped = value.strip()
+    if stripped.lower() in {"none", "null", ""}:
+        return None
+    if stripped.lower() in {"true", "false"}:
+        return stripped.lower() == "true"
+    if re.fullmatch(r"-?\d+", stripped):
+        return int(stripped)
+    return stripped
+
+
+def extract_key_value_result(text: str) -> dict[str, Any] | None:
+    result_keys = {
+        "cli_status",
+        "repair_loops",
+        "timeout_seconds",
+        "spectra_file",
+        "controller_output_dir",
+    }
+    result: dict[str, Any] = {}
+    for line in text.splitlines():
+        match = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*?)\s*$", line)
+        if not match:
+            continue
+        key, value = match.groups()
+        if key in result_keys:
+            result[key] = normalize_result_value(value)
+    return result or None
+
+
+def extract_agent_result(text: str) -> dict[str, Any] | None:
+    return extract_last_json_object(text) or extract_key_value_result(text)
+
+
 def build_command(agent_command: str, prompt_file: Path) -> tuple[str, bool]:
     if "{prompt_file}" in agent_command:
         return agent_command.format(prompt_file=str(prompt_file)), False
@@ -271,6 +305,13 @@ def write_text(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
+def resolve_repo_path(path_value: str | Path) -> Path:
+    path = Path(path_value)
+    if path.is_absolute():
+        return path
+    return REPO_ROOT / path
+
+
 def process_description(
     *,
     record: dict[str, Any],
@@ -280,7 +321,7 @@ def process_description(
     known_completed: set[str],
     refresh_before: datetime | None,
 ) -> str:
-    response_file = Path(record["response_file"])
+    response_file = resolve_repo_path(record["response_file"])
     natural_language_description = response_file.read_text(encoding="utf-8")
     agent_template = AGENT_RECONSTRUCTION_PROMPTS[args.agent_prompt_name]
 
@@ -305,9 +346,9 @@ def process_description(
     skill_dir = safe_path_part(args.skill)
     description_stem = description_relative_stem(response_file)
     run_id = current_run_key[:24]
-    run_dir = output_dir / skill_dir / "runs" / description_stem
+    run_dir = output_dir / description_stem / skill_dir
     artifacts_dir = run_dir / "artifacts"
-    reconstructed_spectra_file = output_dir / skill_dir / "files" / description_stem / f"{skill_dir}.spectra"
+    reconstructed_spectra_file = output_dir / "files" / description_stem / f"{skill_dir}.spectra"
     artifacts_dir.mkdir(parents=True, exist_ok=True)
 
     agent_prompt = render_agent_prompt(
@@ -344,7 +385,7 @@ def process_description(
             exit_code = completed.returncode
             write_text(stdout_file, completed.stdout)
             write_text(stderr_file, completed.stderr)
-            parsed_result = extract_last_json_object(completed.stdout)
+            parsed_result = extract_agent_result(completed.stdout)
             if parsed_result is not None:
                 parsed_result_file.write_text(json.dumps(parsed_result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
             status = "success" if completed.returncode == 0 else "agent_error"
@@ -417,14 +458,14 @@ def main() -> int:
     args = parse_args()
     configure_logging(args.log_level, args.log_file)
 
-    descriptions_manifest = Path(args.descriptions_manifest)
+    descriptions_manifest = resolve_repo_path(args.descriptions_manifest)
     descriptions = load_jsonl(descriptions_manifest)
     if not descriptions:
         LOGGER.error("No descriptions found in %s", descriptions_manifest)
         return 2
 
-    output_dir = Path(args.output_dir)
-    runs_manifest = output_dir / safe_path_part(args.skill) / "runs.jsonl"
+    output_dir = resolve_repo_path(args.output_dir)
+    runs_manifest = output_dir / "runs.jsonl"
     refresh_before = parse_iso_datetime(args.refresh_before)
     known_completed = set() if args.force else completed_run_keys(runs_manifest, refresh_before)
 
