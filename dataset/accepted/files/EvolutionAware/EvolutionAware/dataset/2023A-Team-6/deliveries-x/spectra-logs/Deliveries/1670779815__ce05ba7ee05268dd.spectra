@@ -1,0 +1,35 @@
+import "../imports/DwyerPatterns.spectra"
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+
+//increment 1 - rooms request packages and robots are guaranteed to always get to them
+
+env DimX package0X;
+env DimY package0Y;
+env DimX package1X;
+env DimY package1Y;
+
+define robot0atpackage := robotX0 = package0X & robotY0 = package0Y;
+define robot1atpackage := robotX1 = package1X & robotY1 = package1Y;
+
+
+gar robot0getspackage:
+	alwEv robot0atpackage;
+	
+gar robot1getspackage:
+	alwEv robot1atpackage;
+	
+//specification is realizable and well separated so this is the end of increment 1
+

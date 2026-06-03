@@ -1,0 +1,30 @@
+module GyroAspect
+		env {CLEAR, BLOCKED} frontDistSense ;
+		env {CLEAR, BLOCKED} backDistSense ;
+		env boolean isReady ;
+		env {STP, FWD, BWD, TURN_LEFT, TURN_RIGHT, SWITCH_MODE, SPEED_DOWN, SPEED_UP, NOP } bluetoothCmd ;
+		sys {STP, FWD, BWD, TURN_LEFT, TURN_RIGHT} balancer ;
+		sys { SLOW, REGULAR, FAST } balancerSpeed ;
+		sys { AUTO, MANUAL } spec_mode ;
+		sys { STP, FWD, BWD, TURN_LEFT, TURN_RIGHT } spec_manualCmd ;
+
+
+// Initial state.
+guarantee
+	balancer=STP;
+
+// Stop while the robot is not ready to move.
+guarantee
+	G (isReady=false -> balancer=STP);
+
+// Move forward only when there are no obstacles ahead.
+guarantee 
+	G ((balancer=FWD) -> (frontDistSense=CLEAR));
+
+// Move backward only when there are no obstacles behind.
+guarantee 
+	G ((balancer=BWD) -> (backDistSense=CLEAR));
+
+// When in auto mode, eventually move forward.
+guarantee 
+  GF (spec_mode=AUTO->balancer=FWD);

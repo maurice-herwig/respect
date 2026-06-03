@@ -1,0 +1,41 @@
+module Minepump
+
+env boolean highwater;
+env boolean methane;
+sys boolean pump;
+
+assumption -- initial_assumption
+    highwater=false & methane=false;
+
+guarantee -- initial_guarantee
+    pump=false;
+
+guarantee -- guarantee1_1
+	G(highwater=true->next(pump=true));
+
+guarantee -- guarantee2_1
+	pRespondsToS(methane=true,next(pump=false));
+
+assumption -- assumption1_1
+	G(PREV(pump=true)&pump=true->next(highwater=false));
+
+assumption -- assumption2_1
+	pRespondsToS(true,highwater=false|methane=false);
+
+
+
+pattern pRespondsToS(s, p) {
+  var { S0, S1} state;
+
+  // initial assignments: initial state
+  ini state=S0;
+
+  // safety this and next state
+  alw ((state=S0 & ((!s) | (s & p)) & next(state=S0)) |
+  (state=S0 & (s & !p) & next(state=S1)) |
+  (state=S1 & (p) & next(state=S0)) |
+  (state=S1 & (!p) & next(state=S1)));
+
+  // equivalence of satisfaction
+  alwEv (state=S0);
+}

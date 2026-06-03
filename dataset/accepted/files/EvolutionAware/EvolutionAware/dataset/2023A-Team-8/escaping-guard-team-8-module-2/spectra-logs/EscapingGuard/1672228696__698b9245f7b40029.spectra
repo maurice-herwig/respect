@@ -1,0 +1,54 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+env Dim obstacleUpX;
+env Dim obstacleLeftY;
+
+
+// initial place for the obstacle
+asm ini obstacleUpX = 0;
+asm ini obstacleLeftY = 0;
+
+// obstacle can not exceed board borders
+asm alw obstacleUpX<7;
+asm alw obstacleLeftY<7;
+
+
+
+
+
+
+
+
+
+// robot can't be on the static obstacle
+predicate canNotVisit(Dim posX, Dim posY):
+	(robotX != posX) | (robotY != posY);
+
+gar alw canNotVisit(2,2);
+gar alw canNotVisit(2,3);
+gar alw canNotVisit(2,4);
+gar alw canNotVisit(2,5);
+
+// movement of the robot
+predicate moveDist(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos); 
+  
+
+counter robotCanMove(0..2){
+	robotCanMove = 0;
+	inc: true;
+	overflow: modulo;
+}
+
+gar alw robotCanMove=0 -> robotX = next(robotX) & robotY = next(robotY);
+gar alw robotCanMove>0 -> moveDist(robotX)  & moveDist(robotY);

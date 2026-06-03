@@ -1,0 +1,36 @@
+import "../imports/DwyerPatterns.spectra"
+spec Deliveries
+
+define
+DX := 5;
+DY := 5;
+robotsColliding := (robotX0 = robotX1) & (robotY0 = robotY1);
+elevatorX := 0;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+env DimY elevatorY;
+
+gar ini robotY0 = 0;
+gar ini robotY1 = 0;
+gar alw !robotsColliding;
+gar alw moveHorizontally(robotX0);
+gar alw moveHorizontally(robotX1);
+gar alw robotX0 = elevatorX -> robotY0 = elevatorY;
+gar alw robotX1 = elevatorX -> robotY1 = elevatorY;
+
+predicate moveHorizontally(DimX pos):
+	pos+1 = next (pos) |
+	pos = next (pos) |
+	pos-1 = next (pos);
+
+predicate moveVertaclly(DimY pos):
+	pos+1 = next (pos) |
+	pos-1 = next (pos);	
