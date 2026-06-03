@@ -1,0 +1,62 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+define DM := 6;
+
+type Dim = Int(0..D);
+type DimM = Int(0..DM);
+
+sys Dim robotX;
+sys Dim robotY;
+
+define t1X := 0;
+define t1Y := 0;
+
+define t2X := 7;
+define t2Y := 7;
+
+define t3X := 0;
+define t3Y := 7;
+
+env DimM mx;
+env DimM my;
+
+//fixed obstacles 
+define obstacle1X := 2;
+define obstacle1Y := 2;
+define obstacle2X := 2;
+define obstacle2Y := 3;
+define obstacle3X := 2;
+define obstacle3Y := 4;
+define obstacle4X := 2;
+define obstacle4Y := 5;
+
+
+//Initially, the robot stands at the top right corner (marked Init), and the guard stands at the top left corner (covering T1). 
+gar ini robotX = 7 & robotY = 0;
+asm ini mx = 0 & my = 0; 
+
+//A robot R has to visit the three targets T1, T2, and T3 infinitely often in every run.
+gar alwEv robotX = t1X & robotY = t1Y;
+gar alwEv robotX = t2X & robotY = t2Y;
+gar alwEv robotX = t3X & robotY = t3Y;
+
+predicate moveDistRobot(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);  
+  
+predicate moveDistM(DimM pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);     
+
+asm alw moveDistRobot(robotX);
+asm alw moveDistRobot(robotY);
+asm alw moveDistM(mx);
+asm alw moveDistM(my);
+
+
+
+
