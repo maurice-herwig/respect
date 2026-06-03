@@ -1,0 +1,13 @@
+The Abcg_arbiter system is a reactive system that interacts with its environment through a set of input requests and output grants. The environment controls a set of boolean requests, where each request corresponds to one of ten possible indices. The system, in turn, controls a set of boolean grants, as well as three auxiliary boolean signals (a, b, and c) and a state signal, each with ten indices.
+
+The environment is assumed to provide input requests, but there are no explicit restrictions on the environment's behavior. 
+
+The system must guarantee several properties. Firstly, the system must maintain a specific relationship between the auxiliary signals a, b, and c, and the grant signal, such that a[i] is equal to the next value of b[i], b[i] is equal to the next value of c[i], and c[i] is equal to the next value of grant[i], for all indices i.
+
+Additionally, the system must ensure mutual exclusion among the grants, meaning that at any given time, at most one grant can be true.
+
+Initially, the system's state signal is set to S0 for all indices. The system must then update its state signal based on the current grant and request values. If a grant is true and a request is true, the system's state signal must transition to S1. If a grant is true and a request is false, the system's state signal must transition to S2. If a grant is false and a request is false, and the current state is not S0, the system's state signal must transition to S3. If a grant is false and the current state is S0, the system's state signal must remain in S0. If a grant is false and a request is true, the system's state signal must transition to S0.
+
+Furthermore, the system must ensure that if its state signal is in S3, then the corresponding grant must be false. The system must also ensure that its state signal can only be in one of the states S0, S1, or S3, infinitely often.
+
+The system's behavior is symmetric with respect to the indices, meaning that the same rules apply to all indices.
