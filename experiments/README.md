@@ -23,19 +23,21 @@ python experiments\reconstruct_with_skill.py --skill respect-method-2
 The default command is:
 
 ```text
-codex exec --ephemeral -
+codex exec --ephemeral --sandbox workspace-write --ask-for-approval never -
 ```
 
 `--ephemeral` prevents Codex from persisting session files for the invocation,
-and `-` reads the prompt from stdin. The script starts a separate process for
-each description.
+`--sandbox workspace-write` lets the skill read and write inside this
+repository, `--ask-for-approval never` avoids interactive approval prompts in
+batch runs, and `-` reads the prompt from stdin. The script starts a separate
+process for each description.
 
 If your Codex CLI uses a different invocation, pass it explicitly:
 
 ```powershell
 python experiments\reconstruct_with_skill.py `
   --skill respect-method-2 `
-  --agent-command "codex exec --ephemeral -"
+  --agent-command "codex exec --ephemeral --sandbox workspace-write --ask-for-approval never -"
 ```
 
 Generated experiment artifacts are written to `experiments/runs/`, which is

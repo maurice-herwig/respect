@@ -147,8 +147,11 @@ python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 3
 Remove `--dry-run` to start real agent processes. Experiment outputs are written
 to `experiments/runs/`, which is ignored by Git.
 
-The default agent command is `codex exec --ephemeral -`, so each description is
-processed in a fresh Codex process without persisted session files.
+The default agent command is
+`codex exec --ephemeral --sandbox workspace-write --ask-for-approval never -`,
+so each description is processed in a fresh Codex process without persisted
+session files while still allowing the skill to access repository files and run
+the local Spectra CLI workflow.
 
 If the agent reports a final `spectra_file`, it is copied into a mirrored
 description structure, for example:
