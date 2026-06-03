@@ -148,7 +148,7 @@ If your IDE starts the process with `experiments` as the working directory, use
 the script name without the leading folder:
 
 ```powershell
-python reconstruct_with_skill.py --skill respect-method-2 --limit 3
+python reconstruct_with_skill.py --skill respect-method-2 --limit 3/
 ```
 
 Remove `--dry-run` to start real agent processes. Experiment outputs are written
