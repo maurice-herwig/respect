@@ -1,0 +1,45 @@
+import "../imports/DwyerPatterns.spectra"
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+//second module - lamps
+//env variables
+
+env DimX lamp0X;
+env DimY lamp0Y;
+env DimX lamp1X;
+env DimY lamp1Y;
+
+predicate moveDistX(DimX pos):
+	pos+1 = next(pos) or
+	pos   = next(pos) or
+	pos-1 = next(pos);
+  
+predicate moveDistY(DimY pos):
+	pos+1 = next(pos) or
+	pos   = next(pos) or
+	pos-1 = next(pos);
+	
+predicate elevatorMoveDistY(DimY pos):
+	pos+1 = next(pos) or
+	pos-1 = next(pos);
+	
+predicate equalLocation(DimX oneX, DimY oneY, DimX twoX, DimY twoY):
+	oneX = twoX and oneY = twoY;
+
+asm lampMoveWhenReached:
+	alw equalLocation(robotX0, robotY0, lamp0X, lamp0Y) -> lamp0Y != next(lamp0Y);
+	
+asm lamp1DontMoveUntilReached:
+	alw !equalLocation(robotX1, robotY1, lamp1X, lamp1Y) -> lamp1X = next(lamp1X) and lamp1Y = next(lamp1Y);	

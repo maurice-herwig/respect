@@ -1,0 +1,9 @@
+The system interacts with an environment that sends requests through an array of boolean signals, `request`, of size `N`, which is twice a constant `K` (set to 4), resulting in `N` being 8. The system responds to these requests through an array of boolean signals, `grant`, of the same size. 
+
+The environment is assumed to behave in such a way that if a request is waiting (i.e., a `request` signal is true and the corresponding `grant` signal is false), then the environment will not change the request signal in the next step. Additionally, it is assumed that eventually, every request will be released (i.e., the `request` signal will become false). The environment is also assumed to never send requests on the first half of the `request` array (signals 0 through `K-1`) simultaneously.
+
+The system guarantees that if a request is being held (i.e., both the `request` and `grant` signals are true for the same index), then the system will continue to grant it in the next step. Furthermore, the system ensures that every waiting request will eventually be granted. For the second half of the `grant` array (signals `K` through `N-1`), if a grant is given in the next step when it was not given in the current step, then none of the first half of the requests can be pending (i.e., requested but not granted).
+
+The system also guarantees mutual exclusion among all grants; at any given time, only one `grant` signal can be true. This ensures that the system does not grant multiple requests simultaneously.
+
+The symmetry of the system's behavior is observed in two parts: one concerning the first half of the `request` and `grant` arrays (indexes 0 through `K-1`), and the other concerning the second half (indexes `K` through `N-1`). This symmetry implies that the system's behavior and the environment's assumptions are consistent across these two halves of the arrays.

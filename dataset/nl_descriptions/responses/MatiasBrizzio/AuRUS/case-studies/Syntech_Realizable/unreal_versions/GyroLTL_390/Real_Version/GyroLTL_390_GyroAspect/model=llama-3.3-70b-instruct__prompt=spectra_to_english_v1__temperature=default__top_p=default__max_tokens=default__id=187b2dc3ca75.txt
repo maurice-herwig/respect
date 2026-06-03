@@ -1,0 +1,11 @@
+The system is a gyro balancer that interacts with its environment. The environment controls the distance sensor (`distSense`) which can be either `CLEAR` or `BLOCKED`, and a readiness signal (`isReady`) which is a boolean value. The system controls the balancer's state, which can be one of `STP` (stop), `FWD` (forward), `BWD` (backward), `TURN_LEFT`, or `TURN_RIGHT`.
+
+Initially, the balancer is in the `STP` state. The system guarantees that when it is not ready (`isReady` is false), the balancer will remain in the `STP` state. Additionally, the system ensures that if the distance sensor detects a blockage (`distSense` is `BLOCKED`) and the system is ready, the balancer will not move forward.
+
+The system's goal is to eventually move the balancer forward (`FWD`) infinitely often. When the distance sensor detects a clear path (`distSense` is `CLEAR`) and the system is ready, the balancer will move forward. Furthermore, once the balancer is moving forward, it will not turn left or right in the next state.
+
+If the distance sensor detects a blockage, the balancer is stopped, and the system is ready, the balancer will change its state in the next step.
+
+The environment is assumed to respond to the balancer's state by clearing the distance sensor (`distSense` becomes `CLEAR`) when the balancer is not moving forward or stopped. The environment also guarantees that it will eventually become ready (`isReady` becomes true) infinitely often, and once it becomes ready, it will remain ready until the next state. However, initially, the environment is not ready.
+
+In general, the environment's response to certain triggers is characterized by a pattern where it responds eventually and consistently, as long as the trigger persists, and remembers its previous responses.

@@ -1,0 +1,13 @@
+The TrafficE2 system controls traffic lights for two roads, A and B, in response to the presence of cars on these roads and an emergency status. The environment controls the presence of cars on road A (`cara`), the presence of cars on road B (`carb`), and the emergency status (`emergency`). The system controls the traffic lights for road A (`greena`) and road B (`greenb`).
+
+The system must always ensure that at least one of the roads has a red light, meaning either `greena` or `greenb` (but not both) can be false at any given time.
+
+When a car is present on road A (`cara` is true), the system must eventually respond by turning the light for road A green (`greena` is true). Similarly, when a car is present on road B (`carb` is true), the system must eventually respond by turning the light for road B green (`greenb` is true).
+
+The environment is assumed to behave in the following ways: 
+- When an emergency is declared (`emergency` is true), if road A's light is red (`greena` is false), then there must be no car on road A (`cara` is false).
+- During an emergency, if the light for road B is red, then the emergency must still be in effect.
+- When the emergency is declared or there is no car on road A, or the next state will have no car on road A, or road A's light is red, then a car on road A will move (i.e., `cara` will become false).
+- Similarly, during an emergency or when there is no car on road B, or the next state will have no car on road B, then a car on road B will move (i.e., `carb` will become false).
+
+The system's response to the presence of cars is defined by a pattern that ensures the system will eventually turn the corresponding light green when a car is present. This pattern involves the system transitioning between two states based on the presence of cars and the state of the lights, ensuring that the light will turn green in response to a car's presence and will remain in a state that allows it to respond to future car arrivals. The system will infinitely often be in a state where it is ready to respond to car arrivals (`state=S0`).

@@ -1,0 +1,61 @@
+import "../imports/DwyerPatterns.spectra"
+spec Patrolling
+
+define DX := 4;
+define DY := 4;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+
+sys DimX robotX;
+sys DimY robotY;
+
+//module 1 will handle the guarantees and assumptions for the targets: the robot should reach every target eventually when they are green, go to the top left corner between each visit to a target, and never visit when they are red
+
+sys DimX targetAX;
+sys DimY targetAY;
+sys boolean Agreen;
+
+sys DimX targetBX;
+sys DimY targetBY;
+sys boolean Bgreen;
+
+sys DimX targetCX;
+sys DimY targetCY;
+sys boolean Cgreen;
+
+define atA := (robotX = targetAX) & (robotY = targetAY);
+define atB := (robotX = targetBX) & (robotY = targetBY);
+define atC := (robotX = targetCX) & (robotY = targetCY);
+
+//guarantees to always visit each target
+gar eventuallyVisitTargetA:
+	alwEv atA;
+	
+gar eventuallyVisitTargetB:
+	alwEv atB;
+	
+gar eventuallyVisitTargetC:
+	alwEv atC;
+	
+//guarantee to never visit red targets
+gar neverAtAWhenRed:
+	alw !(atA & !Agreen);
+	
+gar neverAtBWhenRed:
+	alw !(atB & !Bgreen);
+	
+gar neverAtCWhenRed:
+	alw !(atC & !Cgreen);
+
+
+
+
+
+
+
+
+
+
+
+

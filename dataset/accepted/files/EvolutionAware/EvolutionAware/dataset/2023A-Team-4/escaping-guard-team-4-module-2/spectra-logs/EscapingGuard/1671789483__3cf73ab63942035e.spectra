@@ -1,0 +1,40 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+/* This specification responsible for the robot and the moving obstacle movement. */
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+/* We will define the robot location as the top left square of it. */
+env Dim obsXL;
+env Dim obsYT;
+
+/* robot's movement */
+predicate moveDist(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);
+  
+gar robotAlwaysMove: alw (moveDist(robotX) & moveDist(robotY));
+
+/* ---------------obstacle movement--------------- */
+asm obsAlwaysMove: alw (moveDist(obsXL) & moveDist(obsYT));
+predicate obsRespondsToRob(Dim robotX, Dim robotY, Dim obsXL, Dim obsYT):
+	(robotX < obsXL -> (next(obsXL) <= obsXL)) and 
+	(robotX > obsXL -> next(obsXL) >= obsXL) and
+	(robotY < obsYT -> next(obsYT) <= obsYT) and
+	(robotY > obsYT -> next(obsYT) >= obsYT);
+asm alw obsRespondsToRob(robotX, robotY, obsXL, obsYT);
+
+counter count(0..2) {
+	count = 0;
+	inc: count < 2;
+	overflow: modulo;
+}
+
+asm obsMovesSlower: alw (count < 2) -> (next(obsXL) = obsXL) and (next(obsYT) = obsYT);
+	 
+

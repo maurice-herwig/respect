@@ -1,0 +1,18 @@
+The TrafficE2 system controls traffic lights for two roads, A and B, in response to the presence of cars on each road and an emergency status. The environment controls the presence of cars on road A (cara) and road B (carb), as well as the emergency status (emergency). The system controls the traffic lights for road A (greena) and road B (greenb).
+
+The system must satisfy the following guarantees: 
+- At any given time, at least one of the traffic lights for road A or road B must be red (i.e., not both can be green at the same time).
+- If there is a car on road A, the system must eventually respond by turning the traffic light for road A to green.
+- If there is a car on road B, the system must eventually respond by turning the traffic light for road B to green.
+
+The environment is assumed to behave as follows: 
+- When the emergency status is active, if the traffic light for road A is red, there must be no car on road A, unless the traffic light for road A is green.
+- When the emergency status is active, if the traffic light for road B is red, the emergency status must remain active.
+- When the emergency status is not active, if there is a car on road A and the traffic light for road A is green, the car on road A must move (i.e., its presence must change) at the next time step, unless the traffic light for road A turns red.
+- When the emergency status is not active, if there is a car on road B and the traffic light for road B is green, the car on road B must move (i.e., its presence must change) at the next time step.
+
+The system's response to the presence of cars on the roads follows a specific pattern: 
+- Initially, the system is in a state where it is waiting for a car to arrive.
+- If a car arrives on a road and the corresponding traffic light is not green, the system transitions to a state where it is waiting for the traffic light to turn green.
+- If the traffic light turns green while the system is in this waiting state, it transitions back to the initial waiting state.
+- The system must always eventually return to the initial waiting state.
