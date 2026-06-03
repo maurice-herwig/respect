@@ -141,7 +141,7 @@ After natural-language descriptions have been generated, run a selected agent
 skill once per description from the repository root:
 
 ```powershell
-python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 2
+python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 1
 ```
 
 If your IDE starts the process with `experiments` as the working directory, use
@@ -161,12 +161,12 @@ session files while allowing the skill to access repository files and run the
 local Spectra CLI workflow. The full-access sandbox setting is used because the
 nested Windows workspace sandbox can fail before local validation commands start.
 
-If the agent reports a final `spectra_file`, it is copied into a mirrored
-description structure, for example:
+If the agent reports a final `spectra_file`, it is copied into the mirrored run
+directory alongside the prompt and captured agent output. For example:
 
 ```text
 dataset/nl_descriptions/responses/A/B/C.txt
-experiments/runs/files/A/B/C/respect-method-2.spectra
+experiments/runs/A/B/C/respect-method-2/respect-method-2.spectra
 ```
 
 Run artifacts such as `agent_prompt.txt`, `agent_stdout.txt`, and

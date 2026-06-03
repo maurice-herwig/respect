@@ -48,10 +48,8 @@ python experiments\reconstruct_with_skill.py `
 ```
 
 Generated experiment artifacts are written to `experiments/runs/`, which is
-ignored by Git.
-
-Reconstructed Spectra files are copied into a path that mirrors the
-natural-language description path. For example:
+ignored by Git. Each run uses a path that mirrors the natural-language
+description path. For example:
 
 ```text
 dataset/nl_descriptions/responses/A/B/C.txt
@@ -60,19 +58,15 @@ dataset/nl_descriptions/responses/A/B/C.txt
 becomes:
 
 ```text
-experiments/runs/files/A/B/C/respect-method-2.spectra
-```
-
-Each run also stores the prompt and captured agent output under the mirrored
-description path and skill name:
-
-```text
 experiments/runs/A/B/C/respect-method-2/
 ```
+
+Each run directory stores:
 
 - `input_description.txt`
 - `agent_prompt.txt`
 - `agent_stdout.txt`
 - `agent_stderr.txt`
 - `parsed_result.json`, if the agent prints a final JSON object
+- `respect-method-2.spectra`, if the agent reports a Spectra file
 - a row in `runs.jsonl`

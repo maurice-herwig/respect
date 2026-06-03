@@ -137,6 +137,9 @@ def description_relative_stem(response_file: Path) -> Path:
 def resolve_reported_path(path_value: str | None) -> Path | None:
     if not path_value:
         return None
+    markdown_link = re.fullmatch(r"\[[^\]]+\]\(([^)]+)\)", path_value.strip())
+    if markdown_link:
+        path_value = markdown_link.group(1)
     path = Path(path_value)
     if not path.is_absolute():
         path = REPO_ROOT / path
@@ -348,7 +351,7 @@ def process_description(
     run_id = current_run_key[:24]
     run_dir = output_dir / description_stem / skill_dir
     artifacts_dir = run_dir / "artifacts"
-    reconstructed_spectra_file = output_dir / "files" / description_stem / f"{skill_dir}.spectra"
+    reconstructed_spectra_file = run_dir / f"{skill_dir}.spectra"
     artifacts_dir.mkdir(parents=True, exist_ok=True)
 
     agent_prompt = render_agent_prompt(
