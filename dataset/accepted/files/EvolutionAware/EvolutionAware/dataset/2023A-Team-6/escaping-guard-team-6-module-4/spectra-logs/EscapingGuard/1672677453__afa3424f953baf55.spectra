@@ -1,0 +1,19 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+//module 4 - robot never touches guard
+env Dim guardX; 
+env Dim guardY; //these will hold the coordinates for the top left corner of the guard
+
+gar robotDoesntTouchGuard:
+	alw (robotX != guardX | robotY != guardY)
+	& (robotX != guardX+1 | robotY != guardY)
+	& (robotX != guardX | robotY != guardY+1)
+	& (robotX != guardX+1 | robotY != guardY+1);

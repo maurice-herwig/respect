@@ -1,0 +1,20 @@
+import "../imports/DwyerPatterns.spectra"
+spec Patrolling
+
+define DX := 4;
+define DY := 4;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+
+sys DimX robotX;
+sys DimY robotY;
+
+define atChargingPlace := robotX = 4 and robotY = 0;
+
+gar trig [true]*[atChargingPlace] |=> [atChargingPlace]{5}[true];
+
+/* assumption - the betray of the robot is goot for 10 states. */
+gar trig [true]*[!atChargingPlace]{10} |=> [atChargingPlace];
+
+

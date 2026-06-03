@@ -1,0 +1,30 @@
+spec TrafficE2
+
+env boolean carA;
+env boolean emergency;
+env boolean police;
+
+sys boolean greenA;
+
+asm initial_env_conditions:
+    ini !carA & !emergency;
+
+gar initial_sys_conditions:
+    ini !greenA;
+
+asm carA_detected_often:
+	alwEv carA;
+
+gar greenA_often:
+	alwEv greenA;
+
+gar no_carA_often:
+    alwEv !carA;
+
+asm carA_idle_when_red:
+	alw carA & !greenA -> next(carA);
+
+asm carA_moves_when_green:
+	alw carA & greenA -> next(!carA);
+
+
