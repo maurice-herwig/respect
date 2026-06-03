@@ -1,0 +1,20 @@
+module Elevator
+
+env {LOWER,MIDDLE,UPPER,NONE} floor ;
+sys boolean doorMot ;
+sys {FWD, BWD, STOP} elevMot ;
+
+guarantee -- initial state
+elevMot=STOP;
+
+guarantee -- goal of forklift
+GF (elevMot=FWD);
+
+guarantee -- change direction at lower floor
+GF (floor=LOWER->elevMot=FWD);
+
+guarantee -- change direction at upper floor
+GF (floor=UPPER->elevMot=BWD);
+
+assumption -- ambulanceAvailableAtDeparturePoint_if_AmbulanceAvailableAtOptimalParkingPoint
+G ( elevMot=STOP -> floor!=NONE );
