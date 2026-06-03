@@ -1,0 +1,36 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+counter turnsCnt(0..3) {
+	// initialize at 0
+	turnsCnt = 0;
+	
+	// increment always
+	inc: turnsCnt < 3;
+
+	// reset to 0 when turnsCnt is 3
+	reset: turnsCnt = 3;
+	
+	overflow: false;
+}
+
+predicate moveDist(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos); 
+  
+predicate stationaryPos(Dim posX, Dim posY):
+	(posX = next(posX)) and (posY = next(posY));
+
+gar robotMoves:
+  always moveDist(robotX) & moveDist(robotY);
+
+gar robotRespectsEnvironmentTurn:
+	always turnsCnt = 0 -> stationaryPos(robotX, robotY);

@@ -1,0 +1,39 @@
+spec TrafficE2
+
+env boolean car;
+env boolean emergency;
+env boolean police;
+sys boolean green;
+
+
+gar green_often:
+	pRespondsToS(car ,green);
+
+gar no_car_often:
+    GF(!car);
+
+asm not_police_often:
+	GF(!police);
+
+asm car_idle_when_red:
+	G(car & !green & !emergency -> next(car));
+
+asm car_moves_when_green:
+	G(car & green & !police -> next(!car));
+
+
+pattern pRespondsToS(s, p) {
+  var { S0, S1} state;
+
+  // initial assignments: initial state
+  ini state=S0;
+
+  // safety this and next state
+  alw ((state=S0 & ((!s) | (s & p)) & next(state=S0)) |
+  (state=S0 & (s & !p) & next(state=S1)) |
+  (state=S1 & (p) & next(state=S0)) |
+  (state=S1 & (!p) & next(state=S1)));
+
+  // equivalence of satisfaction
+  alwEv (state=S0);
+}

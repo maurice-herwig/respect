@@ -1,0 +1,38 @@
+import "../imports/DwyerPatterns.spectra"
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+env DimX lamp0X;
+env DimY lamp0Y;
+env DimX lamp1X;
+env DimY lamp1Y;
+
+predicate moveDistX(DimX pos):
+	pos+1 = next(pos) or
+	pos   = next(pos) or
+	pos-1 = next(pos);
+  
+predicate moveDistY(DimY pos):
+	pos+1 = next(pos) or
+	pos   = next(pos) or
+	pos-1 = next(pos);
+	
+define onPackage1 := robotX0 = lamp0X and robotY0 = lamp0Y;
+	
+counter package1Cnt(0..2){
+	package1Cnt = 0;
+	inc: onPackage1;
+}
+
+asm alw package1Cnt = 2 -> robotX0 = DX and robotY0 = DY;

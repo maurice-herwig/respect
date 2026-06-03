@@ -297,15 +297,17 @@ def run_agent(command: str, prompt_text: str, pass_prompt_on_stdin: bool, timeou
         input=prompt_text if pass_prompt_on_stdin else None,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=False,
         shell=True,
         timeout=timeout,
     )
 
 
-def write_text(path: Path, content: str) -> None:
+def write_text(path: Path, content: str | None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    path.write_text(content or "", encoding="utf-8")
 
 
 def resolve_repo_path(path_value: str | Path) -> Path:

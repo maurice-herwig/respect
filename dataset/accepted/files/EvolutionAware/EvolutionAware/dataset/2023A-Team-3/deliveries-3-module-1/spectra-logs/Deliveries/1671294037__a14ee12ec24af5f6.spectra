@@ -1,0 +1,31 @@
+/* 1- elevator 
+ */
+import "../imports/DwyerPatterns.spectra"
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+env DimY elevatorY;
+define elevatorX := 0;
+
+predicate moveDistY(DimY pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);  
+
+asm alw moveDistY(elevatorY);
+
+//Elevator visits the ground floor and the top floor infinitely many times
+asm alwEv elevatorY = 0;
+asm alwEv elevatorY = 5;  
+ 

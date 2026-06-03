@@ -1,0 +1,20 @@
+import "../imports/DwyerPatterns.spectra"
+spec CatchingIntruder
+define D := 7;
+type Dim = Int(0..D);
+
+sys Dim robotX0;
+sys Dim robotY0;
+sys Dim robotX1;
+sys Dim robotY1;
+
+/* Initially, the two robots R0 and R1 are located at the top left and right corners respectively.  */
+gar atTopLeft: ini robotX0 = 0 and robotY0 = 0;
+gar atTopRight: ini robotX1 = 0 and robotY1 = 0;
+
+/* robot doesn't hit static obstacles */
+predicate robotNotOnStaticObstacles(Dim robX, Dim robY):
+	robY = 1 -> (robX != 2 and robX != 3 and robX != 4 and robX != 5);
+
+gar alw robotNotOnStaticObstacles(robotX0, robotY0);
+gar alw robotNotOnStaticObstacles(robotX1, robotY1);

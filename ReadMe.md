@@ -141,14 +141,14 @@ After natural-language descriptions have been generated, run a selected agent
 skill once per description from the repository root:
 
 ```powershell
-python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 1
+python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 10
 ```
 
 If your IDE starts the process with `experiments` as the working directory, use
 the script name without the leading folder:
 
 ```powershell
-python reconstruct_with_skill.py --skill respect-method-2 --limit 3/
+python reconstruct_with_skill.py --skill respect-method-2 --limit 4
 ```
 
 Remove `--dry-run` to start real agent processes. Experiment outputs are written

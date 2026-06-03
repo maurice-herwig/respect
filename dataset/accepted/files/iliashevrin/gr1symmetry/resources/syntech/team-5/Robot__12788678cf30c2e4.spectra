@@ -1,0 +1,29 @@
+import "DwyerPatterns.spectra"
+
+spec Robot
+
+define NumObstacles := 14;
+define DX := 7;
+define DY := 7;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+ 
+sys DimX robotX;
+sys DimY robotY;
+
+gar ini robotX = 0 & robotY = 0;
+
+gar alw next(robotY) = robotY - 1 &  robotY != 0 | 
+		next(robotY) = robotY + 1 &  robotY != DY | 
+		next(robotY) = robotY;
+		
+gar alw next(robotX) = robotX - 1 &  robotX != 0 | 
+		next(robotX) = robotX + 1 &  robotX != DX | 
+		next(robotX) = robotX;
+		
+gar alw robotX = DX & robotY = DY implies next(robotX) = robotX & next(robotY) = robotY;
+		
+gar alw !(robotX = 2 & robotY != 7 | robotX = 5 & robotY != 0);
+
+gar alwEv robotX = DX & robotY = DX;

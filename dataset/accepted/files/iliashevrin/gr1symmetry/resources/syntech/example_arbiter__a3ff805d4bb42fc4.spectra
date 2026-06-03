@@ -1,0 +1,26 @@
+module SymmetryExample
+
+define N := 3;
+define IND := N - 1;
+
+env boolean[N] request;
+sys boolean[N] grant;
+
+predicate holding(Int(0..IND) i) : request[i] & grant[i];
+predicate waiting(Int(0..IND) i) : request[i] & !grant[i];
+
+asm G forall i in Int(0..IND) . waiting(i) -> next(request[i]);
+asm eventual_release{Int(0..IND) i} : GF !holding(i);
+
+gar G forall i in Int(0..IND) . holding(i) -> next(grant[i]);
+gar eventual_grant{Int(0..IND) i} : GF !waiting(i);
+gar G forall i in Int(1..IND) . (!grant[i] & next(grant[i])) -> !waiting(0);
+
+
+gar mutex : G forall i in Int(0..IND) . forall j in Int(0..IND) . (i != j) -> !(grant[i] & grant[j]);
+
+@symmetry {
+  indexes: 1..IND;
+  arrays: request,grant;
+}
+

@@ -1,0 +1,23 @@
+import "../imports/DwyerPatterns.spectra"
+spec CatchingIntruder
+define D := 7;
+type Dim = Int(0..D);
+
+sys Dim robotX0;
+sys Dim robotY0;
+sys Dim robotX1;
+sys Dim robotY1;
+
+//increment 1 - robots move one step at a time without moving diagonally
+
+predicate moveDist(Dim pos):
+	(pos = next(pos)) | (pos = next(pos) + 1) | (pos = next(pos)-1);
+
+predicate staysInPlace(Dim pos):
+	pos = next(pos);
+	
+gar robotsMoveOneAtATime:
+	alw moveDist(robotX0) & moveDist(robotX1) & moveDist(robotY0) & moveDist(robotY1);
+	
+gar robotsDontMoveDiagonally:
+	alw (staysInPlace(robotX0) | staysInPlace(robotY0)) & (staysInPlace(robotX1) | staysInPlace(robotY1));
