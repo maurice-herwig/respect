@@ -1,0 +1,10 @@
+The Arbiter system interacts with its environment, which controls the boolean inputs `a`, `r1`, and `r2`. The system, in turn, controls the boolean outputs `g1` and `g2`. 
+
+The environment is assumed to periodically set `a` to true, meaning that `a` will be true infinitely often.
+
+The system must satisfy the following guarantees:
+- Whenever `r1` is true, the system must eventually set `g1` to true, and similarly, when `r2` is true, the system must eventually set `g2` to true.
+- As long as `a` is false, the system must keep both `g1` and `g2` false.
+- At any given time, the system can have at most one of `g1` or `g2` set to true.
+
+Initially, the system is in a state where it does not respond to any request. The system's behavior can be described by its response to requests `r1` and `r2`. When a request is made (e.g., `r1` is true), if the system is not currently granting the request (i.e., `g1` is false), it moves to a state where it will grant the request. Once the request is granted (i.e., `g1` is true), the system moves back to its initial state. The system remains in this initial state as long as no request is made or the request is made and granted simultaneously. If a request is made but not granted, the system stays in the state where it will grant the request until the request is actually granted. The system always eventually returns to its initial state.

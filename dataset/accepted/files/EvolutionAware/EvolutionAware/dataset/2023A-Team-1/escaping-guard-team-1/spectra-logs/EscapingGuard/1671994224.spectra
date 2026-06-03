@@ -1,0 +1,18 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+predicate fixed(Dim x):
+	x = next(x);
+	
+predicate moveDist(Dim x):
+	x - next(x) < 1 and next(x) - x < 1;
+	
+
+gar alw moveDist(robotX) and moveDist(robotY);

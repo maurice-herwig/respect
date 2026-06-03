@@ -1,0 +1,7 @@
+The Rover system operates in an environment where sensors detect gravity and provide a direction after a seeking process. The environment-controlled inputs are `gravityDetected`, which indicates whether gravity is detected, and `found`, which indicates whether a direction was found after seeking. The system-controlled outputs are `speed`, which is an integer between 0 and 7, and `mode`, which can be one of three states: `SEEK`, `MEASURE`, or `IDLE`.
+
+The environment is assumed to behave in the following ways: initially, no gravity is detected, and once gravity is detected, it remains detected. Additionally, the environment will eventually detect gravity.
+
+The system guarantees the following behavior: it starts in `IDLE` mode. When no gravity is detected, the system sets its speed to 0 and remains in `IDLE` mode. If the system is in `SEEK` mode, it will have a non-zero speed in the next state. The system also guarantees that it will not remain in `IDLE` mode indefinitely, and it will periodically transition to a non-`IDLE` mode.
+
+The system has an internal monitor that tracks whether it is expecting to find a direction after seeking. This expectation is initially false and becomes true when the system enters `SEEK` mode. The expectation remains true until a direction is found. The environment is assumed to eventually stop expecting a finding, meaning that the system will eventually find a direction or exit `SEEK` mode.
