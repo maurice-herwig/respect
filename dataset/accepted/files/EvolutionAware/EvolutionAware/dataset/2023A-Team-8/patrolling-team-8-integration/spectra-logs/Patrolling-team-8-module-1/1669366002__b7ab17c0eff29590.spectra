@@ -1,0 +1,65 @@
+import "../imports/DwyerPatterns.spectra"
+/**
+ * module that describes obstacles behavior.
+ */
+ 
+spec PatrollingTeam8Module1
+
+define D := 4;
+
+/**
+ * creating obstacles
+ */
+type Dim = Int(0..D);
+env Dim[2] fixedObstacle1;
+env Dim[2] fixedObstacle2;
+env Dim[2] fixedObstacle3;
+env Dim[2] fixedObstacle4;
+env Dim[2] fixedObstacle5;
+env Dim[2] movingObstacle;
+
+
+/**
+ * fixed obstacle does not move
+ */
+asm alw (fixedObstacle1[0]=1) & (fixedObstacle1[1] = 1);
+asm alw (fixedObstacle2[0]=2) & (fixedObstacle2[1] = 1);
+asm alw (fixedObstacle3[0]=0) & (fixedObstacle3[1] = 3);
+asm alw (fixedObstacle4[0]=3) & (fixedObstacle4[1] = 3);
+asm alw (fixedObstacle5[0]=3) & (fixedObstacle5[1] = 4);
+
+/**
+ * moving obstacle starts at fixed location
+ */
+asm ini (movingObstacle[0]= 0) & (movingObstacle[1] = 2);
+ 
+/**
+ * obstacle can move only on X-axis
+ */
+predicate moveDist(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos); 
+ 
+asm obstacleMoves: always moveDist(movingObstacle[0]); 
+
+/**
+ * obstacle can not stay on target square forever 
+ */
+//asm alwEv next(movingObstacle[0])!= movingObstacle[0];
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 

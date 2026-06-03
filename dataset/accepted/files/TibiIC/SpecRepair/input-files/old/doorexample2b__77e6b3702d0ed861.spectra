@@ -1,0 +1,68 @@
+module Door2b
+
+env boolean onebellpressed ;
+
+env boolean onebellrings ;
+
+env boolean onedoorhit ;
+
+env boolean oneknocksound ;
+
+sys boolean onedooranswered ;
+
+env boolean twobellpressed ;
+
+env boolean twobellrings ;
+
+env boolean twodoorhit ;
+
+env boolean twoknocksound ;
+
+sys boolean twodooranswered ;
+
+guarantee -- onegoal1
+
+G ( onebellrings=true -> onedooranswered=true ) ;
+
+guarantee -- onegoal2
+
+G ( oneknocksound=true -> onedooranswered=true ) ;
+
+guarantee -- twogoal1
+
+G ( twobellrings=true -> twodooranswered=true ) ;
+
+guarantee -- twogoal2
+
+G ( twoknocksound=true -> twodooranswered=true ) ;
+
+guarantee -- s_init
+
+onedooranswered=false & twodooranswered=false;
+
+assumption -- e_init
+
+onebellrings=false & onedoorhit=false & onebellpressed=false & oneknocksound=false & twobellrings=false & twodoorhit=false & twobellpressed=false & twoknocksound=false ;
+
+
+
+
+
+assumption -- onefineassumption
+
+G ( onedoorhit=true -> oneknocksound=true ) ;
+
+assumption -- oneotherassumption
+
+G ( onebellpressed=true -> onebellrings=true ) ;
+
+assumption -- twosillyassumption
+
+G ( twobellpressed=true -> twoknocksound=true ) ;
+
+assumption -- twootherassumption
+
+G ( twodoorhit=true -> twoknocksound=true ) ;
+
+
+
