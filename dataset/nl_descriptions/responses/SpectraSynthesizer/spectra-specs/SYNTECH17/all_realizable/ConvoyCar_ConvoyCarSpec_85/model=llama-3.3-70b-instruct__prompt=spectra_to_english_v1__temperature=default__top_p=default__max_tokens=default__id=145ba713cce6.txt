@@ -1,0 +1,13 @@
+The system is a convoy car controller that interacts with its environment through a sensor input, `sense`, which represents the distance to the next car. The system controls two outputs, `mLeft` and `mRight`, which represent the movement of the left and right parts of the car, respectively.
+
+The environment is assumed to initialize the distance sensor to a value greater than or equal to the minimum distance, `minDist`. The system guarantees that it will not turn, meaning that `mLeft` and `mRight` will always be equal.
+
+Initially, the system is in a stopped state, with `mLeft` and `mRight` both set to 0, and it is not accelerating or slowing down. The system guarantees that it will maintain a safe distance from the next car, defined as being within the range `minDist` to `maxDist`.
+
+When the system is accelerating, it will increase `mLeft` by 1, unless `mLeft` is already at its maximum value of 4, in which case it will remain at 4. When the system is slowing down, it will decrease `mLeft` by 1, unless `mLeft` is already at its minimum value of 0, in which case it will remain at 0.
+
+The system monitors the last distance reading, `lastDist`, and updates it to the current distance reading, `sense`, at each step. If the next car is far away, the system will accelerate. If the distance to the next car is decreasing while within range, the system will slow down. If the distance to the next car is increasing while within range, the system will accelerate. If the distance to the next car is constant while within range, the system will neither accelerate nor slow down.
+
+The system guarantees that it will always be in one of the following states: within range of the next car, far away from the next car, or too close to the next car and stopped. If the next car is too close, the system will slow down.
+
+The system also guarantees that it will periodically be within range of the next car, far away from the next car, or too close to the next car and stopped.
