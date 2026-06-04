@@ -4,6 +4,55 @@
 
 ## Setup
 
+Install Spot for omega-automata and HOA operations. Use the LRDE/EPITA Spot
+package from conda-forge in a supported Linux/macOS environment.
+
+On Windows, use WSL2 because the conda-forge Spot package does not currently
+provide a native Windows build. From an administrator PowerShell, install
+Ubuntu if WSL is not already available:
+
+```powershell
+wsl --install -d Ubuntu
+```
+
+Restart Windows if prompted, then open Ubuntu and create your Linux user. Inside
+Ubuntu, update packages and install basic tools:
+
+```bash
+sudo apt update
+sudo apt install -y git curl ca-certificates
+```
+
+Install Miniforge, which is the conda-forge based Conda distribution:
+
+```bash
+curl -L -o Miniforge3-Linux-x86_64.sh \
+  https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+bash Miniforge3-Linux-x86_64.sh
+```
+
+When the installer asks whether it should initialize Conda, answer `yes`. Close
+and reopen Ubuntu, then create a dedicated environment for Spot-based
+evaluation:
+
+```bash
+conda create -n respect-spot python=3.12 conda-forge::spot
+conda activate respect-spot
+python -c "import spot; print(spot.version())"
+```
+
+If `conda` is not found after reopening Ubuntu, initialize Miniforge manually:
+
+```bash
+~/miniforge3/bin/conda init bash
+exec bash
+```
+
+If `~/miniforge3/bin/conda` does not exist, rerun the Miniforge installer above.
+
+Do not use `pip install spot`; the PyPI package with that name is not the Spot
+omega-automata library used by this project.
+
 Create a local `.env` file from the example file:
 
 ```powershell
