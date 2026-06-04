@@ -16,6 +16,30 @@ Implementation intentionally deferred.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from math import isclose
+
+
+@dataclass(frozen=True)
+class MarkovTransition:
+    """One probabilistic transition of the induced Markov chain."""
+
+    target: int
+    probability: float
+    acceptance_sets: frozenset[int]
+
+
+@dataclass(frozen=True)
+class MarkovChain:
+    """Sparse Markov-chain view of a deterministic Spot automaton."""
+
+    num_states: int
+    initial_state: int
+    atomic_propositions: tuple[str, ...]
+    transitions: dict[int, list[MarkovTransition]]
+    acceptance_formula: str
+    num_acceptance_sets: int
+
 
 def require_spot():
     """Import Spot lazily so the script can print a clear setup error."""
@@ -28,6 +52,18 @@ def require_spot():
             "`conda create -n respect-spot python=3.12 conda-forge::spot`."
         ) from exc
     return spot
+
+
+def require_buddy():
+    """Import Buddy, Spot's BDD backend, with a clear setup error."""
+    try:
+        import buddy
+    except ImportError as exc:
+        raise SystemExit(
+            "Could not import Buddy, Spot's BDD backend. "
+            "Run this script inside the WSL/conda Spot environment."
+        ) from exc
+    return buddy
 
 
 def get_example_buchi_automata():
@@ -49,6 +85,99 @@ def get_example_buchi_automata():
     # `product_xor` requires deterministic operands, so the examples are
     # generated as deterministic Buchi automata from the beginning.
     return tuple(spot.translate(formula, "BA", "deterministic") for formula in formulas)
+
+
+def count_satisfying_letters(condition, bdd_variables: tuple[int, ...]) -> int:
+    """Count complete AP valuations satisfying a Spot/Buddy BDD condition.
+
+    This intentionally uses explicit enumeration. That is simple and reliable
+    for the first implementation, and good enough while the example alphabets are
+    small. Later, this can be replaced by a direct BDD model-counting routine if
+    large Spectra alphabets become a bottleneck.
+    """
+    buddy = require_buddy()
+    satisfying_letters = 0
+
+    for valuation in range(1 << len(bdd_variables)):
+        cube = buddy.bddtrue
+        for index, variable in enumerate(bdd_variables):
+            literal = buddy.bdd_ithvar(variable) if valuation & (1 << index) else buddy.bdd_nithvar(variable)
+            cube &= literal
+        if condition & cube != buddy.bddfalse:
+            satisfying_letters += 1
+
+    return satisfying_letters
+
+
+def automaton_to_markov_chain(automaton, debug: bool = False) -> MarkovChain:
+    """Translate a deterministic Spot automaton into a sparse Markov chain.
+
+    The random-word model is currently uniform over all complete valuations of
+    the automaton's atomic propositions. For `n` APs, every letter therefore has
+    probability `1 / 2**n`.
+
+    Raises:
+        ValueError: if the automaton is not deterministic or if an outgoing row
+        does not cover the complete alphabet.
+    """
+    if not automaton.is_deterministic():
+        raise ValueError("Cannot translate a nondeterministic automaton into a Markov chain.")
+
+    bdd_dict = automaton.get_dict()
+    atomic_propositions = tuple(str(ap) for ap in automaton.ap())
+    bdd_variables = tuple(bdd_dict.varnum(ap) for ap in automaton.ap())
+    alphabet_size = 1 << len(bdd_variables)
+    transitions: dict[int, list[MarkovTransition]] = {}
+
+    if debug:
+        print("[debug] Translating automaton to Markov chain.")
+        print(f"[debug] States: {automaton.num_states()}")
+        print(f"[debug] Initial state: {automaton.get_init_state_number()}")
+        print(f"[debug] Atomic propositions: {atomic_propositions}")
+        print(f"[debug] Alphabet size: {alphabet_size}")
+
+    for source in range(automaton.num_states()):
+        outgoing: list[MarkovTransition] = []
+        row_probability = 0.0
+
+        for edge in automaton.out(source):
+            satisfying_letters = count_satisfying_letters(edge.cond, bdd_variables)
+            if satisfying_letters == 0:
+                continue
+
+            probability = satisfying_letters / alphabet_size
+            transition = MarkovTransition(
+                target=edge.dst,
+                probability=probability,
+                acceptance_sets=frozenset(int(acc_set) for acc_set in edge.acc.sets()),
+            )
+            outgoing.append(transition)
+            row_probability += probability
+
+            if debug:
+                print(
+                    "[debug] MC edge "
+                    f"{source} -> {transition.target}, "
+                    f"probability={transition.probability:.6g}, "
+                    f"acceptance_sets={sorted(transition.acceptance_sets)}"
+                )
+
+        if not isclose(row_probability, 1.0, rel_tol=1e-12, abs_tol=1e-12):
+            raise ValueError(
+                f"Automaton is not complete at state {source}: "
+                f"outgoing probability sums to {row_probability} instead of 1.0."
+            )
+
+        transitions[source] = outgoing
+
+    return MarkovChain(
+        num_states=automaton.num_states(),
+        initial_state=automaton.get_init_state_number(),
+        atomic_propositions=atomic_propositions,
+        transitions=transitions,
+        acceptance_formula=str(automaton.get_acceptance()),
+        num_acceptance_sets=automaton.num_sets(),
+    )
 
 
 def compute_buchi_distance(left_automaton, right_automaton, debug: bool = False) -> float:
@@ -78,13 +207,19 @@ def compute_buchi_distance(left_automaton, right_automaton, debug: bool = False)
         print("[debug] Symmetric-difference automaton:")
         print(f"[debug] States: {symmetric_difference.num_states()}")
         print(symmetric_difference.to_str("hoa").rstrip())
-        print("[debug] Distance implementation stops after symmetric-difference construction.")
+
+    markov_chain = automaton_to_markov_chain(symmetric_difference, debug=debug)
+
+    if debug:
+        print("[debug] Markov-chain translation complete.")
+        print(f"[debug] Markov-chain states: {markov_chain.num_states}")
+        print("[debug] Distance implementation stops after Markov-chain construction.")
 
     # Later steps will interpret `symmetric_difference` as a Markov chain under a
     # random-word distribution, find accepting BSCCs, and compute the reachability
     # probability. For now, stop here explicitly so partial results are not
     # mistaken for the final distance.
-    raise NotImplementedError("Buchi distance computation is implemented up to symmetric difference.")
+    raise NotImplementedError("Buchi distance computation is implemented up to Markov-chain construction.")
 
 
 def main() -> int:
