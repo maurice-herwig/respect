@@ -117,11 +117,20 @@ def automaton_to_markov_chain(automaton, debug: bool = False) -> MarkovChain:
     probability `1 / 2**n`.
 
     Raises:
-        ValueError: if the automaton is not deterministic or if an outgoing row
-        does not cover the complete alphabet.
+        ValueError: if the automaton is not deterministic, explicitly marked
+        incomplete, or if an outgoing row does not cover the complete alphabet.
     """
     if not automaton.is_deterministic():
         raise ValueError("Cannot translate a nondeterministic automaton into a Markov chain.")
+
+    # Spot stores automaton properties as three-valued information:
+    # true/false/unknown. The HOA printer may still be able to report
+    # `complete` after analyzing the automaton, while prop_complete() remains
+    # unknown on the object. Therefore we only fail early on explicit false and
+    # keep the row-sum check below as the authoritative completeness test.
+    complete_property = automaton.prop_complete()
+    if complete_property.is_false():
+        raise ValueError("Cannot translate an incomplete automaton into a Markov chain.")
 
     bdd_dict = automaton.get_dict()
     atomic_propositions = tuple(str(ap) for ap in automaton.ap())
@@ -135,6 +144,7 @@ def automaton_to_markov_chain(automaton, debug: bool = False) -> MarkovChain:
         print(f"[debug] Initial state: {automaton.get_init_state_number()}")
         print(f"[debug] Atomic propositions: {atomic_propositions}")
         print(f"[debug] Alphabet size: {alphabet_size}")
+        print(f"[debug] Spot complete property: {complete_property}")
 
     for source in range(automaton.num_states()):
         outgoing: list[MarkovTransition] = []
@@ -238,8 +248,6 @@ def main() -> int:
     # Run the currently implemented part of the distance pipeline. This will
     # print the symmetric-difference automaton and then raise NotImplementedError.
     compute_buchi_distance(example_automata[0], example_automata[1], debug=True)
-
-    return 0
 
 
 if __name__ == "__main__":
