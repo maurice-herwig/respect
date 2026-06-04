@@ -41,6 +41,97 @@ class MarkovChain:
     num_acceptance_sets: int
 
 
+def markov_successors(markov_chain: MarkovChain, state: int) -> set[int]:
+    """Return successors reachable with positive probability."""
+    return {
+        transition.target
+        for transition in markov_chain.transitions.get(state, [])
+        if transition.probability > 0.0
+    }
+
+
+def find_strongly_connected_components(markov_chain: MarkovChain) -> list[set[int]]:
+    """Find SCCs of the Markov-chain graph with Tarjan's algorithm."""
+    index = 0
+    stack: list[int] = []
+    on_stack: set[int] = set()
+    indices: dict[int, int] = {}
+    lowlinks: dict[int, int] = {}
+    components: list[set[int]] = []
+
+    def visit(state: int) -> None:
+        nonlocal index
+        indices[state] = index
+        lowlinks[state] = index
+        index += 1
+        stack.append(state)
+        on_stack.add(state)
+
+        for successor in markov_successors(markov_chain, state):
+            if successor not in indices:
+                visit(successor)
+                lowlinks[state] = min(lowlinks[state], lowlinks[successor])
+            elif successor in on_stack:
+                lowlinks[state] = min(lowlinks[state], indices[successor])
+
+        if lowlinks[state] == indices[state]:
+            component: set[int] = set()
+            while True:
+                member = stack.pop()
+                on_stack.remove(member)
+                component.add(member)
+                if member == state:
+                    break
+            components.append(component)
+
+    for state in range(markov_chain.num_states):
+        if state not in indices:
+            visit(state)
+
+    return components
+
+
+def find_bsccs(markov_chain: MarkovChain, debug: bool = False) -> list[set[int]]:
+    """Return all bottom SCCs of the Markov chain."""
+    bsccs: list[set[int]] = []
+
+    for component in find_strongly_connected_components(markov_chain):
+        is_bottom = True
+        for state in component:
+            outside_successors = markov_successors(markov_chain, state) - component
+            if outside_successors:
+                is_bottom = False
+                break
+
+        if is_bottom:
+            bsccs.append(component)
+
+    if debug:
+        print(f"[debug] BSCC count: {len(bsccs)}")
+        for index, component in enumerate(bsccs):
+            print(f"[debug] BSCC {index}: {sorted(component)}")
+
+    return bsccs
+
+
+def acceptance_sets_in_bscc(markov_chain: MarkovChain, bscc: set[int]) -> frozenset[int]:
+    """Return acceptance sets seen on positive-probability internal BSCC edges.
+
+    For transition-based acceptance, an acceptance set is seen infinitely often
+    inside a reached BSCC iff it occurs on at least one internal transition with
+    positive probability.
+    """
+    seen: set[int] = set()
+
+    for source in bscc:
+        for transition in markov_chain.transitions.get(source, []):
+            if transition.probability <= 0.0 or transition.target not in bscc:
+                continue
+            seen.update(transition.acceptance_sets)
+
+    return frozenset(seen)
+
+
 def require_spot():
     """Import Spot lazily so the script can print a clear setup error."""
     try:
@@ -219,10 +310,15 @@ def compute_buchi_distance(left_automaton, right_automaton, debug: bool = False)
         print(symmetric_difference.to_str("hoa").rstrip())
 
     markov_chain = automaton_to_markov_chain(symmetric_difference, debug=debug)
+    bsccs = find_bsccs(markov_chain, debug=debug)
 
     if debug:
         print("[debug] Markov-chain translation complete.")
         print(f"[debug] Markov-chain states: {markov_chain.num_states}")
+        print(f"[debug] Markov-chain BSCCs: {bsccs}")
+        for index, bscc in enumerate(bsccs):
+            acceptance_sets = acceptance_sets_in_bscc(markov_chain, bscc)
+            print(f"[debug] BSCC {index} acceptance sets: {sorted(acceptance_sets)}")
         print("[debug] Distance implementation stops after Markov-chain construction.")
 
     # Later steps will interpret `symmetric_difference` as a Markov chain under a
