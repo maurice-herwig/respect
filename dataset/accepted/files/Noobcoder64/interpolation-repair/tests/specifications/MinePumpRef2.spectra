@@ -1,0 +1,21 @@
+module MinePump
+
+env boolean h;
+env boolean m;
+
+sys boolean p;
+sys boolean prev_p;
+
+assumption
+	G (((prev_p & p) -> !(next(h))));
+assumption
+	G(!(h & m));
+
+guarantee
+	G ((h -> next(p)));
+guarantee
+	G ((m -> !(next(p))));
+guarantee
+	(!(prev_p));
+guarantee
+	G ((next(prev_p) <-> p));
