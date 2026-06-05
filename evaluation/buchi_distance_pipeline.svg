@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1420" height="720" viewBox="0 0 1420 720" role="img" aria-labelledby="title desc">
+  <title id="title">Buchi Distance: Computation Pipeline</title>
+  <desc id="desc">Flowchart showing the computation steps and packages used for the Buchi automata distance.</desc>
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .title { font: 700 34px Arial, sans-serif; fill: #172033; }
+      .subtitle { font: 400 16px Arial, sans-serif; fill: #5b667a; }
+      .box { fill: #f8fbff; stroke: #2f6fed; stroke-width: 2; rx: 8; }
+      .box-alt { fill: #fbfcfe; stroke: #8ca3c7; stroke-width: 1.5; rx: 8; }
+      .num { font: 700 15px Arial, sans-serif; fill: #ffffff; }
+      .num-bg { fill: #2f6fed; }
+      .head { font: 700 18px Arial, sans-serif; fill: #172033; }
+      .text { font: 400 14px Arial, sans-serif; fill: #313b4f; }
+      .mono { font: 400 14px Consolas, monospace; fill: #24314a; }
+      .pkg { font: 700 12px Arial, sans-serif; fill: #1d4fb8; }
+      .pkg-bg { fill: #e8f0ff; stroke: #b8cbf5; stroke-width: 1; rx: 5; }
+      .arrow { stroke: #6b778c; stroke-width: 2.2; fill: none; marker-end: url(#arrowhead); }
+      .legend-title { font: 700 16px Arial, sans-serif; fill: #172033; }
+      .legend-text { font: 400 14px Arial, sans-serif; fill: #313b4f; }
+      .legend-key { font: 700 14px Arial, sans-serif; fill: #1d4fb8; }
+      .small { font: 400 12px Arial, sans-serif; fill: #5b667a; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#6b778c"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1420" height="720"/>
+  <text class="title" x="48" y="58">Büchi Distance: Computation Pipeline</text>
+  <text class="subtitle" x="48" y="84">Distance between two specifications via symmetric difference, Markov chain, and reachability probability</text>
+
+  <!-- Row 1 -->
+  <g transform="translate(48 130)">
+    <rect class="box" x="0" y="0" width="245" height="150"/>
+    <circle class="num-bg" cx="24" cy="24" r="16"/>
+    <text class="num" x="19" y="29">1</text>
+    <text class="head" x="50" y="30">Input</text>
+    <text class="text" x="22" y="65">two deterministic</text>
+    <text class="text" x="22" y="86">Büchi automata</text>
+    <text class="mono" x="22" y="112">A, B im Spot/HOA-Format</text>
+    <rect class="pkg-bg" x="22" y="122" width="56" height="20"/>
+    <text class="pkg" x="34" y="137">Spot</text>
+  </g>
+
+  <path class="arrow" d="M300 205 L345 205"/>
+
+  <g transform="translate(350 130)">
+    <rect class="box" x="0" y="0" width="245" height="150"/>
+    <circle class="num-bg" cx="24" cy="24" r="16"/>
+    <text class="num" x="19" y="29">2</text>
+    <text class="head" x="50" y="30">Symmetric Difference</text>
+    <text class="mono" x="22" y="68">L(A) △ L(B)</text>
+    <text class="text" x="22" y="96">accepts exactly words</text>
+    <text class="text" x="22" y="117">where A and B differ</text>
+    <rect class="pkg-bg" x="22" y="122" width="118" height="20"/>
+    <text class="pkg" x="31" y="137">Spot: product_xor</text>
+  </g>
+
+  <path class="arrow" d="M602 205 L647 205"/>
+
+  <g transform="translate(652 130)">
+    <rect class="box" x="0" y="0" width="245" height="150"/>
+    <circle class="num-bg" cx="24" cy="24" r="16"/>
+    <text class="num" x="19" y="29">3</text>
+    <text class="head" x="50" y="30">Automaton → Markov Chain</text>
+    <text class="text" x="22" y="65">uniform AP valuations</text>
+    <text class="text" x="22" y="86">count BDD labels</text>
+    <text class="mono" x="22" y="112">P(q → q')</text>
+    <rect class="pkg-bg" x="22" y="122" width="96" height="20"/>
+    <text class="pkg" x="34" y="137">Spot + Buddy</text>
+  </g>
+
+  <path class="arrow" d="M904 205 L949 205"/>
+
+  <g transform="translate(954 130)">
+    <rect class="box" x="0" y="0" width="245" height="150"/>
+    <circle class="num-bg" cx="24" cy="24" r="16"/>
+    <text class="num" x="19" y="29">4</text>
+    <text class="head" x="50" y="30">Find BSCCs</text>
+    <text class="text" x="22" y="65">compute SCCs</text>
+    <text class="text" x="22" y="86">filter bottom components</text>
+    <text class="mono" x="22" y="112">Tarjan + Graphfilter</text>
+    <rect class="pkg-bg" x="22" y="122" width="126" height="20"/>
+    <text class="pkg" x="33" y="137">custom Python code</text>
+  </g>
+
+  <!-- Connector down -->
+  <path class="arrow" d="M1076 285 L1076 330 L1040 330"/>
+
+  <!-- Row 2 reversed -->
+  <g transform="translate(795 360)">
+    <rect class="box" x="0" y="0" width="245" height="150"/>
+    <circle class="num-bg" cx="24" cy="24" r="16"/>
+    <text class="num" x="19" y="29">5</text>
+    <text class="head" x="50" y="30">Acceptance per BSCC</text>
+    <text class="text" x="22" y="65">collect internal transitions</text>
+    <text class="text" x="22" y="86">sets seen infinitely often</text>
+    <text class="mono" x="22" y="112">accepting(seen)</text>
+    <rect class="pkg-bg" x="22" y="122" width="158" height="20"/>
+    <text class="pkg" x="33" y="137">Spot acceptance_condition</text>
+  </g>
+
+  <path class="arrow" d="M788 435 L743 435"/>
+
+  <g transform="translate(498 360)">
+    <rect class="box" x="0" y="0" width="245" height="150"/>
+    <circle class="num-bg" cx="24" cy="24" r="16"/>
+    <text class="num" x="19" y="29">6</text>
+    <text class="head" x="50" y="30">Solve Reachability</text>
+    <text class="text" x="22" y="65">reach accepting BSCCs</text>
+    <text class="mono" x="22" y="96">(I - P_UU)x = b</text>
+    <text class="text" x="22" y="117">linear equation system</text>
+    <rect class="pkg-bg" x="22" y="122" width="70" height="20"/>
+    <text class="pkg" x="37" y="137">NumPy</text>
+  </g>
+
+  <path class="arrow" d="M491 435 L446 435"/>
+
+  <g transform="translate(200 360)">
+    <rect class="box" x="0" y="0" width="245" height="150"/>
+    <circle class="num-bg" cx="24" cy="24" r="16"/>
+    <text class="num" x="19" y="29">7</text>
+    <text class="head" x="50" y="30">Distance Value</text>
+    <text class="text" x="22" y="65">probability of reaching</text>
+    <text class="text" x="22" y="86">an accepting BSCC</text>
+    <text class="mono" x="22" y="117">distance ∈ [0, 1]</text>
+  </g>
+
+  <!-- Legend -->
+  <g transform="translate(1110 360)">
+    <rect class="box-alt" x="0" y="0" width="260" height="210"/>
+    <text class="legend-title" x="20" y="32">Used Packages</text>
+    <text class="legend-key" x="20" y="70">Spot</text>
+    <text class="legend-text" x="82" y="70">ω-automata, HOA, XOR,</text>
+    <text class="legend-text" x="82" y="90">acceptance condition</text>
+    <text class="legend-key" x="20" y="122">Buddy</text>
+    <text class="legend-text" x="82" y="122">BDD conditions and</text>
+    <text class="legend-text" x="82" y="142">AP valuations</text>
+    <text class="legend-key" x="20" y="174">NumPy</text>
+    <text class="legend-text" x="82" y="174">linear equation system</text>
+  </g>
+
+  <text class="small" x="48" y="665">Assumption: deterministic and complete difference automaton; random-word model currently uniform over complete AP valuations at each time step.</text>
+</svg>
