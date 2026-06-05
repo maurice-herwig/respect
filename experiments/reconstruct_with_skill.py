@@ -326,6 +326,16 @@ def resolve_repo_path(path_value: str | Path) -> Path:
     return REPO_ROOT / path
 
 
+def repo_relative_path(path: str | Path | None) -> str | None:
+    if path is None:
+        return None
+    resolved = Path(path).resolve()
+    try:
+        return str(resolved.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(resolved)
+
+
 def process_description(
     *,
     record: dict[str, Any],
@@ -418,7 +428,7 @@ def process_description(
         if copied_spectra_file:
             if parsed_result is not None:
                 parsed_result["original_reported_spectra_file"] = parsed_result.get("spectra_file")
-                parsed_result["spectra_file"] = copied_spectra_file
+                parsed_result["spectra_file"] = repo_relative_path(copied_spectra_file)
             LOGGER.info("Copied reconstructed Spectra file to %s", copied_spectra_file)
         elif not args.dry_run:
             LOGGER.warning("Agent run succeeded but no reported spectra_file could be copied for %s", record.get("description_id"))
