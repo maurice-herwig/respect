@@ -190,7 +190,7 @@ After natural-language descriptions have been generated, run a selected agent
 skill once per description from the repository root:
 
 ```powershell
-python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 28
+python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 40
 ```
 
 If your IDE starts the process with `experiments` as the working directory, use
@@ -223,4 +223,27 @@ Run artifacts such as `agent_prompt.txt`, `agent_stdout.txt`, and
 
 ```text
 experiments/runs/A/B/C/respect-method-2/
+```
+
+## Reconstruction Run Summary
+
+After reconstruction experiments have produced `experiments/runs/runs.jsonl`,
+summarize the CLI outcomes and repair-loop counts for a selected skill/model:
+
+```powershell
+python evaluation\summarize_reconstruction_runs.py --skill respect-method-2 --model llama-3
+```
+
+The script reports:
+
+```text
+reported_cli_status counts and percentages
+reported_repair_loops counts and percentages
+percentage of runs with reported_cli_status=synthesized and reported_repair_loops=0
+```
+
+For machine-readable output:
+
+```powershell
+python evaluation\summarize_reconstruction_runs.py --skill respect-method-2 --model llama-3 --json
 ```
