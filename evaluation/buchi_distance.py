@@ -38,6 +38,7 @@ class MarkovChain:
     atomic_propositions: tuple[str, ...]
     transitions: dict[int, list[MarkovTransition]]
     acceptance_formula: str
+    acceptance_condition: object
     num_acceptance_sets: int
 
 
@@ -130,6 +131,41 @@ def acceptance_sets_in_bscc(markov_chain: MarkovChain, bscc: set[int]) -> frozen
             seen.update(transition.acceptance_sets)
 
     return frozenset(seen)
+
+
+def evaluate_acceptance_condition(acceptance_condition, seen_acceptance_sets: frozenset[int]) -> bool:
+    """Evaluate a Spot acceptance condition for a reached BSCC.
+
+    Inside a BSCC, `Inf(i)` is true iff acceptance set `i` appears on at least
+    one positive-probability internal transition. Spot's `accepting()` method
+    evaluates the acceptance formula from exactly this set of infinitely-often
+    seen acceptance marks.
+    """
+    return bool(acceptance_condition.accepting(sorted(seen_acceptance_sets)))
+
+
+def find_accepting_bsccs(markov_chain: MarkovChain, bsccs: list[set[int]], debug: bool = False) -> list[set[int]]:
+    """Return BSCCs satisfying the Markov chain's omega-acceptance formula."""
+    accepting_bsccs: list[set[int]] = []
+
+    for index, bscc in enumerate(bsccs):
+        seen_acceptance_sets = acceptance_sets_in_bscc(markov_chain, bscc)
+        is_accepting = evaluate_acceptance_condition(markov_chain.acceptance_condition, seen_acceptance_sets)
+
+        if debug:
+            print(
+                f"[debug] BSCC {index}: states={sorted(bscc)}, "
+                f"acceptance_sets={sorted(seen_acceptance_sets)}, "
+                f"accepting={is_accepting}"
+            )
+
+        if is_accepting:
+            accepting_bsccs.append(bscc)
+
+    if debug:
+        print(f"[debug] Accepting BSCC count: {len(accepting_bsccs)}")
+
+    return accepting_bsccs
 
 
 def require_spot():
@@ -277,6 +313,7 @@ def automaton_to_markov_chain(automaton, debug: bool = False) -> MarkovChain:
         atomic_propositions=atomic_propositions,
         transitions=transitions,
         acceptance_formula=str(automaton.get_acceptance()),
+        acceptance_condition=automaton.get_acceptance(),
         num_acceptance_sets=automaton.num_sets(),
     )
 
@@ -311,14 +348,13 @@ def compute_buchi_distance(left_automaton, right_automaton, debug: bool = False)
 
     markov_chain = automaton_to_markov_chain(symmetric_difference, debug=debug)
     bsccs = find_bsccs(markov_chain, debug=debug)
+    accepting_bsccs = find_accepting_bsccs(markov_chain, bsccs, debug=debug)
 
     if debug:
         print("[debug] Markov-chain translation complete.")
         print(f"[debug] Markov-chain states: {markov_chain.num_states}")
         print(f"[debug] Markov-chain BSCCs: {bsccs}")
-        for index, bscc in enumerate(bsccs):
-            acceptance_sets = acceptance_sets_in_bscc(markov_chain, bscc)
-            print(f"[debug] BSCC {index} acceptance sets: {sorted(acceptance_sets)}")
+        print(f"[debug] Markov-chain accepting BSCCs: {accepting_bsccs}")
         print("[debug] Distance implementation stops after Markov-chain construction.")
 
     # Later steps will interpret `symmetric_difference` as a Markov chain under a
