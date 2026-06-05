@@ -168,6 +168,93 @@ def find_accepting_bsccs(markov_chain: MarkovChain, bsccs: list[set[int]], debug
     return accepting_bsccs
 
 
+def union_components(components: list[set[int]]) -> set[int]:
+    """Return the union of a list of state sets."""
+    states: set[int] = set()
+    for component in components:
+        states.update(component)
+    return states
+
+
+def require_numpy():
+    """Import NumPy lazily because only the final probability solve needs it."""
+    try:
+        import numpy
+    except ImportError as exc:
+        raise SystemExit(
+            "Could not import NumPy. Install it in the WSL/conda environment with "
+            "`conda install numpy` or `pip install numpy`."
+        ) from exc
+    return numpy
+
+
+def reachability_probability_exact(
+    markov_chain: MarkovChain,
+    accepting_bsccs: list[set[int]],
+    all_bsccs: list[set[int]],
+    debug: bool = False,
+) -> float:
+    """Compute the probability of reaching an accepting BSCC.
+
+    Accepting BSCC states have value 1, rejecting BSCC states have value 0, and
+    all remaining transient states are solved exactly via `(I - P_UU) x = b`.
+    """
+    np = require_numpy()
+
+    accepting_states = union_components(accepting_bsccs)
+    rejecting_bsccs = [bscc for bscc in all_bsccs if bscc not in accepting_bsccs]
+    rejecting_states = union_components(rejecting_bsccs)
+    all_states = set(range(markov_chain.num_states))
+    unknown_states = sorted(all_states - accepting_states - rejecting_states)
+
+    if debug:
+        print(f"[debug] Accepting states: {sorted(accepting_states)}")
+        print(f"[debug] Rejecting states: {sorted(rejecting_states)}")
+        print(f"[debug] Unknown transient states: {unknown_states}")
+
+    if markov_chain.initial_state in accepting_states:
+        return 1.0
+    if markov_chain.initial_state in rejecting_states:
+        return 0.0
+    if not unknown_states:
+        raise ValueError("Initial state is neither classified nor transient; cannot solve reachability.")
+
+    state_to_row = {state: index for index, state in enumerate(unknown_states)}
+    size = len(unknown_states)
+    matrix = np.eye(size)
+    rhs = np.zeros(size)
+
+    for state in unknown_states:
+        row = state_to_row[state]
+        for transition in markov_chain.transitions.get(state, []):
+            target = transition.target
+            probability = transition.probability
+
+            if target in accepting_states:
+                rhs[row] += probability
+            elif target in rejecting_states:
+                continue
+            else:
+                column = state_to_row[target]
+                matrix[row, column] -= probability
+
+    if debug:
+        print("[debug] Reachability linear-system matrix:")
+        print(matrix)
+        print("[debug] Reachability linear-system rhs:")
+        print(rhs)
+
+    solution = np.linalg.solve(matrix, rhs)
+    probability = float(solution[state_to_row[markov_chain.initial_state]])
+
+    if debug:
+        print("[debug] Reachability solution:")
+        print(solution)
+        print(f"[debug] Initial-state reachability probability: {probability}")
+
+    return probability
+
+
 def require_spot():
     """Import Spot lazily so the script can print a clear setup error."""
     try:
@@ -349,19 +436,16 @@ def compute_buchi_distance(left_automaton, right_automaton, debug: bool = False)
     markov_chain = automaton_to_markov_chain(symmetric_difference, debug=debug)
     bsccs = find_bsccs(markov_chain, debug=debug)
     accepting_bsccs = find_accepting_bsccs(markov_chain, bsccs, debug=debug)
+    distance = reachability_probability_exact(markov_chain, accepting_bsccs, bsccs, debug=debug)
 
     if debug:
         print("[debug] Markov-chain translation complete.")
         print(f"[debug] Markov-chain states: {markov_chain.num_states}")
         print(f"[debug] Markov-chain BSCCs: {bsccs}")
         print(f"[debug] Markov-chain accepting BSCCs: {accepting_bsccs}")
-        print("[debug] Distance implementation stops after Markov-chain construction.")
+        print(f"[debug] Buchi distance: {distance}")
 
-    # Later steps will interpret `symmetric_difference` as a Markov chain under a
-    # random-word distribution, find accepting BSCCs, and compute the reachability
-    # probability. For now, stop here explicitly so partial results are not
-    # mistaken for the final distance.
-    raise NotImplementedError("Buchi distance computation is implemented up to Markov-chain construction.")
+    return distance
 
 
 def main() -> int:
@@ -377,9 +461,8 @@ def main() -> int:
     print("Example automata 1:")
     print(example_automata[1].to_str("hoa"))
 
-    # Run the currently implemented part of the distance pipeline. This will
-    # print the symmetric-difference automaton and then raise NotImplementedError.
-    compute_buchi_distance(example_automata[0], example_automata[1], debug=True)
+    distance = compute_buchi_distance(example_automata[0], example_automata[1], debug=True)
+    print(f"Buchi distance: {distance}")
 
 
 if __name__ == "__main__":
