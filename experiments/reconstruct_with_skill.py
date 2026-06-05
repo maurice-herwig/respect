@@ -137,9 +137,18 @@ def description_relative_stem(response_file: Path) -> Path:
 def resolve_reported_path(path_value: str | None) -> Path | None:
     if not path_value:
         return None
-    markdown_link = re.fullmatch(r"\[[^\]]+\]\(([^)]+)\)", path_value.strip())
+
+    path_value = path_value.strip()
+    if path_value.startswith("```") and path_value.endswith("```"):
+        path_value = path_value[3:-3].strip()
+    path_value = path_value.strip("`").strip()
+
+    markdown_link = re.fullmatch(r"\[[^\]]+\]\(([^)]+)\)", path_value)
     if markdown_link:
         path_value = markdown_link.group(1)
+        path_value = path_value.strip().strip("`").strip()
+
+    path_value = path_value.strip("\"'").strip()
     path = Path(path_value)
     if not path.is_absolute():
         path = REPO_ROOT / path
