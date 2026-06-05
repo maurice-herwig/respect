@@ -190,7 +190,7 @@ After natural-language descriptions have been generated, run a selected agent
 skill once per description from the repository root:
 
 ```powershell
-python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 10
+python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 15
 ```
 
 If your IDE starts the process with `experiments` as the working directory, use
