@@ -301,6 +301,16 @@ def get_example_buchi_automata():
     return tuple(spot.translate(formula, "BA", "deterministic") for formula in formulas)
 
 
+def get_second_example_buchi_automata():
+    """Return a second deterministic example pair with distance strictly between 0 and 1."""
+    spot = require_spot()
+    formulas = [
+        "GF grant",
+        "req & GF grant",
+    ]
+    return tuple(spot.translate(formula, "BA", "deterministic") for formula in formulas)
+
+
 def count_satisfying_letters(condition, bdd_variables: tuple[int, ...]) -> int:
     """Count complete AP valuations satisfying a Spot/Buddy BDD condition.
 
@@ -463,6 +473,16 @@ def main() -> int:
 
     distance = compute_buchi_distance(example_automata[0], example_automata[1], debug=True)
     print(f"Buchi distance: {distance}")
+
+    second_example_automata = get_second_example_buchi_automata()
+    print()
+    print("Second example automata 0:")
+    print(second_example_automata[0].to_str("hoa"))
+    print()
+    print("Second example automata 1:")
+    print(second_example_automata[1].to_str("hoa"))
+    second_distance = compute_buchi_distance(second_example_automata[0], second_example_automata[1], debug=True)
+    print(f"Second Buchi distance: {second_distance}")
 
 
 if __name__ == "__main__":
