@@ -43,6 +43,12 @@ def parse_args() -> argparse.Namespace:
     source.add_argument("--prompt-file", help="Path to a text file containing the user prompt for --single-run.")
     parser.add_argument("--prompt-name", choices=sorted(PROMPTS), default="spectra_to_english_v1", help="Name of a prompt from prompts.py.")
     parser.add_argument("--accepted-manifest", default=DEFAULT_ACCEPTED_MANIFEST, help="Path to accepted Spectra manifest JSONL.")
+    parser.add_argument(
+        "--dedupe-by-content",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Process only one accepted record per Spectra content_sha256 value. Enabled by default.",
+    )
     parser.add_argument("--single-run", action="store_true", help="Run only one standalone prompt request instead of the dataset mode.")
     parser.add_argument("--resume", action="store_true", help="Deprecated compatibility flag. Matching successful descriptions are skipped by default.")
     parser.add_argument("--force", action="store_true", help="Regenerate descriptions even if a matching successful description already exists.")
@@ -155,6 +161,25 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
                 continue
             records.append(json.loads(line))
     return records
+
+
+def dedupe_accepted_records_by_content(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for record in records:
+        content_sha256 = record.get("content_sha256")
+        if not content_sha256:
+            accepted_file = Path(record["accepted_file"])
+            content_sha256 = sha256_text(accepted_file.read_text(encoding="utf-8"))
+
+        if content_sha256 in seen:
+            continue
+
+        seen.add(content_sha256)
+        deduped.append(record)
+
+    return deduped, len(records) - len(deduped)
 
 
 def generation_config_key(
@@ -479,6 +504,16 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
     if not accepted_records:
         LOGGER.error("No accepted records found in %s.", args.accepted_manifest)
         return 2
+    original_accepted_count = len(accepted_records)
+    deduplicated_records = 0
+    if args.dedupe_by_content:
+        accepted_records, deduplicated_records = dedupe_accepted_records_by_content(accepted_records)
+        LOGGER.info(
+            "[dedupe] kept %d of %d accepted records by content_sha256; removed %d duplicates",
+            len(accepted_records),
+            original_accepted_count,
+            deduplicated_records,
+        )
 
     refresh_before = parse_iso_datetime(args.refresh_before)
     completed_keys = set() if args.force else load_completed_generation_keys(Path(args.output_dir), refresh_before)
@@ -487,7 +522,8 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
     skipped = 0
     errors = 0
     LOGGER.info(
-        f"[start] accepted_records={len(accepted_records)}, existing_matching_descriptions={len(completed_keys)}, "
+        f"[start] accepted_records={len(accepted_records)}, original_accepted_records={original_accepted_count}, "
+        f"deduplicated_records={deduplicated_records}, existing_matching_descriptions={len(completed_keys)}, "
         f"force={args.force}, refresh_before={refresh_before.isoformat() if refresh_before else None}"
     )
 
@@ -534,6 +570,9 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
 
     summary = {
         "accepted_records": len(accepted_records),
+        "original_accepted_records": original_accepted_count,
+        "dedupe_by_content": args.dedupe_by_content,
+        "deduplicated_records": deduplicated_records,
         "generated": processed,
         "skipped": skipped,
         "errors": errors,
