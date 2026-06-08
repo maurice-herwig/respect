@@ -1,0 +1,15 @@
+spec RobotGridUp
+
+env Int(0..4) robX;
+env Int(0..4) robY;
+
+sys {UP, DOWN, LEFT, RIGHT, STAY} moveRob;
+
+asm ini robX=0 & robY=0;
+asm alw moveRob=UP implies next(robY)=robY-1;
+
+gar ini moveRob=STAY;
+gar alw robY=0 implies moveRob!=UP;
+gar alw robY=4 implies moveRob!=DOWN;
+gar alw robX=0 implies moveRob!=LEFT;
+gar alw robX=4 implies moveRob!=RIGHT;
