@@ -210,6 +210,34 @@ def generation_config_key(
     )
 
 
+def content_generation_key(
+    *,
+    spectra_sha256: str,
+    prompt_name: str | None,
+    prompt_sha256: str,
+    system_prompt_sha256: str,
+    model: str,
+    temperature: float | None,
+    top_p: float | None,
+    max_tokens: int | None,
+) -> str:
+    return sha256_text(
+        json.dumps(
+            {
+                "source_spectra_sha256": spectra_sha256,
+                "prompt_name": prompt_name,
+                "prompt_sha256": prompt_sha256,
+                "system_prompt_sha256": system_prompt_sha256,
+                "model": model,
+                "temperature": temperature,
+                "top_p": top_p,
+                "max_tokens": max_tokens,
+            },
+            sort_keys=True,
+        )
+    )
+
+
 def record_is_fresh(record: dict[str, Any], refresh_before: datetime | None) -> bool:
     if refresh_before is None:
         return True
@@ -233,6 +261,35 @@ def load_completed_generation_keys(output_dir: Path, refresh_before: datetime | 
             and record_is_fresh(record, refresh_before)
         ):
             keys.add(record["generation_config_key"])
+    return keys
+
+
+def load_completed_content_generation_keys(output_dir: Path, refresh_before: datetime | None = None) -> set[str]:
+    manifest_file = output_dir / "descriptions.jsonl"
+    keys: set[str] = set()
+    for record in load_jsonl(manifest_file):
+        if record.get("api_status") != "success" or not record_is_fresh(record, refresh_before):
+            continue
+
+        spectra_sha256 = record.get("source_spectra_sha256")
+        prompt_sha256 = record.get("user_prompt_sha256")
+        system_prompt_sha256 = record.get("system_prompt_sha256")
+        model = record.get("model")
+        if not all(isinstance(value, str) and value for value in (spectra_sha256, prompt_sha256, system_prompt_sha256, model)):
+            continue
+
+        keys.add(
+            content_generation_key(
+                spectra_sha256=spectra_sha256,
+                prompt_name=record.get("prompt_name"),
+                prompt_sha256=prompt_sha256,
+                system_prompt_sha256=system_prompt_sha256,
+                model=model,
+                temperature=record.get("temperature"),
+                top_p=record.get("top_p"),
+                max_tokens=record.get("max_tokens"),
+            )
+        )
     return keys
 
 
@@ -517,6 +574,9 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
 
     refresh_before = parse_iso_datetime(args.refresh_before)
     completed_keys = set() if args.force else load_completed_generation_keys(Path(args.output_dir), refresh_before)
+    completed_content_keys = (
+        set() if args.force else load_completed_content_generation_keys(Path(args.output_dir), refresh_before)
+    )
     template = PROMPTS[args.prompt_name]
     processed = 0
     skipped = 0
@@ -524,6 +584,7 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
     LOGGER.info(
         f"[start] accepted_records={len(accepted_records)}, original_accepted_records={original_accepted_count}, "
         f"deduplicated_records={deduplicated_records}, existing_matching_descriptions={len(completed_keys)}, "
+        f"existing_matching_content_descriptions={len(completed_content_keys)}, "
         f"force={args.force}, refresh_before={refresh_before.isoformat() if refresh_before else None}"
     )
 
@@ -535,19 +596,34 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
         spectra_code = spectra_file.read_text(encoding="utf-8")
         user_prompt = render_prompt(template, spectra_code=spectra_code)
         spectra_sha256 = sha256_text(spectra_code)
+        prompt_sha256 = sha256_text(user_prompt)
+        system_prompt_sha256 = sha256_text(args.system_prompt)
         config_key = generation_config_key(
             dataset_id=record.get("dataset_id"),
             prompt_name=args.prompt_name,
-            prompt_sha256=sha256_text(user_prompt),
-            system_prompt_sha256=sha256_text(args.system_prompt),
+            prompt_sha256=prompt_sha256,
+            system_prompt_sha256=system_prompt_sha256,
             model=args.model,
             temperature=args.temperature,
             top_p=args.top_p,
             max_tokens=args.max_tokens,
         )
-        if config_key in completed_keys:
+        content_key = content_generation_key(
+            spectra_sha256=spectra_sha256,
+            prompt_name=args.prompt_name,
+            prompt_sha256=prompt_sha256,
+            system_prompt_sha256=system_prompt_sha256,
+            model=args.model,
+            temperature=args.temperature,
+            top_p=args.top_p,
+            max_tokens=args.max_tokens,
+        )
+        if config_key in completed_keys or content_key in completed_content_keys:
             skipped += 1
-            LOGGER.info("[skip] %s already generated for current model/settings/prompt", record.get("dataset_id"))
+            LOGGER.info(
+                "[skip] %s already generated for current model/settings/prompt/content",
+                record.get("dataset_id"),
+            )
             continue
 
         LOGGER.info("[generate] %s from %s", record.get("dataset_id"), spectra_file)
@@ -563,6 +639,7 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
                 spectra_sha256=spectra_sha256,
             )
             completed_keys.add(config_key)
+            completed_content_keys.add(content_key)
             processed += 1
         except Exception as exc:
             errors += 1
@@ -573,6 +650,8 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
         "original_accepted_records": original_accepted_count,
         "dedupe_by_content": args.dedupe_by_content,
         "deduplicated_records": deduplicated_records,
+        "existing_matching_descriptions": len(completed_keys),
+        "existing_matching_content_descriptions": len(completed_content_keys),
         "generated": processed,
         "skipped": skipped,
         "errors": errors,

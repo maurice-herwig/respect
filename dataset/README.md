@@ -105,6 +105,9 @@ python dataset\generate_nl_description.py
 
 By default, the script processes only one accepted record per
 `content_sha256`, so duplicate Spectra contents are skipped before generation.
+If a successful description already exists for a duplicate file with the same
+Spectra content, model, prompt, system prompt, and generation settings, the
+current duplicate group is skipped as already generated.
 To process every accepted record anyway:
 
 ```powershell
