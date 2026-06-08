@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
   <title id="title">ReSpect Dataset Construction Workflow</title>
-  <desc id="desc">Workflow diagram showing how public Spectra files are discovered on GitHub, filtered by controller synthesis, stored as an accepted dataset, and translated into natural-language descriptions with the Academic Cloud API.</desc>
+  <desc id="desc">Workflow diagram showing how public Spectra files are discovered on GitHub, filtered by controller synthesis, stored as an accepted dataset, deduplicated by content hash, and translated into natural-language descriptions with the Academic Cloud API.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#2f3a4a"/>
@@ -29,7 +29,7 @@
 
   <rect class="bg" x="0" y="0" width="1200" height="760"/>
   <text class="title" x="60" y="52">ReSpect Dataset Construction Workflow</text>
-  <text class="subtitle" x="60" y="78">Two-script pipeline for collecting realizable Spectra files and generating English natural-language descriptions.</text>
+  <text class="subtitle" x="60" y="78">Two-script pipeline for collecting realizable Spectra files and generating English descriptions for unique contents.</text>
 
   <rect class="lane" x="45" y="115" width="1110" height="250" rx="8"/>
   <text class="lane-title" x="70" y="148">Script 1: GitHub Spectra Dataset Builder</text>
@@ -73,34 +73,40 @@
   <text class="lane-title" x="70" y="438">Script 2: Natural-Language Description Generator</text>
   <text class="mono" x="70" y="460">dataset/generate_nl_description.py</text>
 
-  <rect class="box box-green" x="75" y="500" width="220" height="95" rx="8"/>
+  <rect class="box box-green" x="75" y="500" width="190" height="95" rx="8"/>
   <text class="box-title" x="95" y="528">Accepted Dataset</text>
   <text class="mono" x="95" y="553">dataset/accepted/files/</text>
   <text class="mono" x="95" y="574">accepted_manifest.jsonl</text>
 
-  <rect class="box box-amber" x="350" y="500" width="210" height="95" rx="8"/>
-  <text class="box-title" x="370" y="528">Prompt Rendering</text>
-  <text class="box-text" x="370" y="553">Insert Spectra code into</text>
-  <text class="mono" x="370" y="574">spectra_to_english_v1</text>
+  <rect class="box box-amber" x="305" y="500" width="190" height="95" rx="8"/>
+  <text class="box-title" x="325" y="528">Content Dedupe</text>
+  <text class="box-text" x="325" y="553">Keep one record per</text>
+  <text class="mono" x="325" y="574">content_sha256</text>
 
-  <rect class="box box-blue" x="620" y="500" width="215" height="95" rx="8"/>
-  <text class="box-title" x="640" y="528">Academic Cloud API</text>
-  <text class="box-text" x="640" y="553">One independent request</text>
-  <text class="box-text" x="640" y="574">per Spectra file</text>
+  <rect class="box box-amber" x="535" y="500" width="190" height="95" rx="8"/>
+  <text class="box-title" x="555" y="528">Prompt Rendering</text>
+  <text class="box-text" x="555" y="553">Insert Spectra code into</text>
+  <text class="mono" x="555" y="574">spectra_to_english_v1</text>
 
-  <rect class="box box-green" x="890" y="500" width="220" height="95" rx="8"/>
-  <text class="box-title" x="910" y="528">NL Descriptions</text>
-  <text class="mono" x="910" y="553">responses/.../*.txt</text>
-  <text class="mono" x="910" y="574">descriptions.jsonl</text>
+  <rect class="box box-blue" x="765" y="500" width="165" height="95" rx="8"/>
+  <text class="box-title" x="785" y="528">Cloud API</text>
+  <text class="box-text" x="785" y="553">One request per</text>
+  <text class="box-text" x="785" y="574">unique content</text>
 
-  <path class="arrow" d="M 295 548 L 350 548"/>
-  <path class="arrow" d="M 560 548 L 620 548"/>
-  <path class="arrow" d="M 835 548 L 890 548"/>
+  <rect class="box box-green" x="970" y="500" width="160" height="95" rx="8"/>
+  <text class="box-title" x="990" y="528">NL Descriptions</text>
+  <text class="mono" x="990" y="553">responses/.../*.txt</text>
+  <text class="mono" x="990" y="574">descriptions.jsonl</text>
+
+  <path class="arrow" d="M 265 548 L 305 548"/>
+  <path class="arrow" d="M 495 548 L 535 548"/>
+  <path class="arrow" d="M 725 548 L 765 548"/>
+  <path class="arrow" d="M 930 548 L 970 548"/>
 
   <path class="arrow-soft" d="M 1078 315 C 1078 370, 190 370, 190 500"/>
 
   <rect class="note" x="75" y="620" width="1035" height="36" rx="6"/>
-  <text class="note-text" x="95" y="642">Resume logic skips already processed combinations; refresh timestamps can force older accepted files or descriptions to be regenerated.</text>
+  <text class="note-text" x="95" y="642">By default, duplicate accepted files are grouped by content_sha256 and only one file from each duplicate group is used for NL generation.</text>
 
-  <text class="subtitle" x="60" y="725">Final dataset artifacts: accepted Spectra specifications, source metadata, English descriptions, model settings, prompt hashes, and generation timestamps.</text>
+  <text class="subtitle" x="60" y="725">Final dataset artifacts: accepted Spectra specifications, source metadata, deduplicated English descriptions, model settings, prompt hashes, and generation timestamps.</text>
 </svg>
