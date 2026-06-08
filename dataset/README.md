@@ -100,6 +100,36 @@ natural-language descriptions for the same Spectra file.
 Raw API responses are not stored by default. Use `--keep-raw-responses` to write
 them to `raw_responses/<description_id>.json`.
 
+## Accepted Dataset Duplicate Summary
+
+Summarize how many accepted records have distinct Spectra contents and how many
+records are duplicates by `content_sha256`:
+
+From the repository root:
+
+```bash
+python dataset/summarize_accepted_duplicates.py
+```
+
+From this `dataset` directory, for example when an IDE uses `dataset` as the
+working directory:
+
+```bash
+python summarize_accepted_duplicates.py
+```
+
+Print fewer or more large duplicate groups:
+
+```bash
+python dataset/summarize_accepted_duplicates.py --top 5
+```
+
+For machine-readable output:
+
+```bash
+python dataset/summarize_accepted_duplicates.py --json
+```
+
 ## Discovery
 
 `discover_github_spectra.py` discovers public `.spectra` files through the GitHub Search API. For each size window, it downloads discovered candidates, runs Spectra synthesis, and stores only files for which a controller can be synthesized.
