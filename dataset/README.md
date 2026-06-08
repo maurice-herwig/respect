@@ -168,36 +168,6 @@ The response file name includes the model, prompt name, explicit generation
 settings, and a short configuration hash. This lets the dataset store multiple
 natural-language descriptions for the same Spectra file.
 
-## Natural-Language Description Deduplication
-
-If older runs generated descriptions for multiple duplicate Spectra files,
-deduplicate `dataset/nl_descriptions/descriptions.jsonl` by Spectra content,
-model, prompt, system prompt, and generation settings.
-
-Preview the cleanup without changing files:
-
-```powershell
-python dataset\dedupe_nl_descriptions.py
-```
-
-Apply the cleanup and write a backup next to the manifest:
-
-```powershell
-python dataset\dedupe_nl_descriptions.py --apply
-```
-
-From this `dataset` directory:
-
-```powershell
-python dedupe_nl_descriptions.py
-```
-
-For machine-readable output:
-
-```powershell
-python dataset\dedupe_nl_descriptions.py --json
-```
-
 ## Accepted Dataset Duplicate Summary
 
 `summarize_accepted_duplicates.py` summarizes how many accepted records have
