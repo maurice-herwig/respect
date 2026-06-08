@@ -12,6 +12,7 @@ from typing import Any
 
 
 DEFAULT_RUNS_MANIFEST = "experiments/runs/runs.jsonl"
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,6 +54,13 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
             except json.JSONDecodeError as exc:
                 raise ValueError(f"Invalid JSON in {path} at line {line_number}: {exc}") from exc
     return records
+
+
+def resolve_repo_path(path_value: str | Path) -> Path:
+    path = Path(path_value)
+    if path.is_absolute() or path.exists():
+        return path
+    return REPO_ROOT / path
 
 
 def extract_model_label(record: dict[str, Any]) -> str | None:
@@ -208,7 +216,7 @@ def print_text_summary(summary: dict[str, Any]) -> None:
 
 def main() -> int:
     args = parse_args()
-    records = load_jsonl(Path(args.runs_manifest))
+    records = load_jsonl(resolve_repo_path(args.runs_manifest))
     summary = summarize(records, args.skill, args.model, args.include_dry_run)
 
     if args.json:

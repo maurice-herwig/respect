@@ -2,6 +2,8 @@
 
 This directory contains scripts for the agent-based reconstruction experiments.
 
+Unless a section says otherwise, run commands from the repository root.
+
 ## Skill-Based Reconstruction
 
 `reconstruct_with_skill.py` reads natural-language descriptions from
@@ -17,10 +19,16 @@ python experiments\reconstruct_with_skill.py --skill respect-method-2 --dry-run 
 From this `experiments` directory, run:
 
 ```powershell
-python reconstruct_with_skill.py --skill respect-method-2 --limit 3
+python reconstruct_with_skill.py --skill respect-method-2 --dry-run --limit 3
 ```
 
-Run with the default agent command from the repository root:
+Run a limited real experiment from the repository root:
+
+```powershell
+python experiments\reconstruct_with_skill.py --skill respect-method-2 --limit 50
+```
+
+Run all pending descriptions with the default agent command:
 
 ```powershell
 python experiments\reconstruct_with_skill.py --skill respect-method-2
