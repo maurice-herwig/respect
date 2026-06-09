@@ -1,0 +1,46 @@
+import "../imports/DwyerPatterns.spectra"
+//blocked targets 
+
+spec Patrolling
+
+define DX := 4;
+define DY := 4;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+
+sys DimX robotX;
+sys DimY robotY;
+
+gar ini robotX = 0;
+gar ini robotY = 0;
+
+// Declaring the targets
+env DimX A_X;
+env DimY A_Y;
+env DimX B_X;
+env DimY B_Y;
+env DimX C_X;
+env DimY C_Y;
+
+
+//req 3
+//Target may always be blocked (turned from green to red) for a finite number of states and then eventually unblocked
+
+env boolean BlockedA;
+env boolean BlockedB;
+env boolean BlockedC;
+
+asm alwEv !BlockedA;
+asm alwEv !BlockedB;
+asm alwEv !BlockedC;
+
+asm ini !(A_X = 0 & A_Y = 0);
+asm ini !(B_X = 0 & B_Y = 0);
+asm ini !(C_X = 0 & C_Y = 0);
+
+//If target is blocked, the robot should not visit it
+gar alw BlockedA = true -> !(robotX = A_X & robotY = A_Y);
+gar alw BlockedB = true -> !(robotX = B_X & robotY = B_Y);
+gar alw BlockedC = true -> !(robotX = C_X & robotY = C_Y);
+

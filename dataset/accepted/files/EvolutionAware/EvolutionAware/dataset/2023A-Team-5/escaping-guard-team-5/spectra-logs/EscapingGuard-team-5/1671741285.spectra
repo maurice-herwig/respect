@@ -1,0 +1,27 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+// First part: robot movement
+define atT1 :=
+	robotX = 0 & robotY = 0;
+define atT2 :=
+	robotX = D & robotY = D;
+define atT3 := 
+	robotX = 0 & robotY = D;
+
+gar ini robotX = D & robotY = 0;
+
+gar alw robotX - 1 <= next(robotX) &  next(robotX) <= robotX + 1;
+gar alw robotY - 1 <= next(robotY) &  next(robotY) <= robotY + 1;
+
+gar alwEv atT1;
+gar alwEv atT2;
+gar alwEv atT3;
+

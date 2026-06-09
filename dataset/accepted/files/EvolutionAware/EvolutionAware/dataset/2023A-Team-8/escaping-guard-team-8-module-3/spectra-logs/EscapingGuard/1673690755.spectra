@@ -1,0 +1,70 @@
+import "../imports/DwyerPatterns.spectra"// describing the movement of the robot towards the targets
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+
+
+
+// initial place
+gar ini robotY=0;
+gar ini robotX = 7;
+
+// movement of the robot
+predicate moveDist(Dim pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos); 
+  
+
+counter canMove(0..2){
+	canMove = 0;
+	inc: true;
+	overflow: modulo;
+}
+
+gar alw canMove=0 -> robotX = next(robotX) & robotY = next(robotY);
+gar alw canMove>0 -> moveDist(robotX)  & moveDist(robotY);
+
+// robot can't be on the static obstacle
+predicate canNotVisit(Dim posX, Dim posY):
+	(robotX != posX) | (robotY != posY);
+
+gar alw canNotVisit(6,2);
+gar alw canNotVisit(6,3);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

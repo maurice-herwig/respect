@@ -1,0 +1,44 @@
+import "../imports/DwyerPatterns.spectra"
+spec Patrolling
+
+define DX := 4;
+define DY := 4;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+
+type Dim = Int(0..4);
+
+sys Dim[2] robot;
+
+env DimX movingObstacleX;
+env DimY movingObstacleY;
+env boolean lowBattery;
+
+define 
+robotAtMovingObstacle:= robot[0] = movingObstacleX & robot[1] = movingObstacleY;
+robotAtObstacle:= (robot[0] = 1 & robot[1] = 1) | (robot[0] = 3 & robot[1] = 3) |
+				  (robot[0] = 2 & robot[1] = 1) | (robot[0] = 0 & robot[1] = 3) |
+				  (robot[0] = 3 & robot[1] = 4);
+robotAtChargingStation:= robot[0] = 4 & robot[1] = 0; 
+
+gar alw !robotAtMovingObstacle;
+gar alw !robotAtObstacle;
+
+asm alw movingObstacleY = 2;
+
+gar trig [true]*[lowBattery] |=> [true]*[robotAtChargingStation]{4,};
+
+gar robotMoves:
+always moveDist(robot[0]) & moveDist(robot[1]);
+
+predicate moveDist(Dim pos):
+  pos+1 = next (pos) |
+pos = next (pos) |
+pos-1 = next (pos) ;
+ 
+
+
+
+
+

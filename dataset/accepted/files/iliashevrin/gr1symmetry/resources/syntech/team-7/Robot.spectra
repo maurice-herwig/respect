@@ -1,0 +1,46 @@
+import "DwyerPatterns.spectra"
+
+spec Robot
+
+define NumObstacles := 14;
+define DX := 7;
+define DY := 7;
+
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+ 
+sys DimX robotX;
+sys DimY robotY;
+
+
+predicate moveDimX(DimX pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);
+  
+predicate moveDimY(DimY pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);      
+
+predicate robotAt(DimX x, DimY y):
+	robotX=x & robotY=y;
+
+predicate robotStays():
+	next(robotX)=robotX & next(robotY)=robotY; 
+
+
+// Robot starts in (0,0)
+gar ini robotAt(0,0);
+
+// Robot should reach the bottom right corner of grid and stay there forever
+gar alwEv robotAt(7,7);
+gar alw robotAt(7,7) -> robotStays(); 
+
+// Robot can move one step to any nearby cell on each turn
+gar alw moveDimX(robotX) & moveDimY(robotY); 
+
+// Robot avoiding obstacles  
+gar alw robotX=2 -> robotY>6;
+gar alw robotX=5 -> robotY<1; 
