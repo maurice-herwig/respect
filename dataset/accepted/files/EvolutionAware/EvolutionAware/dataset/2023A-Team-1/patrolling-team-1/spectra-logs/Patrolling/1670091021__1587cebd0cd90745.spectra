@@ -1,0 +1,42 @@
+import "../imports/DwyerPatterns.spectra"
+spec Patrolling
+
+define DX := 4;
+define DY := 4;
+define num_targets := 3;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+
+sys DimX robotX;
+sys DimY robotY;
+
+env DimX[num_targets] goalsX;
+env DimY[num_targets] goalsY;
+
+//TODO: complete the specification
+
+predicate moveDistX(DimX pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);
+
+predicate moveDistY(DimY pos):
+  pos+1 = next(pos) |
+  pos   = next(pos) |
+  pos-1 = next(pos);
+
+predicate fixed(DimX x, DimY y):
+	x = next(x) & y = next(y);
+	
+predicate inPlace(DimX x1, DimX x2, DimY y1, DimY y2):
+	x1 = x2 & y1 = y2;
+
+gar robotMoveDist:
+	alw moveDistX(robotX) and moveDistY(robotY);
+
+gar visitGoalsInifintely {Int(0..(num_targets-1)) i}:
+	alwEv inPlace(robotX, goalsX[i], robotY, goalsY[i]);
+	
+asm goalsDontMove:
+	 alw forall i in Int(0..(num_targets-1)). fixed(goalsX[i], goalsY[i]);

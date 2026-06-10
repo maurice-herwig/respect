@@ -1,0 +1,51 @@
+spec Module3
+
+define DX := 5;
+define DY := 5;
+
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+type Coord = Int(0..DY);
+
+sys DimX robotX0;
+sys DimY robotY0;
+sys DimX robotX1;
+sys DimY robotY1;
+
+env DimX targetX0;
+env DimY targetY0;
+env DimX targetX1;
+env DimY targetY1;
+
+asm alw targetX0 != 0 & targetX1 != 0 &
+		targetY0 != DY & targetY1 != DY;
+
+define atTarget0 :=
+	robotX0 = targetX0 & robotY0 = targetY0;
+
+define atTarget1 :=
+	robotX1 = targetX1 & robotY1 = targetY1;
+	
+gar alwEv atTarget0;
+gar alwEv atTarget1;
+
+asm alw atTarget0 -> next(targetY0) != targetY0;
+asm alw atTarget1 -> next(targetY1) != targetY1;
+
+counter packages0(0..3) {
+	packages0 = 0;
+	inc: atTarget0;
+	reset: robotY0 = DY & robotX0 != 0;
+	overflow: keep;
+}
+
+gar alw packages0 = 3 -> !atTarget0; 
+
+counter packages1(0..3) {
+	packages1 = 0;
+	inc: atTarget1;
+	reset: robotY1 = DY & robotX1 != 0;
+	overflow: keep;
+}
+
+gar alw packages1 = 3 -> !atTarget1;

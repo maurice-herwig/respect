@@ -1,0 +1,17 @@
+import "../../../assets/examples/L3_patterns/DwyerPatterns.spectra"
+
+spec Forklift
+
+type Obstacle = {BLOCKED, CLEAR};
+type Motor = {STOP, FWD, BWD};
+
+env Obstacle obstacle;
+
+sys Motor lMot;
+sys Motor rMot;
+
+asm S_responds_to_P_globally(obstacle=CLEAR, lMot=BWD | rMot=BWD);
+
+gar ini lMot=STOP & rMot=STOP;
+gar alw obstacle=BLOCKED implies !(lMot=FWD & rMot=FWD);
+gar alwEv (lMot=FWD & rMot=FWD);

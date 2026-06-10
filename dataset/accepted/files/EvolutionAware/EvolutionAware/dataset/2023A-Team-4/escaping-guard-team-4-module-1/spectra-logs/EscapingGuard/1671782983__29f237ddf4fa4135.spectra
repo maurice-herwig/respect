@@ -1,0 +1,31 @@
+import "../imports/DwyerPatterns.spectra"
+spec EscapingGuard
+
+define D := 7;
+
+type Dim = Int(0..D);
+
+sys Dim robotX;
+sys Dim robotY;
+
+/* defining targets locations. */
+define atT1 := robotX = 0 and robotY = 0;
+		atT2 := robotX  = 7 and robotY = 7;
+		atT3 := robotX = 0 and robotY = 7;
+
+
+/* robot doesn't hit obstacles */
+predicate robotNotOnObstacles(Dim robX, Dim robY):
+	robX = 2 -> (robY != 2 and robY != 3 and robY != 4 and robY != 5);
+gar alw robotNotOnObstacles(robotX, robotY);
+
+
+/* The robot needs to start at point (7,0) */
+gar ini robotX = 7 and robotY = 0;
+
+/* The robot must visit infinitely often T1, T2, T3 */
+gar alwEv atT1;
+//gar alwEv atT3;
+//gar S_responds_to_P_globally(atT3, atT1);
+//gar P_is_true_between_Q_and_R(atT2, atT1, atT3);
+

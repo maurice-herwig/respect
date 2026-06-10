@@ -1,0 +1,49 @@
+module ForkLift4
+
+env boolean fardistance ;
+
+
+
+sys boolean liftcommand ;
+
+sys boolean dropcommand ;
+
+sys boolean gocommand ;
+
+sys boolean idlecommand ;
+
+
+assumption -- idle_far
+
+G ( idlecommand=true & fardistance=true -> next( fardistance=true ) );
+
+assumption -- idle_close
+
+G ( idlecommand=true & fardistance=false -> next( fardistance=false ) );
+
+assumption -- go_close
+
+G ( gocommand=true -> next( fardistance=false ) );
+
+assumption -- silly_close_nolift
+
+G ( fardistance=true & liftcommand=false -> next( fardistance=false ) );
+
+assumption -- close_withlift
+
+G  ( fardistance=false & liftcommand=true -> next( fardistance=true ) );
+
+
+
+guarantee -- s_init
+
+liftcommand=true;
+
+guarantee -- s_11
+
+G ( fardistance=true -> next( dropcommand=false ) );
+
+guarantee -- s_12
+
+G ( fardistance=false  -> next( gocommand=false ) );
+

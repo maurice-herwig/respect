@@ -1,0 +1,50 @@
+spec TrafficE2
+
+env boolean carA;
+env boolean carB;
+env boolean emergency;
+
+sys boolean greenA;
+sys boolean greenB;
+
+asm initial_env_conditions:
+    ini !carA & !carB & !emergency;
+
+gar initial_sys_conditions:
+    ini !greenA &!greenB;
+
+asm carA_detected_often:
+	alwEv carA;
+
+asm carB_detected_often:
+	alwEv carB;
+
+asm no_emergency_often:
+	alwEv !emergency;
+
+gar Bred_when_Agreen:
+	alw greenA -> !greenB;
+
+gar Ared_when_Bgreen:
+	alw greenB -> !greenA;
+
+gar greenA_often:
+	alwEv greenA;
+
+gar greenB_often:
+	alwEv greenB;
+
+gar red_when_emergency:
+	alw emergency -> !greenA & !greenB;
+
+asm carA_idle_when_red:
+	alw carA & !greenA -> next(carA);
+
+asm carB_idle_when_red:
+	alw carB & !greenB -> next(carB);
+
+asm carA_moves_when_green:
+	alw carA & greenA -> next(!carA);
+
+asm carB_moves_when_green:
+	alw carB & greenB -> next(!carB);

@@ -1,0 +1,14 @@
+module Minepump
+
+env boolean highwater;
+env boolean methane;
+sys boolean pump;
+
+assumption -- water_falls_when_pump_off
+    G(!pump -> (next(!highwater) | PREV(!highwater)));
+
+guarantee -- methane_with_highwater_activates_pump
+    G(methane & highwater -> next(pump));
+
+guarantee -- no_methane_deactivates_pump
+    G(!methane -> next(!pump));
