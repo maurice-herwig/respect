@@ -1,0 +1,19 @@
+spec Blink5
+
+env boolean atStation;
+
+sys boolean light;
+sys Int(0..5) blinkCount;
+
+predicate blink():
+ next(light) != light;
+
+gar ini !light & blinkCount=0;
+
+gar alw !atStation -> blinkCount=0;
+
+gar alw atStation & blinkCount<5 -> blink() & next(blinkCount)=blinkCount+1;
+
+gar alw atStation & blinkCount=5 -> !blink() & next(blinkCount)=5;
+
+gar alw !atStation -> !blink() & next(blinkCount)=0;

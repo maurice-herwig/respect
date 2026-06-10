@@ -1,0 +1,21 @@
+spec Deliveries
+
+define DX := 5;
+define DY := 5;
+
+type XCoord = Int(0..DX);
+type YCoord = Int(0..DY);
+
+env YCoord elevatorY;
+
+sys XCoord robotX0;
+sys YCoord robotY0;
+sys XCoord robotX1;
+sys YCoord robotY1;
+
+predicate elevatorStep (YCoord y):
+ next(y)=y | (y<DY & next(y)=y+1) | (y>0 & next(y)=y-1);
+
+asm alw elevatorStep(elevatorY);
+
+gar alw TRUE;

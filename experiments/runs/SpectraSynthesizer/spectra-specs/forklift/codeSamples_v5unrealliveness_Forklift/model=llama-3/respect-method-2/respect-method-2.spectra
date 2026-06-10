@@ -1,0 +1,15 @@
+spec Forklift
+
+type Obstacle = {BLOCKED, CLEAR};
+type Movement = {STOP, FWD, BWD};
+
+env Obstacle obstacle;
+sys Movement move;
+
+asm alw move=STOP -> next(obstacle)=obstacle;
+asm alw move=BWD -> next(obstacle)=CLEAR;
+asm alwEv obstacle=CLEAR;
+
+gar ini move=STOP;
+gar alw obstacle=BLOCKED -> move!=FWD;
+gar alwEv move=FWD;

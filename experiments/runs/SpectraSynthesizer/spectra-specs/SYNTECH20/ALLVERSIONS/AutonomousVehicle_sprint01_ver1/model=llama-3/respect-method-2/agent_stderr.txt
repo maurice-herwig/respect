@@ -1,0 +1,544 @@
+OpenAI Codex v0.137.0
+--------
+workdir: C:\Users\mauri\OneDrive\Desktop\Repos\respect
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: medium
+reasoning summaries: none
+session id: 019eb1b9-019d-7a12-a7e4-cb3cefad4293
+--------
+user
+Use $respect-method-2.
+
+The Autonomous Vehicle system interacts with its environment, which provides inputs indicating the presence of a pedestrian, the location of a crosswalk, and the status of a traffic light. The system controls its speed, which ranges from 0 to 10. 
+
+The environment is assumed to always eventually have a green light and no pedestrian present. 
+
+The system must guarantee that it will not drive (i.e., its speed will not be greater than 0) whenever a pedestrian is present or the light is not green. Additionally, when a crosswalk is present, the system must slow down (i.e., its speed must be less than 5). 
+
+The system must also ensure that it will always eventually have a green light, no pedestrians present, and be driving (i.e., its speed will be greater than 0) under these conditions. 
+
+In this system, the environment-controlled inputs are the presence of a pedestrian, the location of a crosswalk, and the status of the traffic light, while the system-controlled output is the vehicle's speed.
+
+codex
+I’m using `respect-method-2` as requested. I’ll read the Spectra workflow reference, draft a temporary spec, then validate and synthesize only through the bundled CLI wrapper.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content -LiteralPath .agents/skills/respect-method-2/references/spectra-workflow.md' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 515ms:
+# Spectra Workflow Reference
+
+## Use This Reference For
+
+- Converting free-form reactive-system requirements into a first Spectra draft
+- Interpreting `spectra-cli.jar` results
+- Repairing parser errors without drifting away from the user's intent
+- Explaining why a valid specification is unrealizable
+
+## Drafting Guidance
+
+- Start with one named `spec`.
+- Declare environment variables with `env` and system variables with `sys`.
+- Encode assumptions with `asm` and guarantees with `gar`.
+- Prefer a minimal complete model over speculative features.
+- If the user request leaves key semantics unstated, make the smallest explicit assumption and report it.
+
+## Validation And Synthesis Branches
+
+Use this check command:
+
+```bash
+java -jar spectra-cli.jar -i <path-to-file>
+```
+
+Observed CLI result patterns in this repo:
+
+- Realizable: `Result: Specification is realizable`
+- Unrealizable: `Result: Specification is unrealizable`
+- Syntax failure: `Error: Could not prepare game input from Spectra file`
+
+Use this synthesis command only after a realizable result:
+
+```bash
+java -jar spectra-cli.jar -i <path-to-file> -s -o <output-dir>
+```
+
+Observed synthesis success pattern:
+
+- `Result: Successfully synthesized a just-in-time controller in output folder`
+
+## Syntax-Repair Loop
+
+1. Save the draft as a `.spectra` file.
+2. Run the CLI.
+3. If parsing fails, extract the parser message, for example `missing ';' at 'gar'`.
+4. Repair the file with the smallest syntax-preserving edit.
+5. Repeat until the file is syntactically valid or the attempt budget is exhausted.
+
+## Realizability Guidance
+
+The CLI reports realizability, but it does not explain the cause in a user-facing way. When a specification is unrealizable, inspect the assumptions and guarantees for patterns like:
+
+- Guarantees that demand progress while safety rules forbid every path to that progress
+- Missing environment assumptions that the system would need to fulfill liveness goals
+- Multiple guarantees that cannot all hold together
+- Initialization constraints that already block the required behavior
+- Response guarantees over unconstrained environment inputs, especially in the initial state
+
+Concrete pitfall: if the environment may set `pedRequest` initially, then `gar alw pedRequest -> walk;` conflicts with `gar ini !walk;` unless an assumption rules out that initial request.
+
+State clearly when this explanation is an inference from the specification plus the CLI result.
+
+## Example Fragments
+
+Realizable example from this repo:
+
+```spectra
+spec TrafficA1
+
+sys boolean greenA;
+sys boolean greenB;
+
+env boolean carA;
+env boolean carB;
+
+asm ini carA & !carB;
+asm alwEv carA;
+asm alwEv carB;
+
+gar ini !greenA & !greenB;
+gar alw !(greenA & greenB);
+gar alw !carA -> !greenA;
+gar alw !carB -> !greenB;
+gar alwEv greenA;
+gar alwEv greenB;
+```
+
+Unrealizable example from this repo:
+
+```spectra
+spec TrafficA2b
+
+sys boolean greenA;
+sys boolean greenB;
+
+env boolean carA;
+env boolean carB;
+
+gar alw !(greenA & greenB);
+
+gar alwEv carA & greenA;
+gar alwEv carB & greenB;
+```
+
+## Useful Local Sources
+
+- `assets/examples/A1_firstController/TrafficA1.spectra`
+- `assets/examples/A2_unrealizability/TrafficA2b.spectra`
+- `assets/examples/L1_firstSpec/`
+- `assets/examples/L2_defsArrays/`
+- `assets/examples/L3_patterns/`
+
+codex
+I’ve got the method constraints and example syntax. I’m checking local Spectra examples for integer/range declarations so the vehicle speed encoding matches the tool’s accepted syntax.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg \"sys .*int|env .*int|\\[0\\.\\.|0\\.\\.10|enum|Type\" -n assets .agents -g \"*.spectra\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-ChildItem -Recurse -Filter *.spectra assets | Select-Object -First 20 -ExpandProperty FullName' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+2026-06-10T13:29:45.246932Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.1 seconds
+Output:
+
+ exited 1 in 1076ms:
+ succeeded in 1130ms:
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\assets\examples\A1_firstController\TrafficA1.spectra
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\assets\examples\A2_unrealizability\TrafficA2b.spectra
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\assets\examples\L1_firstSpec\GridL1.spectra
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\assets\examples\L1_firstSpec\TrafficL1.spectra
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\assets\examples\L2_defsArrays\GridL2.spectra
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\assets\examples\L2_defsArrays\TrafficL2.spectra
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\assets\examples\L3_patterns\DwyerPatterns.spectra
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\assets\examples\L3_patterns\GridL3.spectra
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\assets\examples\L3_patterns\TrafficL3.spectra
+
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content -LiteralPath assets/examples/L2_defsArrays/GridL2.spectra' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content -LiteralPath assets/examples/L3_patterns/GridL3.spectra' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content -LiteralPath .agents/skills/respect-method-2/scripts/run_spectra_cli.py' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1046ms:
+import "DwyerPatterns.spectra"
+
+spec GridL3
+
+define upper:=20;
+
+type Coord = Int(0..upper);
+env Coord[2] rob;
+
+sys {UP, DOWN, LEFT, RIGHT, STAY} move;
+
+define p1 := rob[0]=0 & rob[1]=0;
+define p2 := rob[0]=0 & rob[1]=upper;
+define p3 := rob[0]=upper & rob[1]=0;
+
+asm ini p1;
+asm alw move=UP implies minusOne(rob[1]) & fix(rob[0]);
+asm alw move=DOWN implies plusOne(rob[1]) & fix(rob[0]);
+asm alw move=LEFT implies minusOne(rob[0]) & fix(rob[1]);
+asm alw move=RIGHT implies plusOne(rob[0]) & fix(rob[1]);
+
+predicate plusOne (Coord c):
+ c + 1 = next (c) | (c = upper & next(c)=c);
+predicate minusOne (Coord c):
+ c -1 = next (c) | (c = 0 & next(c)=c);
+predicate fix (Coord c):
+ next(c)=c;
+
+
+gar alwEv p2;
+gar alwEv p3;
+
+gar P_becomes_true_between_Q_and_R(p1, p2, p3);
+
+ succeeded in 1057ms:
+spec GridL2
+
+type Coord = Int(0..20);
+env Coord[2] rob;
+
+predicate same (Coord[2] a, Coord[2] b):
+ a[1]=a[1] & a[0]=a[0];
+
+sys Move moveRob;
+sys Move moveDrone;
+
+type Move = {UP, DOWN, LEFT, RIGHT, STAY};
+
+define coordSum := rob[0] + rob[1];
+
+predicate fix (Coord c):
+ c=next(c);
+
+asm ini rob[0]=0 & rob[1]=0;
+asm alw moveRob=UP implies next(rob[1])=rob[1]-1;
+ 
+gar alw (rob[0]=0 implies moveRob!=LEFT) & 
+		(rob[0]=4 implies moveRob!=RIGHT) &
+		(rob[1]=0 implies moveRob!=UP) & 
+		(rob[1]=4 implies moveRob!=DOWN);
+
+gar alw moveRob=STAY -> fix(rob[0]) & fix(rob[1]);
+
+gar alw coordSum < 7;
+
+// Extend specification GridL2.spectra with the following predicate
+// invMove(Move a, Move b) to assert that two parameters of type Move are inverse to each other, e.g., UP and DOWN or LEFT and RIGHT.
+
+ succeeded in 1072ms:
+#!/usr/bin/env python3
+"""
+Run spectra-cli.jar and normalize its output for skill workflows.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+
+def default_jar_path() -> Path:
+    return Path(__file__).resolve().parents[4] / "spectra-cli.jar"
+
+
+def detect_status(stdout: str, synthesize: bool) -> str:
+    if "Could not prepare game input from Spectra file" in stdout or "ErrorsInSpectraException" in stdout:
+        return "syntax_error"
+    if "Result: Specification is unrealizable" in stdout:
+        return "unrealizable"
+    if "Result: Specification is realizable" in stdout:
+        if synthesize and "Successfully synthesized" in stdout:
+            return "synthesized"
+        return "realizable"
+    return "unknown"
+
+
+def build_command(jar_path: Path, input_path: Path, output_dir: Path | None, synthesize: bool) -> list[str]:
+    command = ["java", "-jar", str(jar_path), "-i", str(input_path)]
+    if synthesize:
+        command.append("-s")
+    if output_dir is not None:
+        command.extend(["-o", str(output_dir)])
+    return command
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Run spectra-cli.jar and summarize the result.")
+    parser.add_argument("--input", required=True, help="Path to the .spectra file to check")
+    parser.add_argument("--jar", default=str(default_jar_path()), help="Path to spectra-cli.jar")
+    parser.add_argument("--output-dir", help="Output directory for synthesis artifacts")
+    parser.add_argument("--synthesize", action="store_true", help="Run controller synthesis with -s")
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=120.0,
+        help="Maximum seconds to wait for spectra-cli.jar before returning status timeout",
+    )
+    args = parser.parse_args()
+
+    input_path = Path(args.input).resolve()
+    jar_path = Path(args.jar).resolve()
+    output_dir = Path(args.output_dir).resolve() if args.output_dir else None
+
+    if not input_path.is_file():
+        print(json.dumps({"status": "error", "message": f"Input file not found: {input_path}"}))
+        return 2
+
+    if not jar_path.is_file():
+        print(json.dumps({"status": "error", "message": f"spectra-cli.jar not found: {jar_path}"}))
+        return 2
+
+    if output_dir is not None:
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    command = build_command(jar_path, input_path, output_dir, args.synthesize)
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=args.timeout)
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout or ""
+        stderr = exc.stderr or ""
+        combined_output = stdout if not stderr else f"{stdout}\n{stderr}".strip()
+        result = {
+            "status": "timeout",
+            "input": str(input_path),
+            "jar": str(jar_path),
+            "command": command,
+            "exit_code": None,
+            "synthesize": args.synthesize,
+            "output_dir": str(output_dir) if output_dir else None,
+            "timeout_seconds": args.timeout,
+            "raw_output": combined_output,
+        }
+        print(json.dumps(result, indent=2))
+        return 0
+
+    stdout = completed.stdout or ""
+    stderr = completed.stderr or ""
+    combined_output = stdout if not stderr else f"{stdout}\n{stderr}".strip()
+
+    result = {
+        "status": detect_status(combined_output, args.synthesize),
+        "input": str(input_path),
+        "jar": str(jar_path),
+        "command": command,
+        "exit_code": completed.returncode,
+        "synthesize": args.synthesize,
+        "output_dir": str(output_dir) if output_dir else None,
+        "timeout_seconds": args.timeout,
+        "raw_output": combined_output,
+    }
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+codex
+The spec can keep traffic light as an environment enum and speed as a bounded integer. I’m making one explicit modeling assumption: “status of the traffic light” is represented as `RED`, `YELLOW`, or `GREEN`, with only `GREEN` permitting motion.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$stamp = Get-Date -Format '"'yyyyMMdd-HHmmss'; "'$dir = "tmp/spectra-runs/$stamp-autonomous-vehicle"; New-Item -ItemType Directory -Force -Path $dir | Out-Null; Write-Output $dir' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 534ms:
+tmp/spectra-runs/20260610-153016-autonomous-vehicle
+
+codex
+I’m writing the temporary Spectra file now, keeping the requirements direct: environment liveness as an assumption, speed restrictions as safety guarantees, and progress as a system liveness guarantee.
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260610-153016-autonomous-vehicle\AutonomousVehicle.spectra
+diff --git a/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra b/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..3042d21c4b025dc6c89296965ecc56786b320529
+--- /dev/null
++++ b/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra
+@@ -0,0 +1,17 @@
++spec AutonomousVehicle
++
++type Speed = Int(0..10);
++type Light = {RED, YELLOW, GREEN};
++
++env boolean pedestrian;
++env boolean crosswalk;
++env Light trafficLight;
++
++sys Speed speed;
++
++asm alwEv trafficLight=GREEN & !pedestrian;
++
++gar alw (pedestrian | trafficLight!=GREEN) -> speed=0;
++gar alw crosswalk -> speed<5;
++
++gar alwEv trafficLight=GREEN & !pedestrian & speed>0;
+
+diff --git a/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra b/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..3042d21c4b025dc6c89296965ecc56786b320529
+--- /dev/null
++++ b/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra
+@@ -0,0 +1,17 @@
++spec AutonomousVehicle
++
++type Speed = Int(0..10);
++type Light = {RED, YELLOW, GREEN};
++
++env boolean pedestrian;
++env boolean crosswalk;
++env Light trafficLight;
++
++sys Speed speed;
++
++asm alwEv trafficLight=GREEN & !pedestrian;
++
++gar alw (pedestrian | trafficLight!=GREEN) -> speed=0;
++gar alw crosswalk -> speed<5;
++
++gar alwEv trafficLight=GREEN & !pedestrian & speed>0;
+
+codex
+The draft is saved. I’m running the CLI validation with the required wrapper and a 120-second timeout; if it reports syntax, I’ll only repair based on that parser output.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'python .agents/skills/respect-method-2/scripts/run_spectra_cli.py --input tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra --timeout 120' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 5275ms:
+{
+  "status": "realizable",
+  "input": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260610-153016-autonomous-vehicle\\AutonomousVehicle.spectra",
+  "jar": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+  "command": [
+    "java",
+    "-jar",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+    "-i",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260610-153016-autonomous-vehicle\\AutonomousVehicle.spectra"
+  ],
+  "exit_code": 0,
+  "synthesize": false,
+  "output_dir": null,
+  "timeout_seconds": 120.0,
+  "raw_output": "Using BDD Package: CUDDFactory, Version: CUDD 3.0\nUsing BDD Package: CUDDFactory, Version: CUDD 3.0\nGR1GameImplC.checkRealizability: start\nGR1GameImplC.checkRealizability: end\nNodes num: 124\nNodes table size: 1022\nResult: Specification is realizable\n"
+}
+
+diff --git a/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra b/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..3042d21c4b025dc6c89296965ecc56786b320529
+--- /dev/null
++++ b/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra
+@@ -0,0 +1,17 @@
++spec AutonomousVehicle
++
++type Speed = Int(0..10);
++type Light = {RED, YELLOW, GREEN};
++
++env boolean pedestrian;
++env boolean crosswalk;
++env Light trafficLight;
++
++sys Speed speed;
++
++asm alwEv trafficLight=GREEN & !pedestrian;
++
++gar alw (pedestrian | trafficLight!=GREEN) -> speed=0;
++gar alw crosswalk -> speed<5;
++
++gar alwEv trafficLight=GREEN & !pedestrian & speed>0;
+
+codex
+Validation succeeded with `realizable` and no syntax repair loops. I’m running synthesis into a dedicated output directory inside the same temporary run folder.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'python .agents/skills/respect-method-2/scripts/run_spectra_cli.py --input tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra --synthesize --output-dir tmp/spectra-runs/20260610-153016-autonomous-vehicle/controller --timeout 120' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 4417ms:
+{
+  "status": "synthesized",
+  "input": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260610-153016-autonomous-vehicle\\AutonomousVehicle.spectra",
+  "jar": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+  "command": [
+    "java",
+    "-jar",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+    "-i",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260610-153016-autonomous-vehicle\\AutonomousVehicle.spectra",
+    "-s",
+    "-o",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260610-153016-autonomous-vehicle\\controller"
+  ],
+  "exit_code": 0,
+  "synthesize": true,
+  "output_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260610-153016-autonomous-vehicle\\controller",
+  "timeout_seconds": 120.0,
+  "raw_output": "Using BDD Package: CUDDFactory, Version: CUDD 3.0\nUsing BDD Package: CUDDFactory, Version: CUDD 3.0\nGR1GameImplC.checkRealizability: start\nGR1GameImplC.checkRealizability: end\nNodes num: 124\nNodes table size: 1022\nResult: Specification is realizable. Proceeding to synthesis\nCalculating controller info for storage\nGR(1) Calculated fixpoints BDD\nGR(1) Calculated trans BDD\nGR(1) Calculated justices BDD\nResult: Successfully synthesized a just-in-time controller in output folder\n"
+}
+
+diff --git a/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra b/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..3042d21c4b025dc6c89296965ecc56786b320529
+--- /dev/null
++++ b/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra
+@@ -0,0 +1,17 @@
++spec AutonomousVehicle
++
++type Speed = Int(0..10);
++type Light = {RED, YELLOW, GREEN};
++
++env boolean pedestrian;
++env boolean crosswalk;
++env Light trafficLight;
++
++sys Speed speed;
++
++asm alwEv trafficLight=GREEN & !pedestrian;
++
++gar alw (pedestrian | trafficLight!=GREEN) -> speed=0;
++gar alw crosswalk -> speed<5;
++
++gar alwEv trafficLight=GREEN & !pedestrian & speed>0;
+
+codex
+Assumption used: traffic light status is modeled as `{RED, YELLOW, GREEN}`, and only `GREEN` permits driving.
+
+```text
+cli_status: synthesized
+repair_loops: 0
+timeout_seconds: 120
+spectra_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260610-153016-autonomous-vehicle\AutonomousVehicle.spectra
+controller_output_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260610-153016-autonomous-vehicle\controller
+```
+diff --git a/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra b/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..3042d21c4b025dc6c89296965ecc56786b320529
+--- /dev/null
++++ b/tmp/spectra-runs/20260610-153016-autonomous-vehicle/AutonomousVehicle.spectra
+@@ -0,0 +1,17 @@
++spec AutonomousVehicle
++
++type Speed = Int(0..10);
++type Light = {RED, YELLOW, GREEN};
++
++env boolean pedestrian;
++env boolean crosswalk;
++env Light trafficLight;
++
++sys Speed speed;
++
++asm alwEv trafficLight=GREEN & !pedestrian;
++
++gar alw (pedestrian | trafficLight!=GREEN) -> speed=0;
++gar alw crosswalk -> speed<5;
++
++gar alwEv trafficLight=GREEN & !pedestrian & speed>0;
+
+tokens used
+16.986

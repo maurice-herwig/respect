@@ -25,7 +25,7 @@ python reconstruct_with_skill.py --skill respect-method-2 --dry-run --limit 3
 Run a limited real experiment from the repository root:
 
 ```powershell
-python reconstruct_with_skill.py --skill respect-method-2 --limit 100
+python reconstruct_with_skill.py --skill respect-method-2 --limit 125
 ```
 
 Run all pending descriptions with the default agent command:

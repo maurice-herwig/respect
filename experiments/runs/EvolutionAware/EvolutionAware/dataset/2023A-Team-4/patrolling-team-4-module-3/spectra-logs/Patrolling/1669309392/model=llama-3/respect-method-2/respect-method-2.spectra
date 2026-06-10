@@ -1,0 +1,29 @@
+spec Patrolling
+
+type Coord = Int(0..4);
+type Counter = Int(0..10);
+
+sys Coord robotX;
+sys Coord robotY;
+sys Counter awayCount;
+
+define atCharge := robotX=4 & robotY=0;
+
+gar ini atCharge & awayCount=0;
+
+gar alw (
+  (next(robotX)=robotX & next(robotY)=robotY) |
+  (robotX < 4 & next(robotX)=robotX+1 & next(robotY)=robotY) |
+  (robotX > 0 & next(robotX)=robotX-1 & next(robotY)=robotY) |
+  (robotY < 4 & next(robotY)=robotY+1 & next(robotX)=robotX) |
+  (robotY > 0 & next(robotY)=robotY-1 & next(robotX)=robotX)
+);
+
+gar alw atCharge -> next(atCharge);
+
+gar alw atCharge -> next(awayCount)=0;
+gar alw (!atCharge & awayCount < 9) -> next(awayCount)=awayCount+1;
+gar alw (!atCharge & awayCount = 9) -> next(atCharge);
+gar alw !atCharge -> awayCount < 10;
+
+gar alwEv atCharge;
