@@ -60,6 +60,12 @@ For each run, the script exports both Spectra files with
 export into transition-labeled HOA, optionally determinizes the Spot automata,
 and then calls `compute_buchi_distance`.
 
+The distance is computed over valid Spectra letters. The CLI encodes a
+finite-domain variable as one AP per value, such as `"signal=false"` and
+`"signal=true"`. `compute_buchi_distance` treats those as one-hot alternatives
+of the same variable instead of independent Boolean APs; otherwise valid
+Spectra words would have probability 0 under the random-word model.
+
 When normalization adds a sink for missing valuations, it also extends the HOA
 acceptance condition with `Fin(k)` and marks the sink self-loop with `{k}`. This
 keeps the completion sink rejecting even for raw exports with `Acceptance: 0 t`.

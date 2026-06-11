@@ -42,6 +42,14 @@ class MarkovChain:
     num_acceptance_sets: int
 
 
+@dataclass(frozen=True)
+class LetterAlphabet:
+    """Finite letter model used to assign probabilities to automaton edges."""
+
+    cubes: tuple[object, ...]
+    model: str
+
+
 def markov_successors(markov_chain: MarkovChain, state: int) -> set[int]:
     """Return successors reachable with positive probability."""
     return {
@@ -322,8 +330,81 @@ def get_second_example_buchi_automata():
     return tuple(spot.translate(formula, "BA", "deterministic") for formula in formulas)
 
 
-def count_satisfying_letters(condition, bdd_variables: tuple[int, ...]) -> int:
-    """Count complete AP valuations satisfying a Spot/Buddy BDD condition.
+def parse_spectra_value_ap(atomic_proposition: str) -> tuple[str, str] | None:
+    """Parse Spectra CLI AP names like `"signal=true"` into variable/value."""
+    name = atomic_proposition
+    if len(name) >= 2 and name[0] == '"' and name[-1] == '"':
+        name = name[1:-1]
+    if "=" not in name:
+        return None
+    variable, value = name.split("=", 1)
+    if not variable or not value:
+        return None
+    return variable, value
+
+
+def build_letter_alphabet(atomic_propositions: tuple[str, ...], bdd_variables: tuple[int, ...]) -> LetterAlphabet:
+    """Build the finite letter alphabet used for edge probabilities.
+
+    The Spectra HOA exporter encodes finite-domain variables as one AP per
+    value, for example `"signal=false"` and `"signal=true"`. Treating those APs
+    as independent Boolean propositions makes valid Spectra valuations a
+    measure-zero subset over infinite words. For such AP groups, we therefore
+    count only one-hot assignments: exactly one value per variable is true.
+
+    APs that do not match this encoding remain ordinary independent Booleans.
+    """
+    buddy = require_buddy()
+    grouped_indices: dict[str, list[int]] = {}
+    independent_indices: list[int] = []
+
+    for index, atomic_proposition in enumerate(atomic_propositions):
+        parsed = parse_spectra_value_ap(atomic_proposition)
+        if parsed is None:
+            independent_indices.append(index)
+            continue
+        variable, _value = parsed
+        grouped_indices.setdefault(variable, []).append(index)
+
+    # A single AP containing "=" is not enough evidence for a finite-domain
+    # encoding, so keep it independent.
+    one_hot_groups: list[list[int]] = []
+    for indices in grouped_indices.values():
+        if len(indices) >= 2:
+            one_hot_groups.append(indices)
+        else:
+            independent_indices.extend(indices)
+
+    cubes: list[object] = []
+
+    def append_cubes(group_index: int, independent_index: int, cube) -> None:
+        if group_index < len(one_hot_groups):
+            group = one_hot_groups[group_index]
+            for selected_index in group:
+                group_cube = cube
+                for member_index in group:
+                    variable = bdd_variables[member_index]
+                    literal = buddy.bdd_ithvar(variable) if member_index == selected_index else buddy.bdd_nithvar(variable)
+                    group_cube &= literal
+                append_cubes(group_index + 1, independent_index, group_cube)
+            return
+
+        if independent_index < len(independent_indices):
+            ap_index = independent_indices[independent_index]
+            variable = bdd_variables[ap_index]
+            append_cubes(group_index, independent_index + 1, cube & buddy.bdd_nithvar(variable))
+            append_cubes(group_index, independent_index + 1, cube & buddy.bdd_ithvar(variable))
+            return
+
+        cubes.append(cube)
+
+    append_cubes(0, 0, buddy.bddtrue)
+    model = "spectra_one_hot" if one_hot_groups else "raw_boolean_ap"
+    return LetterAlphabet(cubes=tuple(cubes), model=model)
+
+
+def count_satisfying_letters(condition, letter_alphabet: LetterAlphabet) -> int:
+    """Count valid letters satisfying a Spot/Buddy BDD condition.
 
     This intentionally uses explicit enumeration. That is simple and reliable
     for the first implementation, and good enough while the example alphabets are
@@ -333,11 +414,7 @@ def count_satisfying_letters(condition, bdd_variables: tuple[int, ...]) -> int:
     buddy = require_buddy()
     satisfying_letters = 0
 
-    for valuation in range(1 << len(bdd_variables)):
-        cube = buddy.bddtrue
-        for index, variable in enumerate(bdd_variables):
-            literal = buddy.bdd_ithvar(variable) if valuation & (1 << index) else buddy.bdd_nithvar(variable)
-            cube &= literal
+    for cube in letter_alphabet.cubes:
         if condition & cube != buddy.bddfalse:
             satisfying_letters += 1
 
@@ -370,7 +447,8 @@ def automaton_to_markov_chain(automaton, debug: bool = False) -> MarkovChain:
     bdd_dict = automaton.get_dict()
     atomic_propositions = tuple(str(ap) for ap in automaton.ap())
     bdd_variables = tuple(bdd_dict.varnum(ap) for ap in automaton.ap())
-    alphabet_size = 1 << len(bdd_variables)
+    letter_alphabet = build_letter_alphabet(atomic_propositions, bdd_variables)
+    alphabet_size = len(letter_alphabet.cubes)
     transitions: dict[int, list[MarkovTransition]] = {}
 
     if debug:
@@ -378,6 +456,7 @@ def automaton_to_markov_chain(automaton, debug: bool = False) -> MarkovChain:
         print(f"[debug] States: {automaton.num_states()}")
         print(f"[debug] Initial state: {automaton.get_init_state_number()}")
         print(f"[debug] Atomic propositions: {atomic_propositions}")
+        print(f"[debug] Letter model: {letter_alphabet.model}")
         print(f"[debug] Alphabet size: {alphabet_size}")
         print(f"[debug] Spot complete property: {complete_property}")
 
@@ -386,7 +465,7 @@ def automaton_to_markov_chain(automaton, debug: bool = False) -> MarkovChain:
         row_probability = 0.0
 
         for edge in automaton.out(source):
-            satisfying_letters = count_satisfying_letters(edge.cond, bdd_variables)
+            satisfying_letters = count_satisfying_letters(edge.cond, letter_alphabet)
             if satisfying_letters == 0:
                 continue
 
