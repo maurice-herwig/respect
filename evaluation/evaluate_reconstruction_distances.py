@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 import re
 import subprocess
 import statistics
@@ -19,23 +21,445 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from evaluation import buchi_distance
-from evaluation.compare_reconstruction_distance import (
-    DEFAULT_RUNS_MANIFEST,
-    alphabet_diagnostics,
-    automata_are_distance_compatible,
-    automata_are_structurally_compatible,
-    maybe_determinize_automata,
-    export_hoa,
-    load_jsonl,
-    model_matches,
-    normalize_hoa_file,
-    safe_path_part,
-    summarize_run,
-)
-from evaluation.export_spectra_to_hoa import DEFAULT_JAR, resolve_existing_path, resolve_input_path
+from evaluation.summarize_reconstruction_runs import extract_model_label
 
 
+DEFAULT_RUNS_MANIFEST = REPO_ROOT / "experiments" / "runs" / "runs.jsonl"
+DEFAULT_JAR = REPO_ROOT / "assets" / "cli_with_hoa_export" / "spectra-cli.jar"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "evaluation" / "distance_results"
+STATE_RE = re.compile(r"^State:\s+(\d+)(?:\s+\[(.*)\])?(?:\s+(\{[^}]*\}))?\s*$")
+EDGE_RE = re.compile(r"^\[(.*)\]\s+(\d+)(?:\s+(\{[^}]*\}))?\s*$")
+STATES_RE = re.compile(r"^States:\s+(\d+)\s*$")
+PROPERTIES_RE = re.compile(r"^properties:\s+(.*)$")
+
+
+def load_jsonl(path: Path) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    if not path.is_file():
+        raise FileNotFoundError(f"JSONL file not found: {path}")
+    with path.open("r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid JSON in {path} at line {line_number}: {exc}") from exc
+    return records
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def repo_relative_or_absolute(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path.resolve())
+
+
+def normalize_path_value_for_platform(path_value: str) -> str:
+    value = path_value.strip().strip('"').strip("'")
+    if os.name == "nt":
+        return value
+
+    windows_drive_match = re.fullmatch(r"([A-Za-z]):[\\/](.*)", value)
+    if windows_drive_match:
+        drive = windows_drive_match.group(1).lower()
+        rest = windows_drive_match.group(2).replace("\\", "/")
+        return f"/mnt/{drive}/{rest}"
+
+    if "\\" in value and not value.startswith("\\\\"):
+        return value.replace("\\", "/")
+    return value
+
+
+def resolve_input_path(path_value: str) -> Path:
+    path = Path(normalize_path_value_for_platform(path_value))
+    candidates = [path]
+    if not path.is_absolute():
+        candidates.append(REPO_ROOT / path)
+    for candidate in candidates:
+        resolved = candidate.resolve()
+        if resolved.is_file():
+            return resolved
+    return candidates[0].resolve()
+
+
+def resolve_existing_path(path_value: str | Path) -> Path:
+    path = Path(normalize_path_value_for_platform(str(path_value)))
+    candidates = [path]
+    if not path.is_absolute():
+        candidates.append(REPO_ROOT / path)
+    for candidate in candidates:
+        resolved = candidate.resolve()
+        if resolved.exists():
+            return resolved
+    return candidates[0].resolve()
+
+
+def safe_path_part(value: str, max_length: int = 120) -> str:
+    safe = "".join(char if char.isalnum() or char in "._=-" else "_" for char in value).strip("_")
+    return (safe or "value")[:max_length]
+
+
+def model_matches(record: dict[str, Any], model: str | None) -> bool:
+    if model is None:
+        return True
+    return extract_model_label(record) == model
+
+
+def summarize_run(record: dict[str, Any] | None, include_full_record: bool) -> dict[str, Any] | None:
+    if record is None:
+        return None
+    if include_full_record:
+        return record
+    keys = (
+        "run_id",
+        "run_key",
+        "dataset_id",
+        "skill",
+        "status",
+        "reported_cli_status",
+        "reported_repair_loops",
+        "source_repository_full_name",
+        "source_path",
+        "source_spectra_file",
+        "reconstructed_spectra_file",
+        "description_id",
+        "description_relative_stem",
+    )
+    return {key: record.get(key) for key in keys if key in record}
+
+
+def build_export_command(jar_path: Path, input_path: Path, output_path: Path, max_states: int, use_jtlv: bool) -> list[str]:
+    command = ["java", "-jar", str(jar_path), "-i", str(input_path)]
+    if use_jtlv:
+        command.append("--jtlv")
+    command.extend(["--export-hoa", "--hoa-output", str(output_path), "--max-states", str(max_states)])
+    return command
+
+
+def output_fields(raw_output: str, include_raw_output: bool, tail_chars: int) -> dict[str, Any]:
+    if include_raw_output:
+        return {"raw_output": raw_output}
+    if tail_chars <= 0:
+        return {"raw_output_truncated": len(raw_output) > 0, "raw_output_tail": ""}
+    return {"raw_output_truncated": len(raw_output) > tail_chars, "raw_output_tail": raw_output[-tail_chars:]}
+
+
+def export_hoa(
+    *,
+    input_path: Path,
+    output_path: Path,
+    jar_path: Path,
+    max_states: int,
+    timeout: float,
+    use_jtlv: bool,
+    force: bool,
+    include_raw_output: bool,
+    raw_output_tail_chars: int,
+) -> tuple[dict[str, Any], bool]:
+    if output_path.exists() and not force:
+        return (
+            {
+                "status": "reused",
+                "input": repo_relative_or_absolute(input_path),
+                "input_sha256": sha256_file(input_path),
+                "hoa_file": repo_relative_or_absolute(output_path),
+                "hoa_exists": True,
+                "hoa_size_bytes": output_path.stat().st_size,
+                "jar": repo_relative_or_absolute(jar_path),
+                "jar_sha256": sha256_file(jar_path),
+                "max_states": max_states,
+                "timeout_seconds": timeout,
+                "jtlv": use_jtlv,
+            },
+            True,
+        )
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_path.exists() and force:
+        output_path.unlink()
+
+    command = build_export_command(jar_path, input_path, output_path, max_states, use_jtlv)
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        raw_output = "\n".join(part for part in (exc.stdout or "", exc.stderr or "") if part).strip()
+        if output_path.exists():
+            output_path.unlink()
+        result = {
+            "status": "timeout",
+            "input": repo_relative_or_absolute(input_path),
+            "hoa_file": repo_relative_or_absolute(output_path),
+            "hoa_exists": False,
+            "jar": repo_relative_or_absolute(jar_path),
+            "command": command,
+            "exit_code": None,
+            "max_states": max_states,
+            "timeout_seconds": timeout,
+            "jtlv": use_jtlv,
+        }
+        result.update(output_fields(raw_output, include_raw_output, raw_output_tail_chars))
+        return result, False
+
+    raw_output = completed.stdout or ""
+    if completed.stderr:
+        raw_output = f"{raw_output}\n{completed.stderr}".strip()
+    hoa_exists = output_path.is_file()
+    hoa_size_bytes = output_path.stat().st_size if hoa_exists else None
+    ok = completed.returncode == 0 and bool(hoa_size_bytes)
+    if not ok and hoa_exists:
+        output_path.unlink()
+        hoa_exists = False
+        hoa_size_bytes = None
+
+    result = {
+        "status": "exported" if ok else "error",
+        "input": repo_relative_or_absolute(input_path),
+        "input_sha256": sha256_file(input_path),
+        "hoa_file": repo_relative_or_absolute(output_path),
+        "hoa_exists": hoa_exists,
+        "hoa_size_bytes": hoa_size_bytes,
+        "jar": repo_relative_or_absolute(jar_path),
+        "jar_sha256": sha256_file(jar_path),
+        "command": command,
+        "exit_code": completed.returncode,
+        "max_states": max_states,
+        "timeout_seconds": timeout,
+        "jtlv": use_jtlv,
+    }
+    result.update(output_fields(raw_output, include_raw_output, raw_output_tail_chars))
+    return result, ok
+
+
+def normalize_condition(condition: str | None) -> str:
+    if condition is None or not condition.strip():
+        return "t"
+    return condition.strip()
+
+
+def missing_condition(conditions: list[str]) -> str:
+    if not conditions:
+        return "t"
+    if len(conditions) == 1:
+        return f"!({conditions[0]})"
+    return "!(" + " | ".join(f"({condition})" for condition in conditions) + ")"
+
+
+def normalize_properties(line: str) -> str:
+    match = PROPERTIES_RE.match(line)
+    if not match:
+        return line
+    properties = match.group(1).split()
+    rewritten: list[str] = []
+    for prop in properties:
+        if prop == "state-labels":
+            prop = "trans-labels"
+        elif prop == "state-acc":
+            prop = "trans-acc"
+        if prop not in rewritten:
+            rewritten.append(prop)
+    if "trans-labels" not in rewritten:
+        rewritten.append("trans-labels")
+    if "explicit-labels" not in rewritten:
+        rewritten.append("explicit-labels")
+    return "properties: " + " ".join(rewritten)
+
+
+def transform_hoa_state_labels_to_transitions(input_text: str, *, add_rejecting_sink: bool = True) -> tuple[str, dict[str, Any]]:
+    lines = input_text.splitlines()
+    body_index = lines.index("--BODY--")
+    end_index = lines.index("--END--")
+    header = lines[:body_index]
+    body = lines[body_index + 1 : end_index]
+    footer = lines[end_index:]
+
+    state_labels: dict[int, str] = {}
+    state_acceptance: dict[int, str | None] = {}
+    transitions: dict[int, list[tuple[int, str | None]]] = {}
+    state_order: list[int] = []
+    current_state: int | None = None
+
+    for line in body:
+        if not line.strip():
+            continue
+        state_match = STATE_RE.match(line)
+        if state_match:
+            current_state = int(state_match.group(1))
+            state_order.append(current_state)
+            state_labels[current_state] = normalize_condition(state_match.group(2))
+            state_acceptance[current_state] = state_match.group(3).strip() if state_match.group(3) else None
+            transitions.setdefault(current_state, [])
+            continue
+        edge_match = EDGE_RE.match(line)
+        if edge_match:
+            if current_state is None:
+                raise ValueError(f"Transition before first state: {line}")
+            transitions.setdefault(current_state, []).append((int(edge_match.group(2)), edge_match.group(3)))
+            continue
+        raise ValueError(f"Unsupported HOA body line: {line}")
+
+    missing_targets = sorted({target for edges in transitions.values() for target, _ in edges} - set(state_labels))
+    if missing_targets:
+        raise ValueError(f"Transitions reference missing states: {missing_targets}")
+
+    declared_states = None
+    for line in header:
+        states_match = STATES_RE.match(line)
+        if states_match:
+            declared_states = int(states_match.group(1))
+            break
+    if declared_states is None:
+        declared_states = max(state_order) + 1
+
+    sink_state = max(state_order) + 1 if add_rejecting_sink else None
+    output_state_count = max(declared_states, max(state_order) + 1)
+    if sink_state is not None:
+        output_state_count = max(output_state_count, sink_state + 1)
+
+    final_header: list[str] = []
+    inserted_states = False
+    for line in header:
+        if STATES_RE.match(line):
+            final_header.append(f"States: {output_state_count}")
+            inserted_states = True
+        elif PROPERTIES_RE.match(line):
+            final_header.append(normalize_properties(line))
+        else:
+            final_header.append(line)
+    if not inserted_states:
+        final_header.append(f"States: {output_state_count}")
+
+    output_body: list[str] = []
+    added_sink_edges = 0
+    for state in state_order:
+        output_body.append(f"State: {state}")
+        edge_conditions: list[str] = []
+        for target, edge_acceptance in transitions.get(state, []):
+            condition = state_labels[target]
+            acceptance = edge_acceptance or state_acceptance.get(target)
+            suffix = f" {acceptance}" if acceptance else ""
+            output_body.append(f"[{condition}] {target}{suffix}")
+            edge_conditions.append(condition)
+        if sink_state is not None:
+            output_body.append(f"[{missing_condition(edge_conditions)}] {sink_state}")
+            added_sink_edges += 1
+    if sink_state is not None:
+        output_body.append(f"State: {sink_state}")
+        output_body.append("[t] " + str(sink_state))
+
+    metadata = {
+        "states_in": len(state_order),
+        "states_out": output_state_count,
+        "sink_added": sink_state is not None,
+        "sink_state": sink_state,
+        "sink_edges_added": added_sink_edges,
+        "transition_label_source": "target_state_label",
+        "acceptance_source": "target_state_acceptance",
+    }
+    return "\n".join(final_header + ["--BODY--"] + output_body + footer) + "\n", metadata
+
+
+def normalize_hoa_file(input_path: Path, output_path: Path, add_rejecting_sink: bool, force: bool) -> dict[str, Any]:
+    if output_path.exists() and not force:
+        return {
+            "status": "reused",
+            "input": repo_relative_or_absolute(input_path),
+            "output": repo_relative_or_absolute(output_path),
+            "output_size_bytes": output_path.stat().st_size,
+        }
+    normalized, metadata = transform_hoa_state_labels_to_transitions(
+        input_path.read_text(encoding="utf-8"),
+        add_rejecting_sink=add_rejecting_sink,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(normalized, encoding="utf-8")
+    return {
+        "status": "normalized",
+        "input": repo_relative_or_absolute(input_path),
+        "output": repo_relative_or_absolute(output_path),
+        "output_size_bytes": output_path.stat().st_size,
+        **metadata,
+    }
+
+
+def alphabet_diagnostics(result: dict[str, Any]) -> dict[str, Any]:
+    baseline_ap = list((result.get("baseline_automaton") or {}).get("ap") or [])
+    generated_ap = list((result.get("generated_automaton") or {}).get("ap") or [])
+    return {
+        "baseline_ap": baseline_ap,
+        "generated_ap": generated_ap,
+        "baseline_only": sorted(set(baseline_ap) - set(generated_ap)),
+        "generated_only": sorted(set(generated_ap) - set(baseline_ap)),
+    }
+
+
+def automata_are_structurally_compatible(result: dict[str, Any]) -> tuple[bool, str | None]:
+    baseline = result.get("baseline_automaton") or {}
+    generated = result.get("generated_automaton") or {}
+    if baseline.get("deterministic") is not True or generated.get("deterministic") is not True:
+        return False, "nondeterministic_automaton"
+    if baseline.get("complete") != "yes" or generated.get("complete") != "yes":
+        return False, "incomplete_automaton"
+    return True, None
+
+
+def determinize_automaton_for_distance(automaton):
+    spot = buchi_distance.require_spot()
+    candidates = [
+        ("generic", ("generic", "deterministic", "complete")),
+        ("parity", ("parity", "deterministic", "complete")),
+        ("rabin", ("rabin", "deterministic", "complete")),
+        ("deterministic_complete", ("deterministic", "complete")),
+    ]
+    errors: list[str] = []
+    for name, options in candidates:
+        try:
+            processed = spot.postprocess(automaton, *options)
+        except Exception as exc:
+            errors.append(f"{name}: {type(exc).__name__}: {exc}")
+            continue
+        if processed.is_deterministic() and str(processed.prop_complete()) == "yes":
+            return processed, {
+                "status": "determinized",
+                "method": f"spot.postprocess({', '.join(options)})",
+                "states_before": automaton.num_states(),
+                "states_after": processed.num_states(),
+                "acceptance_before": str(automaton.get_acceptance()),
+                "acceptance_after": str(processed.get_acceptance()),
+            }
+        errors.append(
+            f"{name}: produced deterministic={processed.is_deterministic()} "
+            f"complete={processed.prop_complete()} states={processed.num_states()}"
+        )
+    raise ValueError("Could not determinize automaton with Spot. Attempts: " + " | ".join(errors))
+
+
+def maybe_determinize_automata(baseline_automaton, generated_automaton, *, enabled: bool) -> tuple[Any, Any, dict[str, Any], dict[str, Any]]:
+    baseline_info = {
+        "status": "not_needed" if baseline_automaton.is_deterministic() else "disabled",
+        "states_before": baseline_automaton.num_states(),
+        "states_after": baseline_automaton.num_states(),
+    }
+    generated_info = {
+        "status": "not_needed" if generated_automaton.is_deterministic() else "disabled",
+        "states_before": generated_automaton.num_states(),
+        "states_after": generated_automaton.num_states(),
+    }
+    if not enabled:
+        return baseline_automaton, generated_automaton, baseline_info, generated_info
+    if not baseline_automaton.is_deterministic() or str(baseline_automaton.prop_complete()) != "yes":
+        baseline_automaton, baseline_info = determinize_automaton_for_distance(baseline_automaton)
+    if not generated_automaton.is_deterministic() or str(generated_automaton.prop_complete()) != "yes":
+        generated_automaton, generated_info = determinize_automaton_for_distance(generated_automaton)
+    return baseline_automaton, generated_automaton, baseline_info, generated_info
 
 
 def parse_args() -> argparse.Namespace:
