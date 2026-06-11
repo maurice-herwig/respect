@@ -60,6 +60,10 @@ For each run, the script exports both Spectra files with
 export into transition-labeled HOA, optionally determinizes the Spot automata,
 and then calls `compute_buchi_distance`.
 
+When normalization adds a sink for missing valuations, it also extends the HOA
+acceptance condition with `Fin(k)` and marks the sink self-loop with `{k}`. This
+keeps the completion sink rejecting even for raw exports with `Acceptance: 0 t`.
+
 By default, nondeterministic normalized HOA automata are passed through Spot
 postprocessing before distance computation:
 

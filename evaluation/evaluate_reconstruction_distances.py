@@ -31,6 +31,7 @@ STATE_RE = re.compile(r"^State:\s+(\d+)(?:\s+\[(.*)\])?(?:\s+(\{[^}]*\}))?\s*$")
 EDGE_RE = re.compile(r"^\[(.*)\]\s+(\d+)(?:\s+(\{[^}]*\}))?\s*$")
 STATES_RE = re.compile(r"^States:\s+(\d+)\s*$")
 PROPERTIES_RE = re.compile(r"^properties:\s+(.*)$")
+ACCEPTANCE_RE = re.compile(r"^Acceptance:\s+(\d+)\s+(.*)$")
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -153,6 +154,22 @@ def output_fields(raw_output: str, include_raw_output: bool, tail_chars: int) ->
     return {"raw_output_truncated": len(raw_output) > tail_chars, "raw_output_tail": raw_output[-tail_chars:]}
 
 
+def subprocess_output_to_text(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
+
+
+def combine_subprocess_output(stdout: str | bytes | None, stderr: str | bytes | None) -> str:
+    return "\n".join(
+        part
+        for part in (subprocess_output_to_text(stdout), subprocess_output_to_text(stderr))
+        if part
+    ).strip()
+
+
 def export_hoa(
     *,
     input_path: Path,
@@ -191,7 +208,7 @@ def export_hoa(
     try:
         completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=timeout)
     except subprocess.TimeoutExpired as exc:
-        raw_output = "\n".join(part for part in (exc.stdout or "", exc.stderr or "") if part).strip()
+        raw_output = combine_subprocess_output(exc.stdout, exc.stderr)
         if output_path.exists():
             output_path.unlink()
         result = {
@@ -209,9 +226,7 @@ def export_hoa(
         result.update(output_fields(raw_output, include_raw_output, raw_output_tail_chars))
         return result, False
 
-    raw_output = completed.stdout or ""
-    if completed.stderr:
-        raw_output = f"{raw_output}\n{completed.stderr}".strip()
+    raw_output = combine_subprocess_output(completed.stdout, completed.stderr)
     hoa_exists = output_path.is_file()
     hoa_size_bytes = output_path.stat().st_size if hoa_exists else None
     ok = completed.returncode == 0 and bool(hoa_size_bytes)
@@ -273,6 +288,17 @@ def normalize_properties(line: str) -> str:
     return "properties: " + " ".join(rewritten)
 
 
+def add_rejecting_sink_acceptance(line: str, sink_acceptance_set: int | None) -> str:
+    if sink_acceptance_set is None:
+        return line
+    match = ACCEPTANCE_RE.match(line)
+    if not match:
+        return line
+    old_count = int(match.group(1))
+    formula = match.group(2).strip()
+    return f"Acceptance: {old_count + 1} ({formula}) & Fin({sink_acceptance_set})"
+
+
 def transform_hoa_state_labels_to_transitions(input_text: str, *, add_rejecting_sink: bool = True) -> tuple[str, dict[str, Any]]:
     lines = input_text.splitlines()
     body_index = lines.index("--BODY--")
@@ -320,6 +346,15 @@ def transform_hoa_state_labels_to_transitions(input_text: str, *, add_rejecting_
         declared_states = max(state_order) + 1
 
     sink_state = max(state_order) + 1 if add_rejecting_sink else None
+    sink_acceptance_set: int | None = None
+    if sink_state is not None:
+        for line in header:
+            acceptance_match = ACCEPTANCE_RE.match(line)
+            if acceptance_match:
+                sink_acceptance_set = int(acceptance_match.group(1))
+                break
+        if sink_acceptance_set is None:
+            sink_acceptance_set = 0
     output_state_count = max(declared_states, max(state_order) + 1)
     if sink_state is not None:
         output_state_count = max(output_state_count, sink_state + 1)
@@ -330,6 +365,8 @@ def transform_hoa_state_labels_to_transitions(input_text: str, *, add_rejecting_
         if STATES_RE.match(line):
             final_header.append(f"States: {output_state_count}")
             inserted_states = True
+        elif ACCEPTANCE_RE.match(line):
+            final_header.append(add_rejecting_sink_acceptance(line, sink_acceptance_set))
         elif PROPERTIES_RE.match(line):
             final_header.append(normalize_properties(line))
         else:
@@ -353,7 +390,8 @@ def transform_hoa_state_labels_to_transitions(input_text: str, *, add_rejecting_
             added_sink_edges += 1
     if sink_state is not None:
         output_body.append(f"State: {sink_state}")
-        output_body.append("[t] " + str(sink_state))
+        acceptance_suffix = f" {{{sink_acceptance_set}}}" if sink_acceptance_set is not None else ""
+        output_body.append(f"[t] {sink_state}{acceptance_suffix}")
 
     metadata = {
         "states_in": len(state_order),
@@ -361,6 +399,8 @@ def transform_hoa_state_labels_to_transitions(input_text: str, *, add_rejecting_
         "sink_added": sink_state is not None,
         "sink_state": sink_state,
         "sink_edges_added": added_sink_edges,
+        "sink_acceptance_set": sink_acceptance_set,
+        "sink_rejecting_acceptance_added": sink_acceptance_set is not None,
         "transition_label_source": "target_state_label",
         "acceptance_source": "target_state_acceptance",
     }

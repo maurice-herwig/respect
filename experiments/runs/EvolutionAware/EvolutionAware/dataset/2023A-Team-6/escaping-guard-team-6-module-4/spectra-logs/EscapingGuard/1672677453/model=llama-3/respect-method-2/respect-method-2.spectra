@@ -1,0 +1,19 @@
+spec RobotGuardSafety
+
+type RobotCoord = Int(0..4);
+type GuardCoord = Int(0..3);
+
+env GuardCoord guardX;
+env GuardCoord guardY;
+
+sys RobotCoord robotX;
+sys RobotCoord robotY;
+
+asm alw guardX >= 0 & guardX <= 3 & guardY >= 0 & guardY <= 3;
+
+gar alw !(
+  (robotX = guardX & robotY = guardY) |
+  (robotX = guardX + 1 & robotY = guardY) |
+  (robotX = guardX & robotY = guardY + 1) |
+  (robotX = guardX + 1 & robotY = guardY + 1)
+);
