@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -37,8 +39,33 @@ def repo_relative_or_absolute(path: Path) -> str:
         return str(path.resolve())
 
 
+def normalize_path_value_for_platform(path_value: str) -> str:
+    r"""Return a path string usable on the current platform.
+
+    Experiment manifests are often created on Windows and therefore contain
+    either backslash-separated relative paths or absolute paths such as
+    `C:\Users\...`. Under WSL/Linux, `pathlib.Path` treats backslashes as
+    literal filename characters, so those values need to be translated before
+    existence checks.
+    """
+    value = path_value.strip().strip('"').strip("'")
+    if os.name == "nt":
+        return value
+
+    windows_drive_match = re.fullmatch(r"([A-Za-z]):[\\/](.*)", value)
+    if windows_drive_match:
+        drive = windows_drive_match.group(1).lower()
+        rest = windows_drive_match.group(2).replace("\\", "/")
+        return f"/mnt/{drive}/{rest}"
+
+    if "\\" in value and not value.startswith("\\\\"):
+        return value.replace("\\", "/")
+
+    return value
+
+
 def resolve_input_path(path_value: str) -> Path:
-    path = Path(path_value)
+    path = Path(normalize_path_value_for_platform(path_value))
     candidates = [path]
     if not path.is_absolute():
         candidates.append(REPO_ROOT / path)
@@ -52,7 +79,7 @@ def resolve_input_path(path_value: str) -> Path:
 
 
 def resolve_existing_path(path_value: str) -> Path:
-    path = Path(path_value)
+    path = Path(normalize_path_value_for_platform(path_value))
     candidates = [path]
     if not path.is_absolute():
         candidates.append(REPO_ROOT / path)

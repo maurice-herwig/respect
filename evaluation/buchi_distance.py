@@ -265,6 +265,17 @@ def require_spot():
             "Run this script inside the WSL/conda environment created with "
             "`conda create -n respect-spot python=3.12 conda-forge::spot`."
         ) from exc
+    required_attributes = ("automaton", "product_xor")
+    missing = [attribute for attribute in required_attributes if not hasattr(spot, attribute)]
+    if missing:
+        location = getattr(spot, "__file__", "unknown location")
+        raise SystemExit(
+            "Imported a Python module named `spot`, but it is not the LRDE/EPITA "
+            "Spot omega-automata binding required by this project. "
+            f"Missing attributes: {', '.join(missing)}. Imported module location: {location}. "
+            "Install/use conda-forge::spot in the active WSL/conda environment, and make sure "
+            "no PyPI package named `spot` shadows it."
+        )
     return spot
 
 
@@ -437,6 +448,7 @@ def compute_buchi_distance(left_automaton, right_automaton, debug: bool = False)
     # Spot's product_xor constructs an automaton for exactly this symmetric
     # difference. Spot expects both input automata to be deterministic.
     symmetric_difference = spot.product_xor(left_automaton, right_automaton)
+    symmetric_difference = spot.postprocess(symmetric_difference, "generic", "deterministic", "complete")
 
     if debug:
         print("[debug] Symmetric-difference automaton:")
