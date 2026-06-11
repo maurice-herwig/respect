@@ -409,6 +409,26 @@ def transform_hoa_state_labels_to_transitions(input_text: str, *, add_rejecting_
 
 def normalize_hoa_file(input_path: Path, output_path: Path, add_rejecting_sink: bool, force: bool) -> dict[str, Any]:
     if output_path.exists() and not force:
+        existing_text = output_path.read_text(encoding="utf-8", errors="replace")
+        if not add_rejecting_sink or "sink_rejecting_acceptance_added" in existing_text:
+            return {
+                "status": "reused",
+                "input": repo_relative_or_absolute(input_path),
+                "output": repo_relative_or_absolute(output_path),
+                "output_size_bytes": output_path.stat().st_size,
+            }
+        # Older normalized artifacts used an accepting sink for `Acceptance: 0 t`.
+        # Regenerate them so missing valuations are rejected consistently.
+    if output_path.exists() and not force and add_rejecting_sink:
+        existing_text = output_path.read_text(encoding="utf-8", errors="replace")
+        if "Acceptance: 0 t" not in existing_text and re.search(r"Acceptance:\s+\d+\s+.*&\s*Fin\(\d+\)", existing_text):
+            return {
+                "status": "reused",
+                "input": repo_relative_or_absolute(input_path),
+                "output": repo_relative_or_absolute(output_path),
+                "output_size_bytes": output_path.stat().st_size,
+            }
+    elif output_path.exists() and not force:
         return {
             "status": "reused",
             "input": repo_relative_or_absolute(input_path),
