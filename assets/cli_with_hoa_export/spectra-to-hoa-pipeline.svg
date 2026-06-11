@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="720" viewBox="0 0 1120 720" role="img" aria-labelledby="title desc">
+  <title id="title">Spectra to HOA Rabin Automaton Pipeline</title>
+  <desc id="desc">Pipeline showing how a Spectra file is translated through GameInput, translators, GameModel, graph enumeration, acceptance construction, and HOA writing.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .box { fill: #ffffff; stroke: #334155; stroke-width: 2; rx: 8; }
+      .primary { fill: #e0f2fe; stroke: #0369a1; }
+      .model { fill: #ecfdf5; stroke: #047857; }
+      .accept { fill: #fff7ed; stroke: #c2410c; }
+      .out { fill: #f5f3ff; stroke: #6d28d9; }
+      .text { font-family: Arial, Helvetica, sans-serif; font-size: 16px; fill: #0f172a; }
+      .small { font-family: Arial, Helvetica, sans-serif; font-size: 13px; fill: #334155; }
+      .title { font-family: Arial, Helvetica, sans-serif; font-size: 26px; font-weight: 700; fill: #0f172a; }
+      .subtitle { font-family: Arial, Helvetica, sans-serif; font-size: 15px; fill: #475569; }
+      .line { stroke: #334155; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+      .dashed { stroke-dasharray: 7 5; }
+      .band { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; rx: 10; }
+      .bandLabel { font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 700; fill: #475569; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1120" height="720"/>
+  <text class="title" x="40" y="46">From .spectra to HOA Rabin-Style Automaton</text>
+  <text class="subtitle" x="40" y="72">The CLI reuses the Spectra frontend, exports the reachable GameModel graph, and writes HOA acceptance from justice BDDs.</text>
+
+  <rect class="band" x="30" y="100" width="1060" height="155"/>
+  <text class="bandLabel" x="50" y="126">Spectra frontend</text>
+
+  <rect class="box primary" x="55" y="150" width="140" height="58"/>
+  <text class="text" x="87" y="174">.spectra</text>
+  <text class="small" x="89" y="194">input file</text>
+
+  <rect class="box primary" x="245" y="150" width="190" height="58"/>
+  <text class="text" x="270" y="174">SpectraInputProvider</text>
+  <text class="small" x="308" y="194">No IDE parser</text>
+
+  <rect class="box primary" x="485" y="150" width="145" height="58"/>
+  <text class="text" x="523" y="174">GameInput</text>
+  <text class="small" x="515" y="194">parsed model</text>
+
+  <rect class="box primary" x="680" y="150" width="175" height="58"/>
+  <text class="text" x="704" y="174">DefaultTranslators</text>
+  <text class="small" x="719" y="194">normalize specs</text>
+
+  <rect class="box model" x="905" y="150" width="145" height="58"/>
+  <text class="text" x="930" y="174">GameModel</text>
+  <text class="small" x="928" y="194">BDD arena</text>
+
+  <path class="line" d="M195 179 H245"/>
+  <path class="line" d="M435 179 H485"/>
+  <path class="line" d="M630 179 H680"/>
+  <path class="line" d="M855 179 H905"/>
+
+  <rect class="band" x="30" y="295" width="1060" height="255"/>
+  <text class="bandLabel" x="50" y="321">HOA export branch</text>
+
+  <rect class="box model" x="90" y="355" width="190" height="72"/>
+  <text class="text" x="119" y="381">Collect BDD fields</text>
+  <text class="small" x="119" y="402">current vars</text>
+  <text class="small" x="119" y="418">next vars</text>
+
+  <rect class="box model" x="335" y="340" width="215" height="62"/>
+  <text class="text" x="365" y="365">Initial states</text>
+  <text class="small" x="359" y="386">env.initial AND sys.initial</text>
+
+  <rect class="box model" x="335" y="430" width="215" height="62"/>
+  <text class="text" x="372" y="455">Transitions</text>
+  <text class="small" x="361" y="476">env.trans AND sys.trans</text>
+
+  <rect class="box model" x="620" y="385" width="190" height="72"/>
+  <text class="text" x="659" y="411">Reachability</text>
+  <text class="small" x="671" y="432">BFS over</text>
+  <text class="small" x="654" y="448">BDD valuations</text>
+
+  <rect class="box" x="865" y="385" width="175" height="72"/>
+  <text class="text" x="903" y="411">Explicit graph</text>
+  <text class="small" x="910" y="432">states and</text>
+  <text class="small" x="911" y="448">transitions</text>
+
+  <path class="line" d="M977 208 V270 H185 V355"/>
+  <path class="line" d="M280 391 H335"/>
+  <path class="line" d="M550 371 H585 V412 H620"/>
+  <path class="line" d="M550 461 H585 V430 H620"/>
+  <path class="line" d="M810 421 H865"/>
+
+  <rect class="band" x="30" y="585" width="1060" height="90"/>
+  <text class="bandLabel" x="50" y="611">HOA output</text>
+
+  <rect class="box accept" x="330" y="604" width="245" height="52"/>
+  <text class="text" x="360" y="627">Acceptance builder</text>
+  <text class="small" x="357" y="646">env/sys justice BDDs</text>
+
+  <rect class="box out" x="650" y="604" width="155" height="52"/>
+  <text class="text" x="690" y="627">HOA writer</text>
+  <text class="small" x="675" y="646">header and body</text>
+
+  <rect class="box out" x="880" y="604" width="145" height="52"/>
+  <text class="text" x="905" y="627">.hoa file</text>
+  <text class="small" x="898" y="646">Rabin-style</text>
+
+  <path class="line dashed" d="M977 208 V275 H452 V604"/>
+  <path class="line" d="M953 457 V530 H727 V604"/>
+  <path class="line" d="M575 630 H650"/>
+  <path class="line" d="M805 630 H880"/>
+
+  <text class="small" x="72" y="526">State limit is enforced by --max-states because HOA is explicit while GameModel is symbolic.</text>
+  <text class="small" x="656" y="526">Acceptance shape: Fin(envJustice*) OR Inf(sysJustice*)</text>
+</svg>
