@@ -1,0 +1,39 @@
+spec ColorSwap
+
+type Index = Int(0..2);
+type Color = Int(0..2);
+
+env Color color0;
+env Color color1;
+env Color color2;
+
+sys Index a;
+sys Index b;
+sys Color aColor;
+sys Color bColor;
+
+predicate correctA():
+ (a=0 & aColor=color0) |
+ (a=1 & aColor=color1) |
+ (a=2 & aColor=color2);
+
+predicate correctB():
+ (b=0 & bColor=color0) |
+ (b=1 & bColor=color1) |
+ (b=2 & bColor=color2);
+
+asm alw (a=0 & b=0) implies next(color0)=color0;
+asm alw (a=1 & b=1) implies next(color1)=color1;
+asm alw (a=2 & b=2) implies next(color2)=color2;
+
+asm alw (a=0 & b=1) implies next(color0)=color1 & next(color1)=color0;
+asm alw (a=1 & b=0) implies next(color1)=color0 & next(color0)=color1;
+
+asm alw (a=0 & b=2) implies next(color0)=color2 & next(color2)=color0;
+asm alw (a=2 & b=0) implies next(color2)=color0 & next(color0)=color2;
+
+asm alw (a=1 & b=2) implies next(color1)=color2 & next(color2)=color1;
+asm alw (a=2 & b=1) implies next(color2)=color1 & next(color1)=color2;
+
+gar ini correctA() & correctB();
+gar alw correctA() & correctB();

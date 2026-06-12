@@ -107,5 +107,19 @@ For a quick smoke test:
 python evaluation/evaluate_reconstruction_distances.py --skill respect-method-2 --model llama-3 --limit 1
 ```
 
+To test the distance computation without the modified Spectra CLI, translate two
+Spot formulas over the same alphabet directly:
+
+```powershell
+python evaluation/test_nonzero_distance_fixture.py
+```
+
+The default formulas are `F signal` and `G signal`, so the expected distance is
+non-zero. To run the older end-to-end Spectra export fixture explicitly:
+
+```powershell
+python evaluation/test_nonzero_distance_fixture.py --mode spectra-cli --force
+```
+
 The distance step requires the LRDE/EPITA Spot Python bindings. On Windows, run
 it in the WSL/conda Spot environment described in the repository root README.
