@@ -33,7 +33,7 @@ The goal is to measure whether CLI unrealizability diagnostics improve reconstru
 12. Repair unrealizability only if the proposed change is consistent with the natural-language description.
 13. Prefer minimal repairs that preserve stated requirements: fix overly strong initialization, add environment assumptions only when implied by the description, or relax/reshape a guarantee only when the description supports the weaker form.
 14. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
-15. After each unrealizability repair, increment both `repair_loops` and `unrealizable_repair_loops`, save the file, rerun validation, and continue from the appropriate branch.
+15. After each unrealizability repair, increment `unrealizable_repair_loops`, save the file, rerun validation, and continue from the appropriate branch.
 16. Limit unrealizability-repair loops to at most 3 attempts.
 17. If a repaired specification becomes realizable, run synthesis and report `cli_status = synthesized`.
 18. Always include the final method-3 result fields in the response.
@@ -42,7 +42,7 @@ The goal is to measure whether CLI unrealizability diagnostics improve reconstru
 
 - Create a temporary working directory under the repository root, for example `tmp/spectra-runs/<timestamp>-<slug>/`.
 - Save the generated specification as `<name>.spectra`.
-- Save each unrealizability diagnostic response as `diagnostics/unrealizable-<n>.json`.
+- Save the JSON output of each counter-strategy wrapper call as `diagnostics/unrealizable-<n>.json`. The actual counter-strategy text is preserved inside that JSON object's `raw_output` field.
 - Keep the final `.spectra` file and synthesis output long enough for inspection.
 - Do not overwrite unrelated files.
 
@@ -71,8 +71,6 @@ For synthesis after a `realizable` result:
 ```bash
 python .agents/skills/respect-method-3/scripts/run_spectra_cli.py --input <path-to-file> --synthesize --output-dir <path-to-output-dir> --timeout 120
 ```
-
-The current `spectra-cli.jar` exposes counter-strategy options, but not an unrealizable-core command-line option. If an unrealizable core is unavailable from the wrapper, set `used_unrealizable_core = false` and continue with counter-strategy diagnostics only.
 
 ## Method 3 Boundaries
 
@@ -105,7 +103,6 @@ syntax_repair_loops: <number>
 unrealizable_repair_loops: <number>
 timeout_seconds: <number>
 used_counter_strategy: <true|false>
-used_unrealizable_core: <true|false>
 blocked_by_nl_conflict: <true|false>
 diagnostic_file: <path or none>
 spectra_file: <path>

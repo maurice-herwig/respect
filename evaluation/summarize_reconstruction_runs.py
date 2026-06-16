@@ -151,7 +151,6 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
         and record["reported_repair_loops"] > 0
     )
     counter_strategy_used = sum(1 for record in filtered if record.get("reported_used_counter_strategy") is True)
-    unrealizable_core_used = sum(1 for record in filtered if record.get("reported_used_unrealizable_core") is True)
     blocked_by_nl_conflict = sum(1 for record in filtered if record.get("reported_blocked_by_nl_conflict") is True)
 
     return {
@@ -210,10 +209,6 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
             "count": counter_strategy_used,
             "percent": percent(counter_strategy_used, total),
         },
-        "unrealizable_core_used": {
-            "count": unrealizable_core_used,
-            "percent": percent(unrealizable_core_used, total),
-        },
         "blocked_by_nl_conflict": {
             "count": blocked_by_nl_conflict,
             "percent": percent(blocked_by_nl_conflict, total),
@@ -270,15 +265,11 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         f"{synthesized_after_repair['percent_of_repair_attempts']:.2f}% of repair attempts)"
     )
 
-    if summary["counter_strategy_used"]["count"] or summary["unrealizable_core_used"]["count"] or summary["blocked_by_nl_conflict"]["count"]:
+    if summary["counter_strategy_used"]["count"] or summary["blocked_by_nl_conflict"]["count"]:
         print()
         print(
             "Counter-strategy used: "
             f"{summary['counter_strategy_used']['count']} ({summary['counter_strategy_used']['percent']:.2f}%)"
-        )
-        print(
-            "Unrealizable core used: "
-            f"{summary['unrealizable_core_used']['count']} ({summary['unrealizable_core_used']['percent']:.2f}%)"
         )
         print(
             "Blocked by NL conflict: "
