@@ -25,12 +25,12 @@ python .agents\skills\respect-method-3\scripts\run_spectra_cli.py --input assets
 ```
 
 ```powershell
-java "-Djava.library.path=." -cp "controller_tests\build\classes;assets\examples\E2_execution\executor.jar" respect.controller_tests.Method3TestRunner --plan controller_tests\examples\traffic_e2_plan.json
+java "-Djava.library.path=." -cp "controller_tests\build\classes;assets\examples\E2_execution\executor.jar" respect.controller_tests.TestRunner --plan controller_tests\examples\traffic_e2_plan.json
 ```
 
 On Linux/macOS use `:` instead of `;` in the classpath.
 
-If Java reports `ClassNotFoundException: respect.controller_tests.Method3TestRunner`,
+If Java reports `ClassNotFoundException: respect.controller_tests.TestRunner`,
 run the build command first; `controller_tests/build/classes` is generated and is
 not committed.
 

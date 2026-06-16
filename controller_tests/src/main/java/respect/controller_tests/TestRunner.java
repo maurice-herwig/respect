@@ -7,8 +7,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class Method3TestRunner {
-    private Method3TestRunner() {
+public final class TestRunner {
+    private TestRunner() {
     }
 
     public static void main(String[] args) throws Exception {
