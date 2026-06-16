@@ -132,6 +132,10 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
         )
         for record in filtered
     )
+    test_repair_loop_counts: Counter[str] = Counter(
+        str(record.get("reported_test_repair_loops") if record.get("reported_test_repair_loops") is not None else "missing")
+        for record in filtered
+    )
 
     synthesized_without_repair = sum(
         1
@@ -152,6 +156,10 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
     )
     counter_strategy_used = sum(1 for record in filtered if record.get("reported_used_counter_strategy") is True)
     blocked_by_nl_conflict = sum(1 for record in filtered if record.get("reported_blocked_by_nl_conflict") is True)
+    test_runs_reported = sum(1 for record in filtered if isinstance(record.get("reported_tests_total"), int))
+    tests_total = sum(record.get("reported_tests_total") for record in filtered if isinstance(record.get("reported_tests_total"), int))
+    tests_passed = sum(record.get("reported_tests_passed") for record in filtered if isinstance(record.get("reported_tests_passed"), int))
+    tests_failed = sum(record.get("reported_tests_failed") for record in filtered if isinstance(record.get("reported_tests_failed"), int))
 
     return {
         "skill": skill,
@@ -192,6 +200,14 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
                 unrealizable_repair_loop_counts.items(), key=lambda item: (not item[0].isdigit(), item[0])
             )
         ],
+        "test_repair_loops": [
+            {
+                "test_repair_loops": repair_loops,
+                "count": count,
+                "percent": percent(count, total),
+            }
+            for repair_loops, count in sorted(test_repair_loop_counts.items(), key=lambda item: (not item[0].isdigit(), item[0]))
+        ],
         "synthesized_with_zero_repair_loops": {
             "count": synthesized_without_repair,
             "percent": percent(synthesized_without_repair, total),
@@ -212,6 +228,13 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
         "blocked_by_nl_conflict": {
             "count": blocked_by_nl_conflict,
             "percent": percent(blocked_by_nl_conflict, total),
+        },
+        "controller_tests": {
+            "runs_reported": test_runs_reported,
+            "tests_total": tests_total,
+            "tests_passed": tests_passed,
+            "tests_failed": tests_failed,
+            "tests_passed_percent": percent(tests_passed, tests_total),
         },
     }
 
@@ -245,6 +268,12 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         for item in summary["unrealizable_repair_loops"]:
             print(f"  {item['unrealizable_repair_loops']}: {item['count']} ({item['percent']:.2f}%)")
 
+    if any(item["test_repair_loops"] != "missing" for item in summary["test_repair_loops"]):
+        print()
+        print("Test repair loops:")
+        for item in summary["test_repair_loops"]:
+            print(f"  {item['test_repair_loops']}: {item['count']} ({item['percent']:.2f}%)")
+
     zero_repair = summary["synthesized_with_zero_repair_loops"]
     print()
     print(
@@ -274,6 +303,16 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         print(
             "Blocked by NL conflict: "
             f"{summary['blocked_by_nl_conflict']['count']} ({summary['blocked_by_nl_conflict']['percent']:.2f}%)"
+        )
+
+    tests = summary["controller_tests"]
+    if tests["runs_reported"]:
+        print()
+        print(f"Controller-test runs reported: {tests['runs_reported']}")
+        print(
+            "Controller tests: "
+            f"{tests['tests_passed']}/{tests['tests_total']} passed "
+            f"({tests['tests_passed_percent']:.2f}%), failed={tests['tests_failed']}"
         )
 
 
