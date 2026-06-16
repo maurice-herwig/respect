@@ -120,6 +120,18 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
         str(record.get("reported_repair_loops") if record.get("reported_repair_loops") is not None else "missing")
         for record in filtered
     )
+    syntax_repair_loop_counts: Counter[str] = Counter(
+        str(record.get("reported_syntax_repair_loops") if record.get("reported_syntax_repair_loops") is not None else "missing")
+        for record in filtered
+    )
+    unrealizable_repair_loop_counts: Counter[str] = Counter(
+        str(
+            record.get("reported_unrealizable_repair_loops")
+            if record.get("reported_unrealizable_repair_loops") is not None
+            else "missing"
+        )
+        for record in filtered
+    )
 
     synthesized_without_repair = sum(
         1
@@ -138,6 +150,9 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
         and isinstance(record.get("reported_repair_loops"), int)
         and record["reported_repair_loops"] > 0
     )
+    counter_strategy_used = sum(1 for record in filtered if record.get("reported_used_counter_strategy") is True)
+    unrealizable_core_used = sum(1 for record in filtered if record.get("reported_used_unrealizable_core") is True)
+    blocked_by_nl_conflict = sum(1 for record in filtered if record.get("reported_blocked_by_nl_conflict") is True)
 
     return {
         "skill": skill,
@@ -160,6 +175,24 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
             }
             for repair_loops, count in sorted(repair_loop_counts.items(), key=lambda item: (not item[0].isdigit(), item[0]))
         ],
+        "syntax_repair_loops": [
+            {
+                "syntax_repair_loops": repair_loops,
+                "count": count,
+                "percent": percent(count, total),
+            }
+            for repair_loops, count in sorted(syntax_repair_loop_counts.items(), key=lambda item: (not item[0].isdigit(), item[0]))
+        ],
+        "unrealizable_repair_loops": [
+            {
+                "unrealizable_repair_loops": repair_loops,
+                "count": count,
+                "percent": percent(count, total),
+            }
+            for repair_loops, count in sorted(
+                unrealizable_repair_loop_counts.items(), key=lambda item: (not item[0].isdigit(), item[0])
+            )
+        ],
         "synthesized_with_zero_repair_loops": {
             "count": synthesized_without_repair,
             "percent": percent(synthesized_without_repair, total),
@@ -172,6 +205,18 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
             "count": synthesized_after_repair,
             "percent_of_all": percent(synthesized_after_repair, total),
             "percent_of_repair_attempts": percent(synthesized_after_repair, repair_attempted),
+        },
+        "counter_strategy_used": {
+            "count": counter_strategy_used,
+            "percent": percent(counter_strategy_used, total),
+        },
+        "unrealizable_core_used": {
+            "count": unrealizable_core_used,
+            "percent": percent(unrealizable_core_used, total),
+        },
+        "blocked_by_nl_conflict": {
+            "count": blocked_by_nl_conflict,
+            "percent": percent(blocked_by_nl_conflict, total),
         },
     }
 
@@ -193,6 +238,18 @@ def print_text_summary(summary: dict[str, Any]) -> None:
     for item in summary["repair_loops"]:
         print(f"  {item['repair_loops']}: {item['count']} ({item['percent']:.2f}%)")
 
+    if any(item["syntax_repair_loops"] != "missing" for item in summary["syntax_repair_loops"]):
+        print()
+        print("Syntax repair loops:")
+        for item in summary["syntax_repair_loops"]:
+            print(f"  {item['syntax_repair_loops']}: {item['count']} ({item['percent']:.2f}%)")
+
+    if any(item["unrealizable_repair_loops"] != "missing" for item in summary["unrealizable_repair_loops"]):
+        print()
+        print("Unrealizable repair loops:")
+        for item in summary["unrealizable_repair_loops"]:
+            print(f"  {item['unrealizable_repair_loops']}: {item['count']} ({item['percent']:.2f}%)")
+
     zero_repair = summary["synthesized_with_zero_repair_loops"]
     print()
     print(
@@ -212,6 +269,21 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         f"({synthesized_after_repair['percent_of_all']:.2f}% of all, "
         f"{synthesized_after_repair['percent_of_repair_attempts']:.2f}% of repair attempts)"
     )
+
+    if summary["counter_strategy_used"]["count"] or summary["unrealizable_core_used"]["count"] or summary["blocked_by_nl_conflict"]["count"]:
+        print()
+        print(
+            "Counter-strategy used: "
+            f"{summary['counter_strategy_used']['count']} ({summary['counter_strategy_used']['percent']:.2f}%)"
+        )
+        print(
+            "Unrealizable core used: "
+            f"{summary['unrealizable_core_used']['count']} ({summary['unrealizable_core_used']['percent']:.2f}%)"
+        )
+        print(
+            "Blocked by NL conflict: "
+            f"{summary['blocked_by_nl_conflict']['count']} ({summary['blocked_by_nl_conflict']['percent']:.2f}%)"
+        )
 
 
 def main() -> int:
