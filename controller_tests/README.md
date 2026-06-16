@@ -58,6 +58,33 @@ Supported `kind` values:
 - `exclusion`: fails if a forbidden valuation appears at any step.
 - `always_implication`: whenever `when` matches, `then` must match in the same step.
 - `eventually_response`: whenever `when` matches, `eventually` must match within `within_steps`.
+  Set `require_closed_obligations` to `true` if a trace ending with an open
+  response obligation should fail. The default is `false`, which avoids failing
+  merely because a bounded trace ends before an unexpired deadline.
 
-All controller tests are bounded trace tests. They are evidence for semantic
+Controller tests support three execution modes:
+
+- `trace`: execute the explicit `trace` array from the test plan.
+- `random`: generate `runs` random traces of length `max_depth` from `env` domains.
+- `exhaustive`: enumerate input traces up to `max_depth`, capped by `max_paths`.
+
+Example exploration test:
+
+```json
+{
+  "kind": "exclusion",
+  "name": "never_both_green",
+  "mode": "exhaustive",
+  "max_depth": 4,
+  "max_paths": 256,
+  "env": {
+    "carA": ["false", "true"],
+    "carB": ["false", "true"]
+  },
+  "forbidden": {"greenA": "true", "greenB": "true"}
+}
+```
+
+All controller tests are bounded black-box tests. They replay generated input
+traces against fresh controller instances. They are evidence for semantic
 quality, not full equivalence proofs.

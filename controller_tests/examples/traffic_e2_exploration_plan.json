@@ -1,0 +1,41 @@
+{
+  "controller_dir": "assets/examples/E2_execution/out/jit",
+  "spec_name": "TrafficE2",
+  "spectra_file": "assets/examples/E2_execution/TrafficE2.spectra",
+  "outputs": ["greenA", "greenB"],
+  "tests": [
+    {
+      "kind": "variable_ownership",
+      "name": "declared_variables",
+      "env": ["carA", "carB"],
+      "sys": ["greenA", "greenB"]
+    },
+    {
+      "kind": "exclusion",
+      "name": "never_both_green_exhaustive",
+      "mode": "exhaustive",
+      "max_depth": 2,
+      "max_paths": 16,
+      "env": {
+        "carA": ["false", "true"],
+        "carB": ["false", "true"]
+      },
+      "forbidden": {"greenA": "true", "greenB": "true"}
+    },
+    {
+      "kind": "eventually_response",
+      "name": "initially_green_a_occurs_for_persistent_car_a",
+      "mode": "random",
+      "runs": 20,
+      "max_depth": 8,
+      "seed": 7,
+      "env": {
+        "carA": ["true"],
+        "carB": ["false"]
+      },
+      "when": {},
+      "eventually": {"greenA": "true"},
+      "within_steps": 4
+    }
+  ]
+}

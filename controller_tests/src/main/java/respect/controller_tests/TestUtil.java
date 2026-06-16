@@ -41,6 +41,26 @@ public final class TestUtil {
         return Integer.parseInt(String.valueOf(value));
     }
 
+    public static long longValue(Object value, long fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        return Long.parseLong(String.valueOf(value));
+    }
+
+    public static boolean booleanValue(Object value, boolean fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        return Boolean.parseBoolean(String.valueOf(value));
+    }
+
     public static List<String> stringList(Object value, String label) {
         List<String> result = new ArrayList<>();
         if (value == null) {
@@ -67,6 +87,22 @@ public final class TestUtil {
         Map<String, Object> object = Json.asObject(value, "map");
         for (Map.Entry<String, Object> entry : object.entrySet()) {
             result.put(entry.getKey(), stringValue(entry.getValue(), null));
+        }
+        return result;
+    }
+
+    public static Map<String, List<String>> stringListMap(Object value, String label) {
+        Map<String, List<String>> result = new LinkedHashMap<>();
+        Map<String, Object> object = Json.asObject(value, label);
+        for (Map.Entry<String, Object> entry : object.entrySet()) {
+            List<String> values = stringList(entry.getValue(), label + "." + entry.getKey());
+            if (values.isEmpty()) {
+                throw new IllegalArgumentException("Empty domain for " + entry.getKey());
+            }
+            result.put(entry.getKey(), values);
+        }
+        if (result.isEmpty()) {
+            throw new IllegalArgumentException(label + " must contain at least one variable");
         }
         return result;
     }
