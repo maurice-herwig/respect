@@ -15,11 +15,22 @@ javac -cp assets\examples\E2_execution\executor.jar -d controller_tests\build\cl
 
 ## Run
 
+First synthesize the example JIT controller if `assets/examples/E2_execution/out/jit`
+does not exist:
+
 ```powershell
-java -cp "controller_tests\build\classes;assets\examples\E2_execution\executor.jar" respect.controller_tests.Method3TestRunner --plan controller_tests\examples\traffic_e2_plan.json
+python .agents\skills\respect-method-3\scripts\run_spectra_cli.py --input assets\examples\E2_execution\TrafficE2.spectra --synthesize --output-dir assets\examples\E2_execution\out --timeout 120
+```
+
+```powershell
+java "-Djava.library.path=." -cp "controller_tests\build\classes;assets\examples\E2_execution\executor.jar" respect.controller_tests.Method3TestRunner --plan controller_tests\examples\traffic_e2_plan.json
 ```
 
 On Linux/macOS use `:` instead of `;` in the classpath.
+
+If Java reports `ClassNotFoundException: respect.controller_tests.Method3TestRunner`,
+run the build command first; `controller_tests/build/classes` is generated and is
+not committed.
 
 The controller directory in the plan must point at the synthesized JIT folder,
 for example `<controller_output_dir>/jit`.
