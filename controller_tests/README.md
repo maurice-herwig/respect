@@ -5,6 +5,8 @@ Java test library for method-3 controller checks.
 The library executes synthesized Spectra JIT controllers through Syntech's
 `ControllerExecutor` and checks bounded, natural-language-derived properties.
 
+Workflow overview: [`controller_test_workflow.svg`](controller_test_workflow.svg)
+
 ## Build
 
 From the repository root:
