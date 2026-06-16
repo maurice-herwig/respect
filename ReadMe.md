@@ -23,6 +23,8 @@ agent-based reconstruction experiments, and summarizes the results.
   reconstruction condition. It generates Spectra, validates with
   `spectra-cli.jar`, repairs CLI-reported syntax errors, and synthesizes a
   controller when realizable.
+- [`assets/method2_method3_comparison.svg`](assets/method2_method3_comparison.svg):
+  visual comparison of the Method 2 and Method 3 agent workflows.
 
 ## Environment
 
