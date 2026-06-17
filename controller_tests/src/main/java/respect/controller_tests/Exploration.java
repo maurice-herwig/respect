@@ -17,6 +17,8 @@ public final class Exploration {
         switch (mode) {
             case "trace":
                 return List.of(TestUtil.trace(config));
+            case "traces":
+                return concreteTraces(config);
             case "random":
                 return randomTraces(config);
             case "exhaustive":
@@ -24,6 +26,18 @@ public final class Exploration {
             default:
                 throw new IllegalArgumentException("Unsupported exploration mode: " + mode);
         }
+    }
+
+    private static List<List<Map<String, String>>> concreteTraces(Map<String, Object> config) {
+        List<List<Map<String, String>>> traces = new ArrayList<>();
+        for (Object traceObject : Json.asArray(config.get("traces"), "traces")) {
+            List<Map<String, String>> trace = new ArrayList<>();
+            for (Object stepObject : Json.asArray(traceObject, "trace")) {
+                trace.add(TestUtil.stringMap(stepObject));
+            }
+            traces.add(trace);
+        }
+        return traces;
     }
 
     private static List<List<Map<String, String>>> randomTraces(Map<String, Object> config) {

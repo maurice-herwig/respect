@@ -18,7 +18,7 @@ From this `evaluation` directory, for example when an IDE uses `evaluation` as
 the working directory:
 
 ```powershell
-python summarize_reconstruction_runs.py --skill respect-method-2 --model llama-3
+python summarize_reconstruction_runs.py --skill respect-method-3 --model llama-3
 ```
 
 The script reports:
@@ -123,3 +123,74 @@ python evaluation/test_nonzero_distance_fixture.py --mode spectra-cli --force
 
 The distance step requires the LRDE/EPITA Spot Python bindings. On Windows, run
 it in the WSL/conda Spot environment described in the repository root README.
+
+## Controller Output Distances For A Model And Skill
+
+`evaluate_controller_distances.py` evaluates synthesized runs by comparing the
+controllers synthesized from the accepted baseline Spectra file and the
+reconstructed Spectra file. Both controllers are executed with the same bounded
+input traces, and their system outputs are compared step by step.
+
+```powershell
+python evaluation\evaluate_controller_distances.py `
+  --skill respect-method-2 `
+  --model llama-3 `
+  --mode exhaustive `
+  --max-depth 6 `
+  --max-paths 10000
+```
+
+For larger input domains, use random sampling:
+
+```powershell
+python evaluation\evaluate_controller_distances.py `
+  --skill respect-method-2 `
+  --model llama-3 `
+  --mode random `
+  --max-depth 20 `
+  --runs 1000 `
+  --seed 1
+```
+
+The script automatically synthesizes both controllers into:
+
+```text
+evaluation/controller_distance_results/<skill>/<model>/comparisons/<run_id>/
+```
+
+It then runs `respect.controller_tests.ControllerDistanceRunner` and writes one
+JSONL result row to:
+
+```text
+evaluation/controller_distance_results/<skill>/<model>/controller_distances.jsonl
+```
+
+Reported distance metrics:
+
+- `trace_mismatch_rate`: fraction of bounded input traces where at least one
+  output mismatch occurs.
+- `step_mismatch_rate`: fraction of executed time steps with any output
+  mismatch.
+- `output_hamming_mismatch_rate`: fraction of individual output-variable
+  comparisons that differ.
+
+This is an operational controller-distance measure, not a specification-language
+equivalence proof. Two controllers can differ while still satisfying the same
+underspecified Spectra contract. The metric is most useful for measuring how
+similar the synthesized strategies behave under the same bounded input
+distribution.
+
+Because the metric compares concrete synthesized controller artifacts, even two
+controllers synthesized from the same underspecified Spectra file can produce
+different outputs if synthesis chooses different valid strategies. Use identical
+controller artifacts, not two fresh syntheses, when you need a zero-distance
+smoke test for the runner itself.
+
+For robustness on Windows/CUDD, the Python driver runs controller traces in
+short isolated Java processes by default. `--trace-batch-size 1` is the default;
+increase it only after checking that the local Syntech/CUDD setup stays stable.
+
+Automatic signature extraction currently supports scalar `boolean`, inline enum,
+enum type aliases, and `Int(a..b)` declarations. Runs with renamed variables,
+different domains, arrays, or unsupported declaration forms are reported as
+`signature_mismatch` or `unsupported_signature` instead of receiving a distance.

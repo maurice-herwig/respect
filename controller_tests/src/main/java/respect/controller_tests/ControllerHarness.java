@@ -35,4 +35,8 @@ public final class ControllerHarness {
         }
         return new StepResult(inputs, outputs);
     }
+
+    public void free() {
+        executor.free();
+    }
 }

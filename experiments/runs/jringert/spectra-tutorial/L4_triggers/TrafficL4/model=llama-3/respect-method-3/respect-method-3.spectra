@@ -1,0 +1,50 @@
+spec TrafficL4
+
+sys boolean greenA;
+sys boolean greenB;
+
+env boolean carA;
+env boolean carB;
+
+asm responds_within_3(carB, carA);
+
+gar alw !(greenA & greenB);
+gar responds_within_4(greenA, carA & !greenA);
+
+pattern responds_within_3(s, p) {
+  var {S0, S1, S2, S3, BAD} state;
+
+  ini state=S0;
+
+  alw ((state=S0 & ((!p) | s) & next(state=S0)) |
+       (state=S0 & p & !s & next(state=S1)) |
+       (state=S1 & s & next(state=S0)) |
+       (state=S1 & !s & next(state=S2)) |
+       (state=S2 & s & next(state=S0)) |
+       (state=S2 & !s & next(state=S3)) |
+       (state=S3 & s & next(state=S0)) |
+       (state=S3 & !s & next(state=BAD)) |
+       (state=BAD & next(state=BAD)));
+
+  alwEv state!=BAD;
+}
+
+pattern responds_within_4(s, p) {
+  var {S0, S1, S2, S3, S4, BAD} state;
+
+  ini state=S0;
+
+  alw ((state=S0 & ((!p) | s) & next(state=S0)) |
+       (state=S0 & p & !s & next(state=S1)) |
+       (state=S1 & s & next(state=S0)) |
+       (state=S1 & !s & next(state=S2)) |
+       (state=S2 & s & next(state=S0)) |
+       (state=S2 & !s & next(state=S3)) |
+       (state=S3 & s & next(state=S0)) |
+       (state=S3 & !s & next(state=S4)) |
+       (state=S4 & s & next(state=S0)) |
+       (state=S4 & !s & next(state=BAD)) |
+       (state=BAD & next(state=BAD)));
+
+  alwEv state!=BAD;
+}
