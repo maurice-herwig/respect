@@ -789,6 +789,43 @@ def evaluate_one_run(
 
 def summarize_results(args: argparse.Namespace, total_matching_runs: int, selected_runs: int, records: list[dict[str, Any]], skipped: Counter[str], output_jsonl: Path) -> dict[str, Any]:
     statuses = Counter(str(record.get("status")) for record in records)
+    errors = Counter(str(record.get("error") or "none") for record in records if record.get("status") != "success")
+    baseline_synthesis_statuses = Counter(
+        str(((record.get("baseline_synthesis") or {}).get("status")) or "missing")
+        for record in records
+        if record.get("baseline_synthesis") is not None
+    )
+    generated_synthesis_statuses = Counter(
+        str(((record.get("generated_synthesis") or {}).get("status")) or "missing")
+        for record in records
+        if record.get("generated_synthesis") is not None
+    )
+    cache_reused = sum(1 for record in records if record.get("cache_reused") is True)
+    mapping_used = sum(1 for record in records if record.get("signature_mapping_used") is True)
+    mapping_unusable = sum(
+        1
+        for record in records
+        if (record.get("signature_mapping_record") or {}).get("usable") is False
+    )
+    examples_by_status: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        status = str(record.get("status"))
+        examples = examples_by_status.setdefault(status, [])
+        if len(examples) >= 3:
+            continue
+        run = record.get("run") or {}
+        examples.append(
+            {
+                "run_id": run.get("run_id"),
+                "dataset_id": run.get("dataset_id"),
+                "source_path": run.get("source_path"),
+                "error": record.get("error"),
+                "baseline_signature_status": (record.get("baseline_signature") or {}).get("status"),
+                "generated_signature_status": (record.get("generated_signature") or {}).get("status"),
+                "baseline_synthesis_status": (record.get("baseline_synthesis") or {}).get("status"),
+                "generated_synthesis_status": (record.get("generated_synthesis") or {}).get("status"),
+            }
+        )
     trace_rates = [
         float((record.get("distance") or {}).get("trace_mismatch_rate"))
         for record in records
@@ -830,6 +867,31 @@ def summarize_results(args: argparse.Namespace, total_matching_runs: int, select
             for status, count in sorted(statuses.items())
         ],
         "skipped_counts": dict(sorted(skipped.items())),
+        "error_counts": [
+            {"error": error, "count": count, "percent": percent(count, len(records))}
+            for error, count in sorted(errors.items(), key=lambda item: (-item[1], item[0]))
+        ],
+        "baseline_synthesis_status_counts": [
+            {"status": status, "count": count, "percent": percent(count, len(records))}
+            for status, count in sorted(baseline_synthesis_statuses.items())
+        ],
+        "generated_synthesis_status_counts": [
+            {"status": status, "count": count, "percent": percent(count, len(records))}
+            for status, count in sorted(generated_synthesis_statuses.items())
+        ],
+        "cache_reused": {
+            "count": cache_reused,
+            "percent": percent(cache_reused, len(records)),
+        },
+        "signature_mapping_used": {
+            "count": mapping_used,
+            "percent": percent(mapping_used, len(records)),
+        },
+        "signature_mapping_unusable": {
+            "count": mapping_unusable,
+            "percent": percent(mapping_unusable, len(records)),
+        },
+        "examples_by_status": examples_by_status,
         "trace_mismatch_rate": stats(trace_rates),
         "step_mismatch_rate": stats(step_rates),
         "output_hamming_mismatch_rate": stats(hamming_rates),
@@ -848,6 +910,38 @@ def print_text_summary(summary: dict[str, Any]) -> None:
     print("Statuses:")
     for item in summary["status_counts"]:
         print(f"  {item['status']}: {item['count']} ({item['percent']:.2f}%)")
+    if summary["skipped_counts"]:
+        print()
+        print("Skipped while filtering:")
+        for status, count in summary["skipped_counts"].items():
+            print(f"  {status}: {count}")
+    print()
+    print(
+        "Cache reused: "
+        f"{summary['cache_reused']['count']} ({summary['cache_reused']['percent']:.2f}%)"
+    )
+    print(
+        "Signature mapping used: "
+        f"{summary['signature_mapping_used']['count']} ({summary['signature_mapping_used']['percent']:.2f}%)"
+    )
+    if summary["signature_mapping_unusable"]["count"]:
+        print(
+            "Signature mapping unusable: "
+            f"{summary['signature_mapping_unusable']['count']} ({summary['signature_mapping_unusable']['percent']:.2f}%)"
+        )
+    if summary["baseline_synthesis_status_counts"] or summary["generated_synthesis_status_counts"]:
+        print()
+        print("Baseline synthesis statuses:")
+        for item in summary["baseline_synthesis_status_counts"]:
+            print(f"  {item['status']}: {item['count']} ({item['percent']:.2f}%)")
+        print("Generated synthesis statuses:")
+        for item in summary["generated_synthesis_status_counts"]:
+            print(f"  {item['status']}: {item['count']} ({item['percent']:.2f}%)")
+    if summary["error_counts"]:
+        print()
+        print("Error reasons:")
+        for item in summary["error_counts"][:20]:
+            print(f"  {item['error']}: {item['count']} ({item['percent']:.2f}%)")
     for key in ("trace_mismatch_rate", "step_mismatch_rate", "output_hamming_mismatch_rate"):
         values = summary[key]
         print()
@@ -857,6 +951,29 @@ def print_text_summary(summary: dict[str, Any]) -> None:
             print(f"  median: {values['median']:.6g}")
             print(f"  min: {values['min']:.6g}")
             print(f"  max: {values['max']:.6g}")
+    if summary["examples_by_status"]:
+        print()
+        print("Examples by status:")
+        for status, examples in sorted(summary["examples_by_status"].items()):
+            print(f"  {status}:")
+            for example in examples:
+                parts = [
+                    f"run_id={example.get('run_id')}",
+                    f"source_path={example.get('source_path')}",
+                ]
+                if example.get("error"):
+                    parts.append(f"error={example.get('error')}")
+                if example.get("baseline_signature_status") or example.get("generated_signature_status"):
+                    parts.append(
+                        "signature="
+                        f"{example.get('baseline_signature_status')}/{example.get('generated_signature_status')}"
+                    )
+                if example.get("baseline_synthesis_status") or example.get("generated_synthesis_status"):
+                    parts.append(
+                        "synthesis="
+                        f"{example.get('baseline_synthesis_status')}/{example.get('generated_synthesis_status')}"
+                    )
+                print("    " + " | ".join(parts))
 
 
 def print_intermediate_result(index: int, total: int, run_id: str, result: dict[str, Any]) -> None:
