@@ -141,6 +141,15 @@ def print_stats(title: str, values: dict[str, Any]) -> None:
         print(f"    max: {values['max']:.6g}")
 
 
+def print_skipped_counts(skipped_counts: dict[str, int]) -> None:
+    print("  skipped_counts:")
+    if not skipped_counts:
+        print("    none")
+        return
+    for status, count in sorted(skipped_counts.items()):
+        print(f"    {status}: {count}")
+
+
 def print_text_summary(summary: dict[str, Any]) -> None:
     print(f"Skill: {summary['skill']}")
     print(f"Model: {summary['model']}")
@@ -153,6 +162,16 @@ def print_text_summary(summary: dict[str, Any]) -> None:
     print(f"  skipped_without_model: {reconstruction['skipped_without_model']}")
     print_distribution("  cli_status:", reconstruction["cli_status"])
     print_distribution("  repair_loops:", reconstruction["repair_loops"], key_name="repair_loops")
+    if any(item["syntax_repair_loops"] != "missing" for item in reconstruction["syntax_repair_loops"]):
+        print_distribution("  syntax_repair_loops:", reconstruction["syntax_repair_loops"], key_name="syntax_repair_loops")
+    if any(item["unrealizable_repair_loops"] != "missing" for item in reconstruction["unrealizable_repair_loops"]):
+        print_distribution(
+            "  unrealizable_repair_loops:",
+            reconstruction["unrealizable_repair_loops"],
+            key_name="unrealizable_repair_loops",
+        )
+    if any(item["test_repair_loops"] != "missing" for item in reconstruction["test_repair_loops"]):
+        print_distribution("  test_repair_loops:", reconstruction["test_repair_loops"], key_name="test_repair_loops")
     print(
         "  synthesized_with_zero_repair_loops: "
         f"{reconstruction['synthesized_with_zero_repair_loops']['count']} "
@@ -169,8 +188,20 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         f"({reconstruction['synthesized_after_repair']['percent_of_all']:.2f}% of all, "
         f"{reconstruction['synthesized_after_repair']['percent_of_repair_attempts']:.2f}% of repair attempts)"
     )
+    if reconstruction["counter_strategy_used"]["count"] or reconstruction["blocked_by_nl_conflict"]["count"]:
+        print(
+            "  counter_strategy_used: "
+            f"{reconstruction['counter_strategy_used']['count']} "
+            f"({reconstruction['counter_strategy_used']['percent']:.2f}%)"
+        )
+        print(
+            "  blocked_by_nl_conflict: "
+            f"{reconstruction['blocked_by_nl_conflict']['count']} "
+            f"({reconstruction['blocked_by_nl_conflict']['percent']:.2f}%)"
+        )
     tests = reconstruction["controller_tests"]
     if tests["runs_reported"]:
+        print(f"  controller_test_runs_reported: {tests['runs_reported']}")
         print(
             "  controller_tests: "
             f"{tests['tests_passed']}/{tests['tests_total']} passed "
@@ -185,6 +216,7 @@ def print_text_summary(summary: dict[str, Any]) -> None:
     print(f"  matching_synthesized_runs: {buchi['matching_synthesized_runs']}")
     print(f"  evaluated_runs: {buchi['evaluated_runs']}")
     print_distribution("  status_counts:", buchi["status_counts"])
+    print_skipped_counts(buchi["skipped_counts"])
     print_stats("  distance:", buchi["distance"])
     print()
 
@@ -195,6 +227,7 @@ def print_text_summary(summary: dict[str, Any]) -> None:
     print(f"  matching_synthesized_runs: {controller['matching_synthesized_runs']}")
     print(f"  evaluated_runs: {controller['evaluated_runs']}")
     print_distribution("  status_counts:", controller["status_counts"])
+    print_skipped_counts(controller["skipped_counts"])
     print_stats("  trace_mismatch_rate:", controller["trace_mismatch_rate"])
     print_stats("  step_mismatch_rate:", controller["step_mismatch_rate"])
     print_stats("  output_hamming_mismatch_rate:", controller["output_hamming_mismatch_rate"])
