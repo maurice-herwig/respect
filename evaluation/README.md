@@ -127,6 +127,20 @@ recomputing distances when the same file pair appears again. Use
 `--no-reuse-existing` to rebuild the JSONL from scratch, or `--force` to
 recreate intermediate HOA artifacts and distances.
 
+If the HOA AP alphabets differ only because generated variables use different
+names, enable LLM-assisted one-to-one signature mapping:
+
+```powershell
+python evaluation\evaluate_reconstruction_distances.py `
+  --skill respect-method-2 `
+  --model llama-3 `
+  --signature-mapping llm
+```
+
+Mappings are requested from the Academic Cloud API, validated locally, and cached
+in `evaluation/signature_mappings.jsonl`. The generated HOA AP names are then
+renamed to the baseline variable names before Spot imports the automata.
+
 For a quick smoke test:
 
 ```powershell
@@ -186,6 +200,20 @@ By default the script reuses existing JSONL controller-distance records for the
 same baseline/generated Spectra file hashes and controller-distance settings
 such as mode, depth, seed, and trace batch size. Use `--no-reuse-existing` to
 rebuild the JSONL, or `--force` to resynthesize controllers and recompute.
+
+For variable-name mismatches such as `leftM` versus `leftMotor`, use the same
+LLM-assisted signature mapping:
+
+```powershell
+python evaluation\evaluate_controller_distances.py `
+  --skill respect-method-2 `
+  --model llama-3 `
+  --signature-mapping llm
+```
+
+The evaluation keeps baseline input/output names as the reference. Input traces
+are translated to generated input names before running the generated controller,
+and generated outputs are compared back against the mapped baseline outputs.
 
 Reported distance metrics:
 

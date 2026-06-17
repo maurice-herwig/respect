@@ -35,6 +35,11 @@ from evaluation.evaluate_reconstruction_distances import (  # noqa: E402
     select_matching_runs,
     sha256_file,
 )
+from evaluation.signature_mapping import (  # noqa: E402
+    DEFAULT_MAPPING_FILE,
+    get_or_create_llm_mapping,
+    identity_mapping,
+)
 
 
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "evaluation" / "controller_distance_results"
@@ -270,7 +275,8 @@ def run_controller_trace(
     )
 
 
-def compare_trace_outputs(left: dict[str, Any], right: dict[str, Any], outputs: list[str]) -> dict[str, Any]:
+def compare_trace_outputs(left: dict[str, Any], right: dict[str, Any], outputs: list[str], output_mapping: dict[str, str] | None = None) -> dict[str, Any]:
+    output_mapping = output_mapping or {output: output for output in outputs}
     left_traces = left.get("traces") or []
     right_traces = right.get("traces") or []
     if len(left_traces) != len(right_traces):
@@ -295,7 +301,11 @@ def compare_trace_outputs(left: dict[str, Any], right: dict[str, Any], outputs: 
             input_trace.append(inputs)
             total_steps += 1
             total_output_comparisons += len(outputs)
-            differing_outputs = [output for output in outputs if left_outputs.get(output) != right_outputs.get(output)]
+            differing_outputs = [
+                output
+                for output in outputs
+                if left_outputs.get(output) != right_outputs.get(output_mapping.get(output, output))
+            ]
             if differing_outputs:
                 mismatching_steps += 1
                 mismatching_output_comparisons += len(differing_outputs)
@@ -381,6 +391,16 @@ def random_traces(env: dict[str, list[str]], max_depth: int, runs: int, seed: in
     return traces
 
 
+def remap_traces(traces: list[list[dict[str, str]]], variable_mapping: dict[str, str]) -> list[list[dict[str, str]]]:
+    return [
+        [
+            {variable_mapping.get(name, name): value for name, value in step.items()}
+            for step in trace
+        ]
+        for trace in traces
+    ]
+
+
 def chunked(values: list[Any], chunk_size: int) -> list[list[Any]]:
     return [values[index : index + chunk_size] for index in range(0, len(values), chunk_size)]
 
@@ -451,6 +471,8 @@ def current_pair_key(record: dict[str, Any], args: argparse.Namespace, jar_path:
         "runs": args.runs if args.mode == "random" else None,
         "seed": args.seed if args.mode == "random" else None,
         "trace_batch_size": max(1, int(args.trace_batch_size)),
+        "signature_mapping": args.signature_mapping,
+        "mapping_model": args.mapping_model if args.signature_mapping == "llm" else None,
     }
     return (
         "controller_distance",
@@ -506,6 +528,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
+        "--signature-mapping",
+        choices=("strict", "llm"),
+        default="strict",
+        help="strict requires identical env/sys signatures. llm may map generated variable names to baseline names.",
+    )
+    parser.add_argument("--signature-mapping-file", default=str(DEFAULT_MAPPING_FILE))
+    parser.add_argument("--mapping-model", default=None, help="Academic Cloud model for --signature-mapping llm.")
+    parser.add_argument("--mapping-base-url", default=None)
+    parser.add_argument("--mapping-timeout", type=float, default=120.0)
+    parser.add_argument("--force-signature-mapping", action="store_true")
+    parser.add_argument(
         "--reuse-existing",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -526,6 +559,13 @@ def output_root(args: argparse.Namespace) -> Path:
     if not path.is_absolute():
         path = REPO_ROOT / path
     return path / safe_path_part(args.skill) / safe_path_part(args.model)
+
+
+def resolve_repo_path(path_value: str | Path) -> Path:
+    path = Path(path_value)
+    if path.is_absolute():
+        return path
+    return REPO_ROOT / path
 
 
 def default_output_jsonl(args: argparse.Namespace) -> Path:
@@ -556,7 +596,14 @@ def summarize_run(record: dict[str, Any], include_full_record: bool) -> dict[str
     return {key: record.get(key) for key in keys if key in record}
 
 
-def evaluate_one_run(record: dict[str, Any], args: argparse.Namespace, jar_path: Path, executor_jar: Path, artifacts_root: Path) -> dict[str, Any]:
+def evaluate_one_run(
+    record: dict[str, Any],
+    args: argparse.Namespace,
+    jar_path: Path,
+    executor_jar: Path,
+    artifacts_root: Path,
+    progress=None,
+) -> dict[str, Any]:
     comparison_id = safe_path_part(str(record.get("run_id") or record.get("run_key") or record.get("dataset_id") or "run"))
     pair_dir = artifacts_root / "comparisons" / comparison_id
     baseline_spectra = resolve_input_path(str(record["source_spectra_file"]))
@@ -567,6 +614,10 @@ def evaluate_one_run(record: dict[str, Any], args: argparse.Namespace, jar_path:
         "run": summarize_run(record, args.include_run_record),
         "baseline_signature": None,
         "generated_signature": None,
+        "signature_match_mode": args.signature_mapping,
+        "signature_mapping_used": False,
+        "signature_mapping": None,
+        "signature_mapping_record": None,
         "baseline_synthesis": None,
         "generated_synthesis": None,
         "plan_file": repo_relative_or_absolute(pair_dir / "controller-distance-plan.json"),
@@ -575,6 +626,8 @@ def evaluate_one_run(record: dict[str, Any], args: argparse.Namespace, jar_path:
         "error": None,
     }
     try:
+        if progress:
+            progress("parsing signatures")
         baseline_signature = parse_spectra_signature(baseline_spectra)
         generated_signature = parse_spectra_signature(generated_spectra)
         result["cache_metadata"] = {
@@ -589,16 +642,49 @@ def evaluate_one_run(record: dict[str, Any], args: argparse.Namespace, jar_path:
                 "runs": args.runs if args.mode == "random" else None,
                 "seed": args.seed if args.mode == "random" else None,
                 "trace_batch_size": max(1, int(args.trace_batch_size)),
+                "signature_mapping": args.signature_mapping,
+                "mapping_model": args.mapping_model if args.signature_mapping == "llm" else None,
             },
         }
         result["baseline_signature"] = baseline_signature
         result["generated_signature"] = generated_signature
         compatible, incompatibility = signatures_compatible(baseline_signature, generated_signature)
         if not compatible:
-            result["status"] = "signature_mismatch" if "mismatch" in str(incompatibility) else "unsupported_signature"
-            result["error"] = incompatibility
-            return result
+            if args.signature_mapping != "llm" or baseline_signature.get("status") != "success" or generated_signature.get("status") != "success":
+                result["status"] = "signature_mismatch" if "mismatch" in str(incompatibility) else "unsupported_signature"
+                result["error"] = incompatibility
+                return result
+            if progress:
+                progress(f"strict signature mismatch ({incompatibility}); requesting/loading LLM mapping")
+            mapping_record = get_or_create_llm_mapping(
+                baseline_signature=baseline_signature,
+                generated_signature=generated_signature,
+                mapping_file=resolve_repo_path(args.signature_mapping_file),
+                model=args.mapping_model,
+                base_url=args.mapping_base_url,
+                timeout=args.mapping_timeout,
+                force=args.force_signature_mapping,
+            )
+            result["signature_mapping_record"] = {
+                "mapping_key": mapping_record.get("mapping_key"),
+                "api_status": mapping_record.get("api_status"),
+                "model": mapping_record.get("model"),
+                "usable": mapping_record.get("usable"),
+                "validation_errors": mapping_record.get("validation_errors"),
+            }
+            result["signature_mapping"] = mapping_record.get("mapping")
+            if not mapping_record.get("usable"):
+                result["status"] = "signature_mismatch"
+                result["error"] = "llm_signature_mapping_unusable"
+                return result
+            result["signature_mapping_used"] = True
+            signature_mapping = mapping_record["mapping"]
+        else:
+            signature_mapping = identity_mapping(baseline_signature)
+            result["signature_mapping"] = signature_mapping
 
+        if progress:
+            progress(f"synthesizing baseline controller: {repo_relative_or_absolute(baseline_spectra)}")
         baseline_synthesis, baseline_ok = synthesize_controller(
             spectra_file=baseline_spectra,
             output_dir=pair_dir / "baseline-controller",
@@ -606,6 +692,9 @@ def evaluate_one_run(record: dict[str, Any], args: argparse.Namespace, jar_path:
             timeout=args.synthesis_timeout,
             force=args.force,
         )
+        if progress:
+            progress(f"baseline synthesis status={baseline_synthesis.get('status')}")
+            progress(f"synthesizing generated controller: {repo_relative_or_absolute(generated_spectra)}")
         generated_synthesis, generated_ok = synthesize_controller(
             spectra_file=generated_spectra,
             output_dir=pair_dir / "generated-controller",
@@ -615,6 +704,8 @@ def evaluate_one_run(record: dict[str, Any], args: argparse.Namespace, jar_path:
         )
         result["baseline_synthesis"] = baseline_synthesis
         result["generated_synthesis"] = generated_synthesis
+        if progress:
+            progress(f"generated synthesis status={generated_synthesis.get('status')}")
         if not (baseline_ok and generated_ok):
             result["status"] = "synthesis_failed"
             return result
@@ -623,14 +714,21 @@ def evaluate_one_run(record: dict[str, Any], args: argparse.Namespace, jar_path:
             traces = exhaustive_traces(baseline_signature["env"], args.max_depth, args.max_paths)
         else:
             traces = random_traces(baseline_signature["env"], args.max_depth, args.runs, args.seed)
+        if progress:
+            progress(f"generated {len(traces)} input traces mode={args.mode} depth={args.max_depth}")
         if not traces:
             result["status"] = "failed"
             result["error"] = "no input traces generated"
             return result
 
         batch_size = max(1, int(args.trace_batch_size))
+        trace_batches = chunked(traces, batch_size)
+        total_batches = len(trace_batches)
         batch_results: list[dict[str, Any]] = []
-        for batch_index, trace_batch in enumerate(chunked(traces, batch_size), start=1):
+        for batch_index, trace_batch in enumerate(trace_batches, start=1):
+            generated_trace_batch = remap_traces(trace_batch, signature_mapping["env"])
+            if progress and (batch_index == 1 or batch_index == total_batches or batch_index % 25 == 0):
+                progress(f"running trace batch {batch_index}/{total_batches} traces={len(trace_batch)}")
             baseline_plan_path = pair_dir / "batches" / f"baseline-trace-plan-{batch_index:05d}.json"
             generated_plan_path = pair_dir / "batches" / f"generated-trace-plan-{batch_index:05d}.json"
             baseline_trace_output = pair_dir / "batches" / f"baseline-trace-result-{batch_index:05d}.json"
@@ -647,8 +745,8 @@ def evaluate_one_run(record: dict[str, Any], args: argparse.Namespace, jar_path:
                 path=generated_plan_path,
                 controller_dir=pair_dir / "generated-controller" / "jit",
                 spec_name=str(generated_signature["spec_name"]),
-                outputs=outputs,
-                traces=trace_batch,
+                outputs=[signature_mapping["sys"][output] for output in outputs],
+                traces=generated_trace_batch,
             )
             baseline_trace, baseline_runner_ok = run_controller_trace(
                 plan_path=baseline_plan_path,
@@ -672,7 +770,7 @@ def evaluate_one_run(record: dict[str, Any], args: argparse.Namespace, jar_path:
                 result["status"] = "runner_failed"
                 result["error"] = f"generated controller trace runner failed in batch {batch_index}"
                 return result
-            distance_result = compare_trace_outputs(baseline_trace, generated_trace, outputs)
+            distance_result = compare_trace_outputs(baseline_trace, generated_trace, outputs, signature_mapping["sys"])
             batch_results.append(distance_result)
 
         result["plan_file"] = repo_relative_or_absolute(pair_dir / "batches")
@@ -779,6 +877,21 @@ def print_intermediate_result(index: int, total: int, run_id: str, result: dict[
     )
 
 
+def cached_result_detail(result: dict[str, Any]) -> str:
+    status = result.get("status")
+    distance = result.get("distance") or {}
+    if status == "success":
+        return (
+            f"status=success trace={float(distance.get('trace_mismatch_rate', 0.0)):.6g} "
+            f"step={float(distance.get('step_mismatch_rate', 0.0)):.6g} "
+            f"hamming={float(distance.get('output_hamming_mismatch_rate', 0.0)):.6g}"
+        )
+    error = result.get("error")
+    if error:
+        return f"status={status} error={error}"
+    return f"status={status} distance=none"
+
+
 def main() -> int:
     args = parse_args()
     runs_manifest = resolve_existing_path(args.runs_manifest)
@@ -828,16 +941,24 @@ def main() -> int:
             except Exception:
                 key = None
             if key is not None and key in pair_cache:
-                print(f"[{index}/{len(matching)}] reusing cached controller distance run_id={run_id or 'missing'}", file=sys.stderr)
+                cached = pair_cache[key]
+                print(
+                    f"[{index}/{len(matching)}] reusing cached controller distance "
+                    f"run_id={run_id or 'missing'} {cached_result_detail(cached)}",
+                    file=sys.stderr,
+                )
                 if not (run_id and run_id in existing_run_ids):
-                    result = cached_record_for_run(pair_cache[key], record, args)
+                    result = cached_record_for_run(cached, record, args)
                     append_jsonl(output_jsonl, result)
                     if run_id:
                         existing_run_ids.add(run_id)
                     evaluated_records.append(result)
                 continue
         print(f"[{index}/{len(matching)}] evaluating controller distance run_id={run_id or 'missing'}", file=sys.stderr)
-        result = evaluate_one_run(record, args, jar_path, executor_jar, artifacts_root)
+        def progress(message: str) -> None:
+            print(f"[{index}/{len(matching)}]   {message}", file=sys.stderr)
+
+        result = evaluate_one_run(record, args, jar_path, executor_jar, artifacts_root, progress=progress)
         print_intermediate_result(index, len(matching), run_id, result)
         append_jsonl(output_jsonl, result)
         evaluated_records.append(result)

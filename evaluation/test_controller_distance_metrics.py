@@ -15,6 +15,7 @@ from evaluation.evaluate_controller_distances import (
     random_traces,
     signatures_compatible,
 )
+from evaluation.signature_mapping import apply_hoa_ap_mapping, validate_mapping
 
 
 def runner_output(traces):
@@ -245,6 +246,54 @@ class SpectraSignatureTests(unittest.TestCase):
         compatible, reason = signatures_compatible(baseline, generated_name_change)
         self.assertFalse(compatible)
         self.assertEqual(reason, "environment_signature_mismatch")
+
+
+class SignatureMappingTests(unittest.TestCase):
+    def test_validate_mapping_accepts_complete_one_to_one_domain_match(self):
+        baseline = {
+            "env": {"button": ["false", "true"]},
+            "sys": {"leftM": ["FWD", "BWD", "STP"], "rightM": ["FWD", "BWD", "STP"]},
+        }
+        generated = {
+            "env": {"button": ["false", "true"]},
+            "sys": {"leftMotor": ["FWD", "BWD", "STP"], "rightMotor": ["FWD", "BWD", "STP"]},
+        }
+        mapping = {
+            "env": {"button": "button"},
+            "sys": {"leftM": "leftMotor", "rightM": "rightMotor"},
+            "confidence": "high",
+        }
+
+        validated, errors = validate_mapping(mapping, baseline, generated)
+
+        self.assertEqual(errors, [])
+        self.assertTrue(validated["complete"])
+        self.assertEqual(validated["sys"]["leftM"], "leftMotor")
+
+    def test_validate_mapping_rejects_domain_mismatch_and_duplicate_targets(self):
+        baseline = {
+            "env": {},
+            "sys": {"a": ["0", "1"], "b": ["0", "1"]},
+        }
+        generated = {
+            "env": {},
+            "sys": {"x": ["0", "1"], "y": ["LOW", "HIGH"]},
+        }
+        mapping = {"env": {}, "sys": {"a": "x", "b": "x"}}
+
+        validated, errors = validate_mapping(mapping, baseline, generated)
+
+        self.assertFalse(validated["complete"])
+        self.assertTrue(any("mapped more than once" in error for error in errors))
+
+    def test_apply_hoa_ap_mapping_renames_generated_variable_names_only(self):
+        hoa = 'AP: 2 "leftMotor=FWD" "rightMotor=STP"\n--BODY--\nState: 0\n[0&1] 0\n--END--\n'
+
+        mapped = apply_hoa_ap_mapping(hoa, {"leftMotor": "leftM", "rightMotor": "rightM"})
+
+        self.assertIn('"leftM=FWD"', mapped)
+        self.assertIn('"rightM=STP"', mapped)
+        self.assertNotIn('"leftMotor=FWD"', mapped)
 
 
 if __name__ == "__main__":

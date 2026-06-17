@@ -23,6 +23,13 @@ if str(REPO_ROOT) not in sys.path:
 
 from evaluation import buchi_distance
 from evaluation.summarize_reconstruction_runs import extract_model_label
+from evaluation.signature_mapping import (
+    DEFAULT_MAPPING_FILE,
+    apply_hoa_ap_mapping,
+    generated_to_baseline,
+    get_or_create_llm_mapping,
+    parse_spectra_signature,
+)
 
 
 DEFAULT_RUNS_MANIFEST = REPO_ROOT / "experiments" / "runs" / "runs.jsonl"
@@ -103,6 +110,13 @@ def resolve_existing_path(path_value: str | Path) -> Path:
         if resolved.exists():
             return resolved
     return candidates[0].resolve()
+
+
+def resolve_repo_path(path_value: str | Path) -> Path:
+    path = Path(str(path_value))
+    if path.is_absolute():
+        return path
+    return REPO_ROOT / path
 
 
 def safe_path_part(value: str, max_length: int = 120) -> str:
@@ -590,6 +604,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--raw-output-tail-chars", type=int, default=1000)
     parser.add_argument("--include-run-record", action="store_true")
     parser.add_argument("--debug-distance", action="store_true")
+    parser.add_argument(
+        "--signature-mapping",
+        choices=("strict", "llm"),
+        default="strict",
+        help="strict requires identical HOA AP names. llm may rename generated AP variable names to baseline names.",
+    )
+    parser.add_argument("--signature-mapping-file", default=str(DEFAULT_MAPPING_FILE))
+    parser.add_argument("--mapping-model", default=None)
+    parser.add_argument("--mapping-base-url", default=None)
+    parser.add_argument("--mapping-timeout", type=float, default=120.0)
+    parser.add_argument("--force-signature-mapping", action="store_true")
     parser.add_argument("--json", action="store_true", help="Print machine-readable summary.")
     return parser.parse_args()
 
@@ -678,6 +703,8 @@ def current_pair_key(record: dict[str, Any], args: argparse.Namespace, jar_path:
         "normalize_hoa": args.normalize_hoa,
         "add_rejecting_sink": args.add_rejecting_sink,
         "determinize": args.determinize,
+        "signature_mapping": args.signature_mapping,
+        "mapping_model": args.mapping_model if args.signature_mapping == "llm" else None,
     }
     return (
         "buchi_distance",
@@ -757,6 +784,7 @@ def evaluate_one_run(
     generated_hoa = pair_output_dir / "generated.hoa"
     baseline_distance_hoa = pair_output_dir / "baseline.normalized.hoa"
     generated_distance_hoa = pair_output_dir / "generated.normalized.hoa"
+    generated_mapped_hoa = pair_output_dir / "generated.normalized.mapped.hoa"
 
     result: dict[str, Any] = {
         "status": "started",
@@ -768,6 +796,9 @@ def evaluate_one_run(
         "generated_normalization": None,
         "baseline_determinization": None,
         "generated_determinization": None,
+        "signature_mapping_used": False,
+        "signature_mapping": None,
+        "signature_mapping_record": None,
         "alphabet_diagnostics": None,
         "baseline_automaton": None,
         "generated_automaton": None,
@@ -794,6 +825,8 @@ def evaluate_one_run(
                 "normalize_hoa": args.normalize_hoa,
                 "add_rejecting_sink": args.add_rejecting_sink,
                 "determinize": args.determinize,
+                "signature_mapping": args.signature_mapping,
+                "mapping_model": args.mapping_model if args.signature_mapping == "llm" else None,
             },
         }
 
@@ -842,6 +875,45 @@ def evaluate_one_run(
         else:
             baseline_distance_hoa = baseline_hoa
             generated_distance_hoa = generated_hoa
+
+        if args.signature_mapping == "llm":
+            baseline_signature = parse_spectra_signature(baseline_spectra)
+            generated_signature = parse_spectra_signature(generated_spectra)
+            signatures_equal = (
+                baseline_signature.get("env") == generated_signature.get("env")
+                and baseline_signature.get("sys") == generated_signature.get("sys")
+            )
+            if (
+                not signatures_equal
+                and baseline_signature.get("status") == "success"
+                and generated_signature.get("status") == "success"
+            ):
+                mapping_record = get_or_create_llm_mapping(
+                    baseline_signature=baseline_signature,
+                    generated_signature=generated_signature,
+                    mapping_file=resolve_repo_path(args.signature_mapping_file),
+                    model=args.mapping_model,
+                    base_url=args.mapping_base_url,
+                    timeout=args.mapping_timeout,
+                    force=args.force_signature_mapping,
+                )
+                result["signature_mapping_record"] = {
+                    "mapping_key": mapping_record.get("mapping_key"),
+                    "api_status": mapping_record.get("api_status"),
+                    "model": mapping_record.get("model"),
+                    "usable": mapping_record.get("usable"),
+                    "validation_errors": mapping_record.get("validation_errors"),
+                }
+                result["signature_mapping"] = mapping_record.get("mapping")
+                if mapping_record.get("usable"):
+                    reverse_mapping = generated_to_baseline(mapping_record["mapping"])
+                    mapped_text = apply_hoa_ap_mapping(
+                        generated_distance_hoa.read_text(encoding="utf-8", errors="replace"),
+                        reverse_mapping,
+                    )
+                    generated_mapped_hoa.write_text(mapped_text, encoding="utf-8")
+                    generated_distance_hoa = generated_mapped_hoa
+                    result["signature_mapping_used"] = True
 
         spot = buchi_distance.require_spot()
         baseline_automaton = spot.automaton(str(baseline_distance_hoa))
