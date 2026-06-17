@@ -357,6 +357,66 @@ def process_description(
     refresh_before: datetime | None,
 ) -> str:
     response_file = resolve_repo_path(record["response_file"])
+    if not response_file.is_file():
+        timestamp = utc_now()
+        LOGGER.warning(
+            "Skipping description_id=%s because response_file does not exist: %s",
+            record.get("description_id"),
+            response_file,
+        )
+        append_jsonl(
+            runs_manifest,
+            {
+                "run_id": None,
+                "run_key": None,
+                "status": "missing_description_file",
+                "skill": args.skill,
+                "description_id": record.get("description_id"),
+                "dataset_id": record.get("dataset_id"),
+                "description_file": str(response_file),
+                "source_spectra_file": record.get("source_spectra_file"),
+                "source_repository_full_name": record.get("source_repository_full_name"),
+                "source_path": record.get("source_path"),
+                "agent_command": args.agent_command,
+                "resolved_agent_command": None,
+                "prompt_passed_on_stdin": None,
+                "agent_model": args.agent_model,
+                "agent_prompt_name": args.agent_prompt_name,
+                "agent_prompt_sha256": None,
+                "run_dir": None,
+                "description_relative_stem": None,
+                "reconstructed_spectra_file": None,
+                "expected_reconstructed_spectra_file": None,
+                "agent_prompt_file": None,
+                "input_description_file": None,
+                "agent_stdout_file": None,
+                "agent_stderr_file": None,
+                "parsed_result_file": None,
+                "agent_exit_code": None,
+                "reported_cli_status": None,
+                "reported_repair_loops": None,
+                "reported_syntax_repair_loops": None,
+                "reported_unrealizable_repair_loops": None,
+                "reported_test_repair_loops": None,
+                "reported_used_counter_strategy": None,
+                "reported_blocked_by_nl_conflict": None,
+                "reported_diagnostic_file": None,
+                "reported_test_plan_file": None,
+                "reported_test_result_file": None,
+                "reported_tests_total": None,
+                "reported_tests_passed": None,
+                "reported_tests_failed": None,
+                "reported_spectra_file": None,
+                "timeout_seconds": args.timeout,
+                "run_started_at": timestamp,
+                "run_finished_at": timestamp,
+                "duration_ms": 0,
+                "error": f"Description response file not found: {response_file}",
+                "dry_run": args.dry_run,
+                "refresh_before": refresh_before.isoformat() if refresh_before else None,
+            },
+        )
+        return "skipped"
     natural_language_description = response_file.read_text(encoding="utf-8")
     agent_template = AGENT_RECONSTRUCTION_PROMPTS[args.agent_prompt_name]
 
