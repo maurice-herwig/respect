@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import random
 import re
@@ -410,6 +411,75 @@ def aggregate_distance_results(results: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def run_id_from_result(record: dict[str, Any]) -> str | None:
+    run = record.get("run")
+    if isinstance(run, dict) and isinstance(run.get("run_id"), str):
+        return run["run_id"]
+    return None
+
+
+def result_pair_key(record: dict[str, Any]) -> tuple[Any, ...] | None:
+    metadata = record.get("cache_metadata") or {}
+    baseline_sha = metadata.get("baseline_sha256")
+    generated_sha = metadata.get("generated_sha256")
+    settings = metadata.get("settings")
+    if not baseline_sha or not generated_sha or not isinstance(settings, dict):
+        baseline_synthesis = record.get("baseline_synthesis") or {}
+        generated_synthesis = record.get("generated_synthesis") or {}
+        baseline_sha = baseline_synthesis.get("spectra_sha256")
+        generated_sha = generated_synthesis.get("spectra_sha256")
+        distance = record.get("distance") or {}
+        settings = {
+            "mode": distance.get("mode"),
+            "max_depth": distance.get("max_depth"),
+            "trace_batch_size": distance.get("trace_batch_size"),
+        }
+    if not baseline_sha or not generated_sha:
+        return None
+    return ("controller_distance", baseline_sha, generated_sha, json.dumps(settings, sort_keys=True))
+
+
+def current_pair_key(record: dict[str, Any], args: argparse.Namespace, jar_path: Path, executor_jar: Path) -> tuple[Any, ...]:
+    baseline_spectra = resolve_input_path(str(record["source_spectra_file"]))
+    generated_spectra = resolve_input_path(str(record["reconstructed_spectra_file"]))
+    settings = {
+        "jar_sha256": sha256_file(jar_path),
+        "executor_jar_sha256": sha256_file(executor_jar),
+        "mode": args.mode,
+        "max_depth": args.max_depth,
+        "max_paths": args.max_paths if args.mode == "exhaustive" else None,
+        "runs": args.runs if args.mode == "random" else None,
+        "seed": args.seed if args.mode == "random" else None,
+        "trace_batch_size": max(1, int(args.trace_batch_size)),
+    }
+    return (
+        "controller_distance",
+        sha256_file(baseline_spectra),
+        sha256_file(generated_spectra),
+        json.dumps(settings, sort_keys=True),
+    )
+
+
+def load_pair_cache(path: Path) -> dict[tuple[Any, ...], dict[str, Any]]:
+    cache: dict[tuple[Any, ...], dict[str, Any]] = {}
+    if not path.is_file():
+        return cache
+    for record in load_jsonl(path):
+        key = result_pair_key(record)
+        if key is not None:
+            cache[key] = record
+    return cache
+
+
+def cached_record_for_run(cached: dict[str, Any], run_record: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    reused = copy.deepcopy(cached)
+    reused["run"] = summarize_run(run_record, args.include_run_record)
+    reused["comparison_id"] = safe_path_part(str(run_record.get("run_id") or run_record.get("run_key") or run_record.get("dataset_id") or "run"))
+    reused["cache_reused"] = True
+    reused["cache_source_comparison_id"] = cached.get("comparison_id")
+    return reused
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--skill", required=True)
@@ -435,6 +505,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--reuse-existing",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Reuse existing JSONL distance records for the same baseline/generated Spectra file hashes "
+            "and controller-distance settings. Enabled by default; use --no-reuse-existing to rebuild the JSONL."
+        ),
+    )
     parser.add_argument("--build-controller-tests", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--preflight-java", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--include-run-record", action="store_true")
@@ -498,6 +577,20 @@ def evaluate_one_run(record: dict[str, Any], args: argparse.Namespace, jar_path:
     try:
         baseline_signature = parse_spectra_signature(baseline_spectra)
         generated_signature = parse_spectra_signature(generated_spectra)
+        result["cache_metadata"] = {
+            "baseline_sha256": sha256_file(baseline_spectra),
+            "generated_sha256": sha256_file(generated_spectra),
+            "settings": {
+                "jar_sha256": sha256_file(jar_path),
+                "executor_jar_sha256": sha256_file(executor_jar),
+                "mode": args.mode,
+                "max_depth": args.max_depth,
+                "max_paths": args.max_paths if args.mode == "exhaustive" else None,
+                "runs": args.runs if args.mode == "random" else None,
+                "seed": args.seed if args.mode == "random" else None,
+                "trace_batch_size": max(1, int(args.trace_batch_size)),
+            },
+        }
         result["baseline_signature"] = baseline_signature
         result["generated_signature"] = generated_signature
         compatible, incompatibility = signatures_compatible(baseline_signature, generated_signature)
@@ -701,20 +794,39 @@ def main() -> int:
             return 1
 
     completed_run_ids = load_completed_run_ids(output_jsonl) if args.resume else set()
+    existing_run_ids = load_completed_run_ids(output_jsonl)
+    pair_cache = load_pair_cache(output_jsonl) if args.reuse_existing and not args.force else {}
     evaluated_records: list[dict[str, Any]] = []
-    if not args.resume and output_jsonl.exists():
+    if not args.resume and not args.reuse_existing and output_jsonl.exists():
         output_jsonl.unlink()
 
     for index, record in enumerate(matching, start=1):
         run_id = str(record.get("run_id") or "")
         if args.resume and run_id and run_id in completed_run_ids:
             continue
+        if args.reuse_existing and not args.force:
+            try:
+                key = current_pair_key(record, args, jar_path, executor_jar)
+            except Exception:
+                key = None
+            if key is not None and key in pair_cache:
+                print(f"[{index}/{len(matching)}] reusing cached controller distance run_id={run_id or 'missing'}", file=sys.stderr)
+                if not (run_id and run_id in existing_run_ids):
+                    result = cached_record_for_run(pair_cache[key], record, args)
+                    append_jsonl(output_jsonl, result)
+                    if run_id:
+                        existing_run_ids.add(run_id)
+                    evaluated_records.append(result)
+                continue
         print(f"[{index}/{len(matching)}] evaluating controller distance run_id={run_id or 'missing'}", file=sys.stderr)
         result = evaluate_one_run(record, args, jar_path, executor_jar, artifacts_root)
         append_jsonl(output_jsonl, result)
         evaluated_records.append(result)
+        key = result_pair_key(result)
+        if key is not None:
+            pair_cache[key] = result
 
-    if args.resume and output_jsonl.is_file():
+    if (args.resume or args.reuse_existing) and output_jsonl.is_file():
         evaluated_records = load_jsonl(output_jsonl)
 
     summary = summarize_results(args, total_matching_runs, len(matching), evaluated_records, skipped, output_jsonl)

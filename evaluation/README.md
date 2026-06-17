@@ -121,6 +121,12 @@ python evaluation\evaluate_reconstruction_distances.py `
   --resume
 ```
 
+By default the script also reuses existing JSONL distance records for the same
+baseline/generated Spectra file hashes and evaluation settings. This avoids
+recomputing distances when the same file pair appears again. Use
+`--no-reuse-existing` to rebuild the JSONL from scratch, or `--force` to
+recreate intermediate HOA artifacts and distances.
+
 For a quick smoke test:
 
 ```powershell
@@ -160,13 +166,7 @@ python evaluate_controller_distances.py --skill respect-method-3 --model llama-3
 For larger input domains, use random sampling:
 
 ```powershell
-python evaluation\evaluate_controller_distances.py `
-  --skill respect-method-2 `
-  --model llama-3 `
-  --mode random `
-  --max-depth 20 `
-  --runs 1000 `
-  --seed 1
+  python evaluation/evaluate_controller_distances.py --skill respect-method-2 --model llama-3 --mode random --max-depth 10 --runs 1000 --seed 1           
 ```
 
 The script automatically synthesizes both controllers into:
@@ -175,12 +175,17 @@ The script automatically synthesizes both controllers into:
 evaluation/controller_distance_results/<skill>/<model>/comparisons/<run_id>/
 ```
 
-It then runs `respect.controller_tests.ControllerDistanceRunner` and writes one
-JSONL result row to:
+It then runs `respect.controller_tests.ControllerTraceRunner` in isolated Java
+processes and writes one JSONL result row to:
 
 ```text
 evaluation/controller_distance_results/<skill>/<model>/controller_distances.jsonl
 ```
+
+By default the script reuses existing JSONL controller-distance records for the
+same baseline/generated Spectra file hashes and controller-distance settings
+such as mode, depth, seed, and trace batch size. Use `--no-reuse-existing` to
+rebuild the JSONL, or `--force` to resynthesize controllers and recompute.
 
 Reported distance metrics:
 
