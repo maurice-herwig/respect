@@ -1,0 +1,13 @@
+spec Minepump
+
+env boolean highwater;
+env boolean methane;
+
+sys boolean pump;
+
+asm ini !highwater & !methane;
+asm alw (PREV(pump) & pump) -> !next(highwater);
+
+gar ini !pump;
+gar alw (highwater & !methane) -> next(pump);
+gar alw methane -> !next(pump);
