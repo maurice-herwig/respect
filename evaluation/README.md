@@ -5,6 +5,29 @@ experiment results.
 
 Unless a section says otherwise, run commands from the repository root.
 
+## Global Evaluation Summary
+
+`summarize_all_results.py` combines the available outputs from the other
+evaluation scripts for one model/skill pair. It does not rerun expensive HOA or
+controller evaluations; it reads the existing JSONL files and reports one global
+summary.
+
+```powershell
+python evaluation\summarize_all_results.py --skill respect-method-2 --model llama-3
+```
+
+For machine-readable output:
+
+```powershell
+python evaluation\summarize_all_results.py --skill respect-method-2 --model llama-3 --json
+```
+
+The summary includes:
+
+- reconstruction run outcomes from `experiments/runs/runs.jsonl`
+- Buchi/specification-distance aggregates from `evaluation/distance_results/.../distances.jsonl`, when present
+- controller-output-distance aggregates from `evaluation/controller_distance_results/.../controller_distances.jsonl`, when present
+
 ## Reconstruction Run Summary
 
 After reconstruction experiments have produced `experiments/runs/runs.jsonl`,

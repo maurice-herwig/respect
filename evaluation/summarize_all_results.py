@@ -1,0 +1,238 @@
+#!/usr/bin/env python3
+"""Combine all available ReSpect evaluation summaries for one model/skill."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import statistics
+import sys
+from collections import Counter
+from pathlib import Path
+from typing import Any
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from evaluation.evaluate_controller_distances import (  # noqa: E402
+    DEFAULT_OUTPUT_ROOT as DEFAULT_CONTROLLER_DISTANCE_ROOT,
+)
+from evaluation.evaluate_reconstruction_distances import (  # noqa: E402
+    DEFAULT_OUTPUT_ROOT as DEFAULT_BUCHI_DISTANCE_ROOT,
+    DEFAULT_RUNS_MANIFEST,
+    load_jsonl,
+    percent,
+    resolve_existing_path,
+    safe_path_part,
+    select_matching_runs,
+)
+from evaluation.summarize_reconstruction_runs import summarize as summarize_reconstruction_runs  # noqa: E402
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--skill", required=True, help="Skill/method to summarize, e.g. respect-method-2.")
+    parser.add_argument("--model", required=True, help="Model label, e.g. llama-3.")
+    parser.add_argument("--runs-manifest", default=str(DEFAULT_RUNS_MANIFEST))
+    parser.add_argument("--buchi-distance-root", default=str(DEFAULT_BUCHI_DISTANCE_ROOT))
+    parser.add_argument("--controller-distance-root", default=str(DEFAULT_CONTROLLER_DISTANCE_ROOT))
+    parser.add_argument("--buchi-distance-jsonl", default=None)
+    parser.add_argument("--controller-distance-jsonl", default=None)
+    parser.add_argument("--include-dry-run", action="store_true")
+    parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    return parser.parse_args()
+
+
+def resolve_repo_path(path_value: str | Path) -> Path:
+    path = Path(path_value)
+    if path.is_absolute():
+        return path
+    return REPO_ROOT / path
+
+
+def distance_jsonl_path(root: str | Path, skill: str, model: str, file_name: str) -> Path:
+    root_path = resolve_repo_path(root)
+    return root_path / safe_path_part(skill) / safe_path_part(model) / file_name
+
+
+def stats(values: list[float]) -> dict[str, float | int | None]:
+    return {
+        "count": len(values),
+        "mean": statistics.fmean(values) if values else None,
+        "median": statistics.median(values) if values else None,
+        "min": min(values) if values else None,
+        "max": max(values) if values else None,
+    }
+
+
+def status_counts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    counts = Counter(str(record.get("status")) for record in records)
+    total = len(records)
+    return [
+        {
+            "status": status,
+            "count": count,
+            "percent": percent(count, total),
+        }
+        for status, count in sorted(counts.items())
+    ]
+
+
+def summarize_buchi_distance(path: Path, matching_synthesized_runs: int, skipped: Counter[str]) -> dict[str, Any]:
+    exists = path.is_file()
+    records = load_jsonl(path) if exists else []
+    distances = [float(record["distance"]) for record in records if record.get("status") == "success" and record.get("distance") is not None]
+    return {
+        "available": exists,
+        "output_jsonl": str(path),
+        "matching_synthesized_runs": matching_synthesized_runs,
+        "evaluated_runs": len(records),
+        "status_counts": status_counts(records),
+        "skipped_counts": dict(sorted(skipped.items())),
+        "distance": stats(distances),
+    }
+
+
+def summarize_controller_distance(path: Path, matching_synthesized_runs: int, skipped: Counter[str]) -> dict[str, Any]:
+    exists = path.is_file()
+    records = load_jsonl(path) if exists else []
+
+    def rate_values(key: str) -> list[float]:
+        values: list[float] = []
+        for record in records:
+            if record.get("status") != "success":
+                continue
+            distance = record.get("distance") or {}
+            if distance.get(key) is not None:
+                values.append(float(distance[key]))
+        return values
+
+    return {
+        "available": exists,
+        "output_jsonl": str(path),
+        "matching_synthesized_runs": matching_synthesized_runs,
+        "evaluated_runs": len(records),
+        "status_counts": status_counts(records),
+        "skipped_counts": dict(sorted(skipped.items())),
+        "trace_mismatch_rate": stats(rate_values("trace_mismatch_rate")),
+        "step_mismatch_rate": stats(rate_values("step_mismatch_rate")),
+        "output_hamming_mismatch_rate": stats(rate_values("output_hamming_mismatch_rate")),
+    }
+
+
+def print_distribution(title: str, items: list[dict[str, Any]], key_name: str = "status") -> None:
+    print(title)
+    if not items:
+        print("    none")
+        return
+    for item in items:
+        print(f"    {item[key_name]}: {item['count']} ({item['percent']:.2f}%)")
+
+
+def print_stats(title: str, values: dict[str, Any]) -> None:
+    print(title)
+    print(f"    count: {values['count']}")
+    if values["count"]:
+        print(f"    mean: {values['mean']:.6g}")
+        print(f"    median: {values['median']:.6g}")
+        print(f"    min: {values['min']:.6g}")
+        print(f"    max: {values['max']:.6g}")
+
+
+def print_text_summary(summary: dict[str, Any]) -> None:
+    print(f"Skill: {summary['skill']}")
+    print(f"Model: {summary['model']}")
+    print(f"Runs manifest: {summary['runs_manifest']}")
+    print()
+
+    reconstruction = summary["reconstruction_runs"]
+    print("Reconstruction runs")
+    print(f"  total_runs: {reconstruction['total_runs']}")
+    print(f"  skipped_without_model: {reconstruction['skipped_without_model']}")
+    print_distribution("  cli_status:", reconstruction["cli_status"])
+    print_distribution("  repair_loops:", reconstruction["repair_loops"], key_name="repair_loops")
+    print(
+        "  synthesized_with_zero_repair_loops: "
+        f"{reconstruction['synthesized_with_zero_repair_loops']['count']} "
+        f"({reconstruction['synthesized_with_zero_repair_loops']['percent']:.2f}%)"
+    )
+    print(
+        "  repair_attempted: "
+        f"{reconstruction['repair_attempted']['count']} "
+        f"({reconstruction['repair_attempted']['percent']:.2f}%)"
+    )
+    print(
+        "  synthesized_after_repair: "
+        f"{reconstruction['synthesized_after_repair']['count']} "
+        f"({reconstruction['synthesized_after_repair']['percent_of_all']:.2f}% of all, "
+        f"{reconstruction['synthesized_after_repair']['percent_of_repair_attempts']:.2f}% of repair attempts)"
+    )
+    tests = reconstruction["controller_tests"]
+    if tests["runs_reported"]:
+        print(
+            "  controller_tests: "
+            f"{tests['tests_passed']}/{tests['tests_total']} passed "
+            f"({tests['tests_passed_percent']:.2f}%), failed={tests['tests_failed']}"
+        )
+    print()
+
+    buchi = summary["buchi_distance"]
+    print("Buchi/specification distance")
+    print(f"  available: {buchi['available']}")
+    print(f"  output_jsonl: {buchi['output_jsonl']}")
+    print(f"  matching_synthesized_runs: {buchi['matching_synthesized_runs']}")
+    print(f"  evaluated_runs: {buchi['evaluated_runs']}")
+    print_distribution("  status_counts:", buchi["status_counts"])
+    print_stats("  distance:", buchi["distance"])
+    print()
+
+    controller = summary["controller_distance"]
+    print("Controller output distance")
+    print(f"  available: {controller['available']}")
+    print(f"  output_jsonl: {controller['output_jsonl']}")
+    print(f"  matching_synthesized_runs: {controller['matching_synthesized_runs']}")
+    print(f"  evaluated_runs: {controller['evaluated_runs']}")
+    print_distribution("  status_counts:", controller["status_counts"])
+    print_stats("  trace_mismatch_rate:", controller["trace_mismatch_rate"])
+    print_stats("  step_mismatch_rate:", controller["step_mismatch_rate"])
+    print_stats("  output_hamming_mismatch_rate:", controller["output_hamming_mismatch_rate"])
+
+
+def main() -> int:
+    args = parse_args()
+    runs_manifest = resolve_existing_path(args.runs_manifest)
+    records = load_jsonl(runs_manifest)
+    matching, skipped = select_matching_runs(records, args.skill, args.model)
+    matching_synthesized_runs = len(matching)
+
+    buchi_path = (
+        resolve_repo_path(args.buchi_distance_jsonl)
+        if args.buchi_distance_jsonl
+        else distance_jsonl_path(args.buchi_distance_root, args.skill, args.model, "distances.jsonl")
+    )
+    controller_path = (
+        resolve_repo_path(args.controller_distance_jsonl)
+        if args.controller_distance_jsonl
+        else distance_jsonl_path(args.controller_distance_root, args.skill, args.model, "controller_distances.jsonl")
+    )
+
+    summary = {
+        "skill": args.skill,
+        "model": args.model,
+        "runs_manifest": str(runs_manifest),
+        "reconstruction_runs": summarize_reconstruction_runs(records, args.skill, args.model, args.include_dry_run),
+        "buchi_distance": summarize_buchi_distance(buchi_path, matching_synthesized_runs, skipped),
+        "controller_distance": summarize_controller_distance(controller_path, matching_synthesized_runs, skipped),
+    }
+
+    if args.json:
+        print(json.dumps(summary, indent=2, sort_keys=True))
+    else:
+        print_text_summary(summary)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
