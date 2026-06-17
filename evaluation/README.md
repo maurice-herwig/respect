@@ -49,10 +49,7 @@ Spectra file against the corresponding `dataset/accepted` baseline, writes one
 JSONL result row, and prints an aggregate overview.
 
 ```powershell
-python evaluation\evaluate_reconstruction_distances.py `
-  --skill respect-method-2 `
-  --model llama-3 `
-  --force
+  python evaluation/evaluate_reconstruction_distances.py --skill respect-method-2 --model llama-3 --force      
 ```
 
 For each run, the script exports both Spectra files with
@@ -131,13 +128,10 @@ controllers synthesized from the accepted baseline Spectra file and the
 reconstructed Spectra file. Both controllers are executed with the same bounded
 input traces, and their system outputs are compared step by step.
 
+Metric overview: [`controller_distance_metrics.svg`](evaluation.svg)
+
 ```powershell
-python evaluation\evaluate_controller_distances.py `
-  --skill respect-method-2 `
-  --model llama-3 `
-  --mode exhaustive `
-  --max-depth 6 `
-  --max-paths 10000
+python evaluate_controller_distances.py --skill respect-method-3 --model llama-3 --mode exhaustive --max-depth 6 --max-paths 10000
 ```
 
 For larger input domains, use random sampling:
