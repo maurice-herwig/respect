@@ -955,6 +955,20 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         print(f"  max: {distance['max']:.6g}")
 
 
+def print_intermediate_result(index: int, total: int, run_id: str, result: dict[str, Any]) -> None:
+    status = result.get("status")
+    distance = result.get("distance")
+    if status == "success" and distance is not None:
+        detail = f"distance={float(distance):.6g}"
+    else:
+        error = result.get("error")
+        detail = f"error={error}" if error else "distance=none"
+    print(
+        f"[{index}/{total}] result run_id={run_id or 'missing'} status={status} {detail}",
+        file=sys.stderr,
+    )
+
+
 def main() -> int:
     args = parse_args()
     runs_manifest = resolve_existing_path(args.runs_manifest)
@@ -1032,6 +1046,7 @@ def main() -> int:
                 continue
         print(f"[{index}/{len(matching)}] evaluating run_id={run_id or 'missing'}", file=sys.stderr)
         result = evaluate_one_run(record=record, args=args, jar_path=jar_path, artifacts_root=artifacts_root)
+        print_intermediate_result(index, len(matching), run_id, result)
         if result.get("status") == "alphabet_mismatch":
             diagnostics = result.get("alphabet_diagnostics") or {}
             print(f"[{index}/{len(matching)}] alphabet mismatch for run_id={run_id or 'missing'}", file=sys.stderr)

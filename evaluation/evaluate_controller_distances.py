@@ -761,6 +761,24 @@ def print_text_summary(summary: dict[str, Any]) -> None:
             print(f"  max: {values['max']:.6g}")
 
 
+def print_intermediate_result(index: int, total: int, run_id: str, result: dict[str, Any]) -> None:
+    status = result.get("status")
+    distance = result.get("distance") or {}
+    if status == "success":
+        detail = (
+            f"trace={float(distance.get('trace_mismatch_rate', 0.0)):.6g} "
+            f"step={float(distance.get('step_mismatch_rate', 0.0)):.6g} "
+            f"hamming={float(distance.get('output_hamming_mismatch_rate', 0.0)):.6g}"
+        )
+    else:
+        error = result.get("error")
+        detail = f"error={error}" if error else "distance=none"
+    print(
+        f"[{index}/{total}] result run_id={run_id or 'missing'} status={status} {detail}",
+        file=sys.stderr,
+    )
+
+
 def main() -> int:
     args = parse_args()
     runs_manifest = resolve_existing_path(args.runs_manifest)
@@ -820,6 +838,7 @@ def main() -> int:
                 continue
         print(f"[{index}/{len(matching)}] evaluating controller distance run_id={run_id or 'missing'}", file=sys.stderr)
         result = evaluate_one_run(record, args, jar_path, executor_jar, artifacts_root)
+        print_intermediate_result(index, len(matching), run_id, result)
         append_jsonl(output_jsonl, result)
         evaluated_records.append(result)
         key = result_pair_key(result)
