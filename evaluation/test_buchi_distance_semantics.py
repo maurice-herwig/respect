@@ -72,7 +72,7 @@ class BuchiDistanceSemanticsTests(unittest.TestCase):
         self.assertEqual(len(markov_chain.transitions[0]), 1)
         self.assertEqual(markov_chain.transitions[0][0].acceptance_sets, frozenset({0}))
 
-    def test_relative_bscc_can_be_accepting_with_partial_row(self):
+    def test_accepting_relative_bscc_is_weighted_by_mean_row_mass(self):
         automaton = load_hoa(
             """
             HOA: v1
@@ -95,7 +95,7 @@ class BuchiDistanceSemanticsTests(unittest.TestCase):
 
         self.assertEqual(bsccs, [{0}])
         self.assertEqual(accepting, [{0}])
-        self.assertEqual(distance, 1.0)
+        self.assertEqual(distance, 0.5)
 
     def test_transient_path_keeps_raw_probability_mass(self):
         automaton = load_hoa(
@@ -123,7 +123,7 @@ class BuchiDistanceSemanticsTests(unittest.TestCase):
         self.assertAlmostEqual(markov_chain.transitions[0][0].probability, 0.5)
         self.assertEqual(bsccs, [{1}])
         self.assertEqual(accepting, [{1}])
-        self.assertAlmostEqual(distance, 0.5)
+        self.assertAlmostEqual(distance, 0.25)
 
 
 if __name__ == "__main__":
