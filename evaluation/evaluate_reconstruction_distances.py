@@ -481,18 +481,16 @@ def automata_are_structurally_compatible(result: dict[str, Any]) -> tuple[bool, 
     generated = result.get("generated_automaton") or {}
     if baseline.get("deterministic") is not True or generated.get("deterministic") is not True:
         return False, "nondeterministic_automaton"
-    if baseline.get("complete") != "yes" or generated.get("complete") != "yes":
-        return False, "incomplete_automaton"
     return True, None
 
 
 def determinize_automaton_for_distance(automaton):
     spot = buchi_distance.require_spot()
     candidates = [
-        ("generic", ("generic", "deterministic", "complete")),
-        ("parity", ("parity", "deterministic", "complete")),
-        ("rabin", ("rabin", "deterministic", "complete")),
-        ("deterministic_complete", ("deterministic", "complete")),
+        ("generic", ("generic", "deterministic")),
+        ("parity", ("parity", "deterministic")),
+        ("rabin", ("rabin", "deterministic")),
+        ("deterministic", ("deterministic",)),
     ]
     errors: list[str] = []
     for name, options in candidates:
@@ -501,7 +499,7 @@ def determinize_automaton_for_distance(automaton):
         except Exception as exc:
             errors.append(f"{name}: {type(exc).__name__}: {exc}")
             continue
-        if processed.is_deterministic() and str(processed.prop_complete()) == "yes":
+        if processed.is_deterministic():
             return processed, {
                 "status": "determinized",
                 "method": f"spot.postprocess({', '.join(options)})",
@@ -530,9 +528,9 @@ def maybe_determinize_automata(baseline_automaton, generated_automaton, *, enabl
     }
     if not enabled:
         return baseline_automaton, generated_automaton, baseline_info, generated_info
-    if not baseline_automaton.is_deterministic() or str(baseline_automaton.prop_complete()) != "yes":
+    if not baseline_automaton.is_deterministic():
         baseline_automaton, baseline_info = determinize_automaton_for_distance(baseline_automaton)
-    if not generated_automaton.is_deterministic() or str(generated_automaton.prop_complete()) != "yes":
+    if not generated_automaton.is_deterministic():
         generated_automaton, generated_info = determinize_automaton_for_distance(generated_automaton)
     return baseline_automaton, generated_automaton, baseline_info, generated_info
 
