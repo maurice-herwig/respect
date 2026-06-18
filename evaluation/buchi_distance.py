@@ -5,8 +5,8 @@ Planned workflow:
 1. Read two deterministic omega automata, initially in HOA format.
 2. Check that both automata use the same atomic propositions/alphabet.
 3. Build the symmetric-difference automaton.
-4. Interpret the deterministic difference automaton as a DTMC under a chosen
-   random-word distribution.
+4. Interpret the deterministic difference automaton as a weighted
+   substochastic chain under a chosen valid-letter distribution.
 5. Find accepting bottom strongly connected components.
 6. Compute the probability of reaching an accepting BSCC.
 7. Report that probability as the distance.
@@ -31,7 +31,7 @@ class MarkovTransition:
 
 @dataclass(frozen=True)
 class MarkovChain:
-    """Sparse Markov-chain view of a deterministic Spot automaton."""
+    """Sparse substochastic-chain view of a deterministic Spot automaton."""
 
     num_states: int
     initial_state: int
@@ -40,6 +40,7 @@ class MarkovChain:
     acceptance_formula: str
     acceptance_condition: object
     num_acceptance_sets: int
+    row_probability_sums: tuple[float, ...]
 
 
 @dataclass(frozen=True)
@@ -422,27 +423,27 @@ def count_satisfying_letters(condition, letter_alphabet: LetterAlphabet) -> int:
 
 
 def automaton_to_markov_chain(automaton, debug: bool = False) -> MarkovChain:
-    """Translate a deterministic Spot automaton into a sparse Markov chain.
+    """Translate a deterministic Spot automaton into a sparse substochastic chain.
 
-    The random-word model is currently uniform over all complete valuations of
-    the automaton's atomic propositions. For `n` APs, every letter therefore has
-    probability `1 / 2**n`.
+    Edge weights are absolute masses over the finite valid-letter model built
+    from the automaton's APs. AP groups such as `"x=false"`/`"x=true"` are
+    treated as one-hot finite-domain variables. Missing valid-letter mass is
+    not renormalized and is not represented by an explicit rejecting sink.
+
+    BSCCs are therefore interpreted relative to the graph of existing positive
+    transitions. This is intentional for the current distance: a component that
+    can only be left through absent transitions remains bottom, while the
+    absolute size of existing transitions is still reflected on transient paths.
 
     Raises:
-        ValueError: if the automaton is not deterministic, explicitly marked
-        incomplete, or if an outgoing row does not cover the complete alphabet.
+        ValueError: if the automaton is not deterministic or if outgoing
+        positive valid-letter masses exceed 1.0, which indicates overlapping
+        deterministic edges under the selected letter model.
     """
     if not automaton.is_deterministic():
         raise ValueError("Cannot translate a nondeterministic automaton into a Markov chain.")
 
-    # Spot stores automaton properties as three-valued information:
-    # true/false/unknown. The HOA printer may still be able to report
-    # `complete` after analyzing the automaton, while prop_complete() remains
-    # unknown on the object. Therefore we only fail early on explicit false and
-    # keep the row-sum check below as the authoritative completeness test.
     complete_property = automaton.prop_complete()
-    if complete_property.is_false():
-        raise ValueError("Cannot translate an incomplete automaton into a Markov chain.")
 
     bdd_dict = automaton.get_dict()
     atomic_propositions = tuple(str(ap) for ap in automaton.ap())
@@ -450,6 +451,9 @@ def automaton_to_markov_chain(automaton, debug: bool = False) -> MarkovChain:
     letter_alphabet = build_letter_alphabet(atomic_propositions, bdd_variables)
     alphabet_size = len(letter_alphabet.cubes)
     transitions: dict[int, list[MarkovTransition]] = {}
+    row_probability_sums: list[float] = []
+    ignored_zero_probability_edges = 0
+    partial_rows: list[tuple[int, float]] = []
 
     if debug:
         print("[debug] Translating automaton to Markov chain.")
@@ -467,6 +471,7 @@ def automaton_to_markov_chain(automaton, debug: bool = False) -> MarkovChain:
         for edge in automaton.out(source):
             satisfying_letters = count_satisfying_letters(edge.cond, letter_alphabet)
             if satisfying_letters == 0:
+                ignored_zero_probability_edges += 1
                 continue
 
             probability = satisfying_letters / alphabet_size
@@ -486,13 +491,23 @@ def automaton_to_markov_chain(automaton, debug: bool = False) -> MarkovChain:
                     f"acceptance_sets={sorted(transition.acceptance_sets)}"
                 )
 
-        if not isclose(row_probability, 1.0, rel_tol=1e-12, abs_tol=1e-12):
+        if row_probability > 1.0 and not isclose(row_probability, 1.0, rel_tol=1e-12, abs_tol=1e-12):
             raise ValueError(
-                f"Automaton is not complete at state {source}: "
-                f"outgoing probability sums to {row_probability} instead of 1.0."
+                f"Outgoing valid-letter probability exceeds 1.0 at state {source}: "
+                f"{row_probability}. This indicates overlapping deterministic edges."
             )
 
+        if isclose(row_probability, 1.0, rel_tol=1e-12, abs_tol=1e-12):
+            row_probability = 1.0
+        elif row_probability < 1.0:
+            partial_rows.append((source, row_probability))
+
+        row_probability_sums.append(row_probability)
         transitions[source] = outgoing
+
+    if debug:
+        print(f"[debug] Ignored zero-valid-letter edges: {ignored_zero_probability_edges}")
+        print(f"[debug] Partial substochastic rows: {partial_rows}")
 
     return MarkovChain(
         num_states=automaton.num_states(),
@@ -502,15 +517,18 @@ def automaton_to_markov_chain(automaton, debug: bool = False) -> MarkovChain:
         acceptance_formula=str(automaton.get_acceptance()),
         acceptance_condition=automaton.get_acceptance(),
         num_acceptance_sets=automaton.num_sets(),
+        row_probability_sums=tuple(row_probability_sums),
     )
 
 
 def compute_buchi_distance(left_automaton, right_automaton, debug: bool = False) -> float:
-    """Compute the planned probabilistic distance between two Buchi automata.
+    """Compute the probabilistic distance between two Buchi automata.
 
-    Current implementation status:
-    - implemented: construction of the symmetric-difference automaton
-    - not implemented yet: conversion to a Markov chain and probability solving
+    The symmetric-difference automaton is translated into a weighted
+    substochastic chain over valid Spectra-style letters. Existing positive
+    transitions keep their absolute valid-letter mass; missing transition mass
+    is neither renormalized nor represented as an explicit sink. BSCCs are
+    therefore relative to the graph of existing positive transitions.
 
     When `debug` is true, intermediate automata and state counts are printed to
     make each construction step inspectable.
