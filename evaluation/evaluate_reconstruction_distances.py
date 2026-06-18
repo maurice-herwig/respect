@@ -1079,11 +1079,6 @@ def print_text_summary(summary: dict[str, Any]) -> None:
     print("Statuses:")
     for item in summary["status_counts"]:
         print(f"  {item['status']}: {item['count']} ({item['percent']:.2f}%)")
-    if summary["skipped_counts"]:
-        print()
-        print("Skipped while filtering:")
-        for status, count in summary["skipped_counts"].items():
-            print(f"  {status}: {count}")
     distance = summary["distance"]
     print()
     print(f"Successful distances: {distance['count']}")
@@ -1095,15 +1090,17 @@ def print_text_summary(summary: dict[str, Any]) -> None:
     bounded = summary["bounded_semantic_distance"]
     if bounded["enabled"]:
         print()
-        print("Bounded semantic distance:")
+        print("Bounded semantic distance overview:")
         for key in ("mismatch_rate", "false_negative_rate", "false_positive_rate", "jaccard_distance"):
             values = bounded[key]
-            print(f"  {key}: count={values['count']}")
+            print(f"  {key}: count={values['count']}", end="")
             if values["count"]:
                 print(
-                    f"    mean={values['mean']:.6g} median={values['median']:.6g} "
+                    f" mean={values['mean']:.6g} median={values['median']:.6g} "
                     f"min={values['min']:.6g} max={values['max']:.6g}"
                 )
+            else:
+                print()
 
 
 def print_intermediate_result(index: int, total: int, run_id: str, result: dict[str, Any]) -> None:
@@ -1113,7 +1110,18 @@ def print_intermediate_result(index: int, total: int, run_id: str, result: dict[
         detail = f"distance={float(distance):.6g}"
         bounded = result.get("bounded_semantic_distance") or {}
         if bounded.get("mismatch_rate") is not None:
-            detail += f" bounded_mismatch={float(bounded['mismatch_rate']):.6g}"
+            detail += (
+                f" bounded_mismatch={float(bounded['mismatch_rate']):.6g}"
+                f" bounded_false_negative={float(bounded['false_negative_rate']):.6g}"
+                f" bounded_false_positive={float(bounded['false_positive_rate']):.6g}"
+            )
+            if bounded.get("jaccard_distance") is not None:
+                detail += f" bounded_jaccard={float(bounded['jaccard_distance']):.6g}"
+            detail += (
+                f" bounded_prefixes={bounded.get('total_prefixes')}"
+                f" bounded_depth={bounded.get('depth')}"
+                f" bounded_mode={bounded.get('mode')}"
+            )
     else:
         error = result.get("error")
         detail = f"error={error}" if error else "distance=none"
