@@ -203,14 +203,24 @@ def reachability_probability_exact(
     all_bsccs: list[set[int]],
     debug: bool = False,
 ) -> float:
-    """Compute the probability of reaching an accepting BSCC.
+    """Compute the weighted probability of reaching an accepting BSCC.
 
-    Accepting BSCC states have value 1, rejecting BSCC states have value 0, and
-    all remaining transient states are solved exactly via `(I - P_UU) x = b`.
+    Rejecting BSCC states have value 0. Accepting BSCC states receive the mean
+    outgoing valid-letter mass of the BSCC instead of value 1. This keeps the
+    relative-BSCC interpretation while preventing partially covered accepting
+    components from always contributing full distance.
+
+    All remaining transient states are solved exactly via `(I - P_UU) x = b`.
     """
     np = require_numpy()
 
-    accepting_states = union_components(accepting_bsccs)
+    fixed_state_values: dict[int, float] = {}
+    for bscc in accepting_bsccs:
+        value = sum(markov_chain.row_probability_sums[state] for state in bscc) / len(bscc)
+        for state in bscc:
+            fixed_state_values[state] = value
+
+    accepting_states = set(fixed_state_values)
     rejecting_bsccs = [bscc for bscc in all_bsccs if bscc not in accepting_bsccs]
     rejecting_states = union_components(rejecting_bsccs)
     all_states = set(range(markov_chain.num_states))
@@ -218,11 +228,12 @@ def reachability_probability_exact(
 
     if debug:
         print(f"[debug] Accepting states: {sorted(accepting_states)}")
+        print(f"[debug] Accepting state values: {fixed_state_values}")
         print(f"[debug] Rejecting states: {sorted(rejecting_states)}")
         print(f"[debug] Unknown transient states: {unknown_states}")
 
     if markov_chain.initial_state in accepting_states:
-        return 1.0
+        return fixed_state_values[markov_chain.initial_state]
     if markov_chain.initial_state in rejecting_states:
         return 0.0
     if not unknown_states:
@@ -240,7 +251,7 @@ def reachability_probability_exact(
             probability = transition.probability
 
             if target in accepting_states:
-                rhs[row] += probability
+                rhs[row] += probability * fixed_state_values[target]
             elif target in rejecting_states:
                 continue
             else:
