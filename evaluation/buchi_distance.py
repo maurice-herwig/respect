@@ -527,7 +527,7 @@ def compute_buchi_distance(left_automaton, right_automaton, debug: bool = False)
     # Spot's product_xor constructs an automaton for exactly this symmetric
     # difference. Spot expects both input automata to be deterministic.
     symmetric_difference = spot.product_xor(left_automaton, right_automaton)
-    symmetric_difference = spot.postprocess(symmetric_difference, "generic", "deterministic", "complete")
+    symmetric_difference = spot.postprocess(symmetric_difference, "generic", "deterministic")
 
     if debug:
         print("[debug] Symmetric-difference automaton:")
