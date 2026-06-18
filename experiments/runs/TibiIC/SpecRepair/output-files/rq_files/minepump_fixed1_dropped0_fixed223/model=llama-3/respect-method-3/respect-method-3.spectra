@@ -1,0 +1,16 @@
+import "DwyerPatterns.spectra"
+
+spec Minepump
+
+env boolean highWater;
+env boolean methane;
+
+sys boolean pump;
+sys boolean pumpPreviouslyOn;
+
+asm S_responds_to_P_globally(!highWater, highWater & !pumpPreviouslyOn);
+
+gar ini !pumpPreviouslyOn;
+gar alw next(pumpPreviouslyOn) = pump;
+gar alw methane -> (next(pump) | !highWater);
+gar alw !methane -> !next(pump);
