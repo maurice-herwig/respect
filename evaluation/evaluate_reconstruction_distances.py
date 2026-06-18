@@ -22,6 +22,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from evaluation import buchi_distance
+from evaluation import bounded_semantic_distance
 from evaluation.summarize_reconstruction_runs import extract_model_label
 from evaluation.signature_mapping import (
     DEFAULT_MAPPING_FILE,
@@ -603,6 +604,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--include-run-record", action="store_true")
     parser.add_argument("--debug-distance", action="store_true")
     parser.add_argument(
+        "--bounded-semantic-distance",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Also compute bounded prefix-viability semantic distance.",
+    )
+    parser.add_argument("--bounded-depth", type=int, default=10)
+    parser.add_argument("--bounded-mode", choices=("random", "exhaustive"), default="random")
+    parser.add_argument("--bounded-samples", type=int, default=1000)
+    parser.add_argument("--bounded-seed", type=int, default=1)
+    parser.add_argument(
+        "--bounded-max-prefixes",
+        type=int,
+        default=None,
+        help="Optional cap for exhaustive bounded semantic prefixes.",
+    )
+    parser.add_argument(
         "--signature-mapping",
         choices=("strict", "llm"),
         default="strict",
@@ -701,6 +718,13 @@ def current_pair_key(record: dict[str, Any], args: argparse.Namespace, jar_path:
         "normalize_hoa": args.normalize_hoa,
         "add_rejecting_sink": args.add_rejecting_sink,
         "determinize": args.determinize,
+        "distance_semantics": "relative_bscc_raw_valid_letter_mean_coverage_v1",
+        "bounded_semantic_distance": args.bounded_semantic_distance,
+        "bounded_depth": args.bounded_depth if args.bounded_semantic_distance else None,
+        "bounded_mode": args.bounded_mode if args.bounded_semantic_distance else None,
+        "bounded_samples": args.bounded_samples if args.bounded_semantic_distance and args.bounded_mode == "random" else None,
+        "bounded_seed": args.bounded_seed if args.bounded_semantic_distance and args.bounded_mode == "random" else None,
+        "bounded_max_prefixes": args.bounded_max_prefixes if args.bounded_semantic_distance and args.bounded_mode == "exhaustive" else None,
         "signature_mapping": args.signature_mapping,
         "mapping_model": args.mapping_model if args.signature_mapping == "llm" else None,
     }
@@ -803,6 +827,7 @@ def evaluate_one_run(
         "baseline_automaton_after_determinization": None,
         "generated_automaton_after_determinization": None,
         "distance": None,
+        "bounded_semantic_distance": None,
         "error": None,
     }
 
@@ -823,6 +848,13 @@ def evaluate_one_run(
                 "normalize_hoa": args.normalize_hoa,
                 "add_rejecting_sink": args.add_rejecting_sink,
                 "determinize": args.determinize,
+                "distance_semantics": "relative_bscc_raw_valid_letter_mean_coverage_v1",
+                "bounded_semantic_distance": args.bounded_semantic_distance,
+                "bounded_depth": args.bounded_depth if args.bounded_semantic_distance else None,
+                "bounded_mode": args.bounded_mode if args.bounded_semantic_distance else None,
+                "bounded_samples": args.bounded_samples if args.bounded_semantic_distance and args.bounded_mode == "random" else None,
+                "bounded_seed": args.bounded_seed if args.bounded_semantic_distance and args.bounded_mode == "random" else None,
+                "bounded_max_prefixes": args.bounded_max_prefixes if args.bounded_semantic_distance and args.bounded_mode == "exhaustive" else None,
                 "signature_mapping": args.signature_mapping,
                 "mapping_model": args.mapping_model if args.signature_mapping == "llm" else None,
             },
@@ -949,6 +981,16 @@ def evaluate_one_run(
             generated_automaton,
             debug=args.debug_distance,
         )
+        if args.bounded_semantic_distance:
+            result["bounded_semantic_distance"] = bounded_semantic_distance.compute_bounded_semantic_distance(
+                baseline_automaton,
+                generated_automaton,
+                depth=args.bounded_depth,
+                mode=args.bounded_mode,
+                samples=args.bounded_samples,
+                seed=args.bounded_seed,
+                max_prefixes=args.bounded_max_prefixes,
+            )
         result["status"] = "success"
         return result
     except SystemExit as exc:
@@ -976,6 +1018,32 @@ def summarize_results(
 ) -> dict[str, Any]:
     statuses = Counter(str(record.get("status")) for record in evaluated_records)
     distances = [float(record["distance"]) for record in evaluated_records if record.get("status") == "success"]
+
+    def bounded_values(key: str) -> list[float]:
+        values: list[float] = []
+        for record in evaluated_records:
+            bounded = record.get("bounded_semantic_distance") or {}
+            value = bounded.get(key)
+            if record.get("status") == "success" and value is not None:
+                values.append(float(value))
+        return values
+
+    def stats(values: list[float]) -> dict[str, Any]:
+        return {
+            "count": len(values),
+            "mean": statistics.fmean(values) if values else None,
+            "median": statistics.median(values) if values else None,
+            "min": min(values) if values else None,
+            "max": max(values) if values else None,
+        }
+
+    bounded_summary = {
+        "enabled": args.bounded_semantic_distance,
+        "mismatch_rate": stats(bounded_values("mismatch_rate")),
+        "false_negative_rate": stats(bounded_values("false_negative_rate")),
+        "false_positive_rate": stats(bounded_values("false_positive_rate")),
+        "jaccard_distance": stats(bounded_values("jaccard_distance")),
+    }
     summary: dict[str, Any] = {
         "skill": args.skill,
         "model": args.model,
@@ -995,6 +1063,7 @@ def summarize_results(
             "min": min(distances) if distances else None,
             "max": max(distances) if distances else None,
         },
+        "bounded_semantic_distance": bounded_summary,
     }
     return summary
 
@@ -1023,6 +1092,18 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         print(f"  median: {distance['median']:.6g}")
         print(f"  min: {distance['min']:.6g}")
         print(f"  max: {distance['max']:.6g}")
+    bounded = summary["bounded_semantic_distance"]
+    if bounded["enabled"]:
+        print()
+        print("Bounded semantic distance:")
+        for key in ("mismatch_rate", "false_negative_rate", "false_positive_rate", "jaccard_distance"):
+            values = bounded[key]
+            print(f"  {key}: count={values['count']}")
+            if values["count"]:
+                print(
+                    f"    mean={values['mean']:.6g} median={values['median']:.6g} "
+                    f"min={values['min']:.6g} max={values['max']:.6g}"
+                )
 
 
 def print_intermediate_result(index: int, total: int, run_id: str, result: dict[str, Any]) -> None:
@@ -1030,6 +1111,9 @@ def print_intermediate_result(index: int, total: int, run_id: str, result: dict[
     distance = result.get("distance")
     if status == "success" and distance is not None:
         detail = f"distance={float(distance):.6g}"
+        bounded = result.get("bounded_semantic_distance") or {}
+        if bounded.get("mismatch_rate") is not None:
+            detail += f" bounded_mismatch={float(bounded['mismatch_rate']):.6g}"
     else:
         error = result.get("error")
         detail = f"error={error}" if error else "distance=none"

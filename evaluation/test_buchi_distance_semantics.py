@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from evaluation import buchi_distance
+from evaluation import bounded_semantic_distance
 
 
 def load_hoa(source: str):
@@ -124,6 +125,92 @@ class BuchiDistanceSemanticsTests(unittest.TestCase):
         self.assertEqual(bsccs, [{1}])
         self.assertEqual(accepting, [{1}])
         self.assertAlmostEqual(distance, 0.25)
+
+    def test_bounded_semantic_distance_counts_prefix_viability_mismatches(self):
+        baseline = load_hoa(
+            """
+            HOA: v1
+            States: 1
+            Start: 0
+            AP: 2 "x=false" "x=true"
+            Acceptance: 1 Inf(0)
+            properties: trans-labels explicit-labels trans-acc deterministic
+            --BODY--
+            State: 0
+            [0 & !1] 0 {0}
+            [!0 & 1] 0 {0}
+            --END--
+            """
+        )
+        generated = load_hoa(
+            """
+            HOA: v1
+            States: 1
+            Start: 0
+            AP: 2 "x=false" "x=true"
+            Acceptance: 1 Inf(0)
+            properties: trans-labels explicit-labels trans-acc deterministic
+            --BODY--
+            State: 0
+            [0 & !1] 0 {0}
+            --END--
+            """
+        )
+
+        result = bounded_semantic_distance.compute_bounded_semantic_distance(
+            baseline,
+            generated,
+            depth=1,
+            mode="exhaustive",
+        )
+
+        self.assertEqual(result["total_prefixes"], 2)
+        self.assertEqual(result["both_viable"], 1)
+        self.assertEqual(result["baseline_only"], 1)
+        self.assertEqual(result["generated_only"], 0)
+        self.assertEqual(result["neither_viable"], 0)
+        self.assertEqual(result["mismatch_rate"], 0.5)
+        self.assertEqual(result["false_negative_rate"], 0.5)
+        self.assertEqual(result["false_positive_rate"], 0.0)
+        self.assertEqual(result["jaccard_distance"], 0.5)
+
+    def test_bounded_semantic_distance_random_sampling_is_reproducible(self):
+        automaton = load_hoa(
+            """
+            HOA: v1
+            States: 1
+            Start: 0
+            AP: 2 "x=false" "x=true"
+            Acceptance: 1 Inf(0)
+            properties: trans-labels explicit-labels trans-acc deterministic
+            --BODY--
+            State: 0
+            [0 & !1] 0 {0}
+            [!0 & 1] 0 {0}
+            --END--
+            """
+        )
+
+        first = bounded_semantic_distance.compute_bounded_semantic_distance(
+            automaton,
+            automaton,
+            depth=4,
+            mode="random",
+            samples=20,
+            seed=7,
+        )
+        second = bounded_semantic_distance.compute_bounded_semantic_distance(
+            automaton,
+            automaton,
+            depth=4,
+            mode="random",
+            samples=20,
+            seed=7,
+        )
+
+        self.assertEqual(first, second)
+        self.assertEqual(first["total_prefixes"], 20)
+        self.assertEqual(first["mismatch_rate"], 0.0)
 
 
 if __name__ == "__main__":

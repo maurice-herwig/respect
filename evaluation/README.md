@@ -144,7 +144,7 @@ renamed to the baseline variable names before Spot imports the automata.
 For a quick smoke test:
 
 ```powershell
-python evaluation/evaluate_reconstruction_distances.py --skill respect-method-2 --model llama-3 --limit 1
+python evaluation\evaluate_reconstruction_distances.py --skill respect-method-2 --model llama-3 --limit 1
 ```
 
 To test the distance computation without the modified Spectra CLI, translate two

@@ -84,6 +84,17 @@ def summarize_buchi_distance(path: Path, matching_synthesized_runs: int, skipped
     exists = path.is_file()
     records = load_jsonl(path) if exists else []
     distances = [float(record["distance"]) for record in records if record.get("status") == "success" and record.get("distance") is not None]
+
+    def bounded_values(key: str) -> list[float]:
+        values: list[float] = []
+        for record in records:
+            if record.get("status") != "success":
+                continue
+            bounded = record.get("bounded_semantic_distance") or {}
+            if bounded.get(key) is not None:
+                values.append(float(bounded[key]))
+        return values
+
     return {
         "available": exists,
         "output_jsonl": str(path),
@@ -92,6 +103,10 @@ def summarize_buchi_distance(path: Path, matching_synthesized_runs: int, skipped
         "status_counts": status_counts(records),
         "skipped_counts": dict(sorted(skipped.items())),
         "distance": stats(distances),
+        "bounded_mismatch_rate": stats(bounded_values("mismatch_rate")),
+        "bounded_false_negative_rate": stats(bounded_values("false_negative_rate")),
+        "bounded_false_positive_rate": stats(bounded_values("false_positive_rate")),
+        "bounded_jaccard_distance": stats(bounded_values("jaccard_distance")),
     }
 
 
@@ -218,6 +233,10 @@ def print_text_summary(summary: dict[str, Any]) -> None:
     print_distribution("  status_counts:", buchi["status_counts"])
     print_skipped_counts(buchi["skipped_counts"])
     print_stats("  distance:", buchi["distance"])
+    print_stats("  bounded_mismatch_rate:", buchi["bounded_mismatch_rate"])
+    print_stats("  bounded_false_negative_rate:", buchi["bounded_false_negative_rate"])
+    print_stats("  bounded_false_positive_rate:", buchi["bounded_false_positive_rate"])
+    print_stats("  bounded_jaccard_distance:", buchi["bounded_jaccard_distance"])
     print()
 
     controller = summary["controller_distance"]
