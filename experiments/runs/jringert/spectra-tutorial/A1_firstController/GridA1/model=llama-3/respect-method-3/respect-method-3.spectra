@@ -1,0 +1,19 @@
+spec RobotGridBoundary
+
+type Coord = Int(0..20);
+type Move = {UP, DOWN, LEFT, RIGHT, STAY};
+
+env Coord robX;
+env Coord robY;
+
+sys Move move;
+
+asm ini robX=0;
+asm ini robY=0;
+
+asm alw move=UP -> next(robY)=robY-1;
+
+gar alw robX=0 -> move!=LEFT;
+gar alw robX=4 -> move!=RIGHT;
+gar alw robY=0 -> move!=UP;
+gar alw robY=4 -> move!=DOWN;
