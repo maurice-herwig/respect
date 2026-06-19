@@ -1,0 +1,1932 @@
+OpenAI Codex v0.140.0
+--------
+workdir: C:\Users\mauri\OneDrive\Desktop\Repos\respect
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: medium
+reasoning summaries: none
+session id: 019edf33-c135-7cb1-afd1-a5e73cec2f25
+--------
+user
+Use $respect-method-3.
+
+The EscapingGuard system is a reactive system that describes the movement of a robot towards targets. The system has two outputs: the robot's x-coordinate (robotX) and the robot's y-coordinate (robotY), both of which are restricted to a range of 0 to 7 (defined by the constant D).
+
+The environment does not have any explicitly defined inputs in this specification. 
+
+The assumptions on the environment are not explicitly stated in this specification.
+
+The system guarantees that initially, the robot's y-coordinate (robotY) is 0 and the robot's x-coordinate (robotX) is 7. This defines the starting position of the robot. 
+
+In summary, the system starts with the robot at a specific position (x=7, y=0), but the subsequent movement or behavior of the robot is not defined in this partial specification.
+
+codex
+I’ll use `respect-method-3` as requested. I’m going to read the workflow reference first, then create a temporary Spectra file, validate/synthesize it, and run the NL-guided controller tests for the initial-position behavior.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content .agents\\skills\\respect-method-3\\SKILL.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content .agents\\skills\\respect-method-3\\references\\spectra-workflow.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 730ms:
+# Spectra Workflow Reference
+
+## Use This Reference For
+
+- Converting free-form reactive-system requirements into a first Spectra draft
+- Interpreting `spectra-cli.jar` results
+- Repairing parser errors without drifting away from the user's intent
+- Using counter-strategy diagnostics to repair unrealizable drafts
+
+## Drafting Guidance
+
+- Start with one named `spec`.
+- Declare environment variables with `env` and system variables with `sys`.
+- Encode assumptions with `asm` and guarantees with `gar`.
+- Prefer a minimal complete model over speculative features.
+- If the description leaves key semantics unstated, make the smallest explicit assumption and report it.
+
+## Validation And Synthesis Branches
+
+Use this check command:
+
+```bash
+java -jar spectra-cli.jar -i <path-to-file>
+```
+
+Observed CLI result patterns in this repo:
+
+- Realizable: `Result: Specification is realizable`
+- Unrealizable: `Result: Specification is unrealizable`
+- Syntax failure: `Error: Could not prepare game input from Spectra file`
+
+Use this synthesis command only after a realizable result:
+
+```bash
+java -jar spectra-cli.jar -i <path-to-file> -s -o <output-dir>
+```
+
+Observed synthesis success pattern:
+
+- `Result: Successfully synthesized a just-in-time controller in output folder`
+
+## Counter-Strategy Diagnostics
+
+The current CLI exposes:
+
+```bash
+java -jar spectra-cli.jar -i <path-to-file> --counter-strategy
+java -jar spectra-cli.jar -i <path-to-file> --counter-strategy-jtlv-format
+```
+
+Use these only after the normal check reports `Result: Specification is unrealizable`.
+
+Read the counter-strategy as an environment-winning behavior that demonstrates why the system cannot force its guarantees. It is diagnostic evidence, not a target behavior to copy.
+
+## Syntax-Repair Loop
+
+1. Save the draft as a `.spectra` file.
+2. Run the CLI.
+3. If parsing fails, extract the parser message, for example `missing ';' at 'gar'`.
+4. Repair the file with the smallest syntax-preserving edit.
+5. Repeat until the file is syntactically valid or the attempt budget is exhausted.
+
+## Unrealizability-Repair Loop
+
+1. Run the CLI and confirm the specification is syntactically valid but unrealizable.
+2. Request a counter-strategy diagnostic.
+3. Identify a likely conflict between assumptions, guarantees, initial conditions, safety, liveness, or update rules.
+4. Compare any candidate repair against the natural-language description.
+5. Apply the candidate only when it is consistent with the description.
+6. Re-run the normal CLI check.
+7. Stop after 3 unrealizability-repair attempts or when all plausible repairs would contradict the description.
+
+Common repair patterns:
+
+- Add a missing environment assumption only when the description says the environment is constrained.
+- Repair an initial condition that conflicts with an immediate response requirement.
+- Replace an accidental always-immediate response with a next-step response if the description allows delayed reaction.
+- Remove an over-specific liveness condition only when the description does not require that recurrence.
+
+Common invalid repairs:
+
+- Deleting a stated guarantee solely to make synthesis succeed.
+- Adding an assumption that forbids inputs the description explicitly permits.
+- Weakening "must always" into "may sometimes" without textual support.
+- Ignoring a named input/output or changing control ownership.
+
+## Useful Local Sources
+
+- `assets/examples/A1_firstController/TrafficA1.spectra`
+- `assets/examples/A2_unrealizability/TrafficA2b.spectra`
+- `assets/examples/L1_firstSpec/`
+- `assets/examples/L2_defsArrays/`
+- `assets/examples/L3_patterns/`
+
+ succeeded in 749ms:
+---
+name: respect-method-3
+description: Method 3 agent for the ReSpect study. Generate Spectra specifications from natural-language requirements, validate and synthesize with spectra-cli.jar like method 2, repair unrealizability with CLI counter-strategy diagnostics, and after successful synthesis create and run NL-guided controller tests with controller_tests. Repair generated Spectra only when CLI/test feedback indicates a problem and the repair is consistent with the natural-language description. Do not compare against source Spectra files or benchmark oracles.
+---
+
+# ReSpect Method 3: CLI-Diagnosed Repair With NL-Guided Controller Tests
+
+## Research Role
+
+This skill implements the third ReSpect reconstruction condition in its first version:
+
+- Input: natural-language requirements for a reactive system.
+- Output: a generated Spectra specification plus CLI validation, diagnosis, synthesis, test, and repair results.
+- Feedback sources: `spectra-cli.jar` realizability/synthesis output, CLI counter-strategy diagnostics for unrealizable specifications, and NL-guided controller tests from `controller_tests`.
+- Allowed repair signal: parser output, realizability status, counter-strategy output, controller-test failures, failing traces, generated Spectra, and the natural-language description.
+- Not allowed: reading or comparing against the original/reference Spectra file, semantic equivalence checks against the benchmark, mutation checks, or oracle-based tests.
+
+The goal is to measure whether CLI diagnostics plus NL-guided bounded controller tests improve reconstruction over method 2 while avoiding leakage from the original specification.
+
+## Workflow
+
+1. Read `references/spectra-workflow.md` before drafting a new specification.
+2. Translate the user's natural-language description into a complete Spectra specification.
+3. Save the draft to a temporary `.spectra` file before validation.
+4. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, and `test_repair_loops = 0`.
+5. Run `scripts/run_spectra_cli.py` on the saved file with an explicit timeout.
+6. If the result is `syntax_error`, inspect the parser message, increment both `repair_loops` and `syntax_repair_loops`, repair only the syntax, and rerun validation.
+7. Limit syntax-repair loops to at most 3 attempts and report the last parser error if repair still fails.
+8. If the result is `timeout`, report the timeout and do not continue.
+9. If the result is `realizable`, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
+10. If the result is `unrealizable`, request CLI diagnostics with `--counter-strategy` and save the diagnostic JSON.
+11. Analyze the counter-strategy and the natural-language description before changing the specification.
+12. Repair unrealizability only if the proposed change is consistent with the natural-language description.
+13. Prefer minimal repairs that preserve stated requirements: fix overly strong initialization, add environment assumptions only when implied by the description, or relax/reshape a guarantee only when the description supports the weaker form.
+14. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
+15. After each unrealizability repair, increment `unrealizable_repair_loops`, save the file, rerun validation, and continue from the appropriate branch.
+16. Limit unrealizability-repair loops to at most 3 attempts.
+17. If a repaired specification becomes realizable, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
+18. After every successful synthesis, create a controller test plan from the natural-language description, generated Spectra, and synthesized controller metadata.
+19. Run the test plan with `controller_tests`.
+20. If all tests pass, report the passing test counts and test result file.
+21. If tests fail, inspect each failing test name, reason, and trace. Decide whether the test is actually justified by the natural-language description.
+22. If a failing test is too strong, underspecified, or not supported by the natural-language description, revise or remove that test and rerun the test plan without changing Spectra.
+23. If a failing test is justified by the natural-language description, minimally repair the generated Spectra, increment `test_repair_loops`, rerun CLI validation, rerun synthesis, create a fresh test plan, and rerun tests.
+24. Limit test-repair loops to at most 3 attempts.
+25. Always include the final method-3 result fields in the response.
+
+## Temporary File Handling
+
+- Create a temporary working directory under the repository root, for example `tmp/spectra-runs/<timestamp>-<slug>/`.
+- Save the generated specification as `<name>.spectra`.
+- Save the JSON output of each counter-strategy wrapper call as `diagnostics/unrealizable-<n>.json`. The actual counter-strategy text is preserved inside that JSON object's `raw_output` field.
+- Save controller test plans as `tests/test-plan-<n>.json`.
+- Save controller test results as `tests/test-results-<n>.json`.
+- Keep the final `.spectra` file and synthesis output long enough for inspection.
+- Do not overwrite unrelated files.
+
+## Validation Commands
+
+Use the bundled wrapper instead of calling the jar directly:
+
+```bash
+python .agents/skills/respect-method-3/scripts/run_spectra_cli.py --input <path-to-file> --timeout 120
+```
+
+For counter-strategy diagnostics after an `unrealizable` result:
+
+```bash
+python .agents/skills/respect-method-3/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy --timeout 120
+```
+
+Use JTLV text format only if the default counter-strategy output is not useful:
+
+```bash
+python .agents/skills/respect-method-3/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy-jtlv-format --timeout 120
+```
+
+For synthesis after a `realizable` result:
+
+```bash
+python .agents/skills/respect-method-3/scripts/run_spectra_cli.py --input <path-to-file> --synthesize --output-dir <path-to-output-dir> --timeout 120
+```
+
+## Controller Test Commands
+
+Build the Java test library before the first test run in a task:
+
+```powershell
+javac -cp assets\examples\E2_execution\executor.jar -d controller_tests\build\classes (Get-ChildItem controller_tests\src\main\java -Recurse -Filter *.java).FullName
+```
+
+Run a test plan:
+
+```powershell
+java "-Djava.library.path=." -cp "controller_tests\build\classes;assets\examples\E2_execution\executor.jar" respect.controller_tests.TestRunner --plan <test-plan.json> --output <test-results.json>
+```
+
+On Linux/macOS use `:` instead of `;` in the Java classpath and adjust the native library path for CUDD if needed.
+
+The test plan's `controller_dir` must point at the synthesized JIT folder, usually `<controller_output_dir>/jit`. The `spec_name` must match the `spec` name in the generated Spectra file.
+
+## Method 3 Boundaries
+
+- Use only the natural-language description, generated Spectra, CLI outputs, synthesized controller metadata, and controller-test outputs as repair evidence.
+- Do not open `source_spectra_file`, accepted dataset files, HOA exports, distance results, or benchmark fixtures for the current instance.
+- Do not make a specification realizable by deleting stated requirements without a natural-language justification.
+- Do not weaken a guarantee merely because it appears in the counter-strategy; first decide whether the weaker behavior is allowed by the description.
+- Do not add environment assumptions that shift responsibility to the environment unless the description states or strongly implies that assumption.
+- Do not generate tests from the original/reference Spectra file.
+- Do not treat a failed test as proof that Spectra is wrong until checking whether the test is actually supported by the natural-language description.
+
+## Unrealizability Repair Rules
+
+- Treat the counter-strategy as diagnostic evidence, not as permission to rewrite the task.
+- State the suspected conflict before editing.
+- Check each proposed repair against the natural-language description:
+  - `consistent`: apply the minimal edit and retry.
+  - `unclear`: prefer a smaller edit or stop if the assumption would be material.
+  - `contradicts`: do not apply the edit.
+- Preserve all explicitly described inputs, outputs, initial conditions, safety requirements, liveness requirements, and update rules unless the description itself leaves room for the change.
+- Keep a concise repair log for each unrealizability loop.
+
+## NL-Guided Controller Test Planning
+
+After successful synthesis, generate a JSON test plan for `controller_tests`. Use only the natural-language description, the generated Spectra file, and the synthesized controller location.
+
+Supported test kinds:
+
+- `variable_ownership`: use when the description identifies environment-controlled inputs and system-controlled outputs.
+- `initial_condition`: use when the description states initial output or state requirements.
+- `exclusion`: use for safety requirements saying that a combination must never happen.
+- `always_implication`: use for immediate safety rules of the form "whenever A, B must hold in the same step".
+- `eventually_response`: use for bounded evidence of response/liveness rules, but choose conservative bounds and do not overstate unbounded liveness.
+
+Supported execution modes for controller tests:
+
+- `trace`: use for concrete scenarios directly described in the natural language.
+- `random`: use for lightweight exploration of environment domains.
+- `exhaustive`: use for small Boolean or finite-domain inputs with low depth.
+
+Default bounds:
+
+- `max_depth <= 6`
+- `max_paths <= 256`
+- `runs <= 50`
+- `within_steps <= 10` unless the natural-language description gives a different bound.
+
+Test-plan rules:
+
+- Include top-level `outputs` so the harness reads only system-controlled outputs.
+- Include `spectra_file`, `controller_dir`, and `spec_name`.
+- Use finite environment domains, e.g. `"carA": ["false", "true"]`.
+- Do not create a test that is stronger than the natural-language description. For example, "eventually green" does not imply "green immediately".
+- Prefer a small set of high-confidence tests over many speculative tests.
+
+## Test Failure Repair Rules
+
+When a controller test fails:
+
+1. Read the test result JSON, especially `name`, `kind`, `reason`, and `trace`.
+2. Compare the failed expectation against the natural-language description.
+3. If the test is not justified by the description, revise or remove the test and rerun tests. Do not change Spectra for an invalid test.
+4. If the test is justified, identify the minimal Spectra change needed to satisfy the description.
+5. Apply the repair, increment `test_repair_loops`, rerun CLI validation, rerun synthesis, write a fresh test plan, and rerun tests.
+6. Stop after 3 test-repair attempts.
+7. If tests still fail, report the last failure and whether the remaining issue appears to be a generated-Spectra problem or a test-plan uncertainty.
+
+## Final Response Format
+
+For study runs, keep the final response compact and include:
+
+```text
+cli_status: <syntax_error|unrealizable|realizable|synthesized|timeout|unknown>
+repair_loops: <number>
+syntax_repair_loops: <number>
+unrealizable_repair_loops: <number>
+test_repair_loops: <number>
+timeout_seconds: <number>
+used_counter_strategy: <true|false>
+blocked_by_nl_conflict: <true|false>
+diagnostic_file: <path or none>
+test_plan_file: <path or none>
+test_result_file: <path or none>
+tests_total: <number>
+tests_passed: <number>
+tests_failed: <number>
+spectra_file: <path>
+controller_output_dir: <path or none>
+```
+
+## Bundled Resources
+
+- `scripts/run_spectra_cli.py`: Run `spectra-cli.jar`, normalize the outcome, optionally request counter-strategy diagnostics, and preserve raw output.
+- `references/spectra-workflow.md`: Spectra examples, CLI result patterns, and drafting/repair guidance.
+- `controller_tests/`: Java test library used after synthesis for NL-guided bounded controller tests.
+
+codex
+I’ve got the method constraints and workflow loaded. The natural-language spec is very small: two system outputs bounded `0..7`, no inputs, and only the initial position `(robotX=7, robotY=0)`, so I’m drafting a minimal spec without inventing movement rules.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg -n \"Int\\(|sys .*\\.\\.|robotX|0\\.\\.\" -g \"*.spectra\" assets .agents tmp" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Date -Format yyyyMMdd-HHmmss' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1251ms:
+assets\examples\L2_defsArrays\GridL2.spectra:3:type Coord = Int(0..20);
+tmp\spectra-runs\20260605-124227-catching-intruder\CatchingIntruder.spectra:3:env Int(0..7) intruderX;
+tmp\spectra-runs\20260605-124227-catching-intruder\CatchingIntruder.spectra:4:env Int(0..7) intruderY;
+tmp\spectra-runs\20260605-124227-catching-intruder\CatchingIntruder.spectra:6:sys Int(0..7) robotX0;
+tmp\spectra-runs\20260605-124227-catching-intruder\CatchingIntruder.spectra:7:sys Int(0..7) robotY0;
+tmp\spectra-runs\20260605-124227-catching-intruder\CatchingIntruder.spectra:8:sys Int(0..7) robotX1;
+tmp\spectra-runs\20260605-124227-catching-intruder\CatchingIntruder.spectra:9:sys Int(0..7) robotY1;
+tmp\spectra-runs\20260603-114548-deliveries\Deliveries.spectra:6:type DimX = Int(0..DX);
+tmp\spectra-runs\20260603-114548-deliveries\Deliveries.spectra:7:type DimY = Int(0..DY);
+tmp\spectra-runs\20260603-114548-deliveries\Deliveries.spectra:8:type Coord = Int(0..DY);
+tmp\spectra-runs\20260603-114548-deliveries\Deliveries.spectra:10:sys DimX robotX0;
+tmp\spectra-runs\20260603-114548-deliveries\Deliveries.spectra:12:sys DimX robotX1;
+tmp\spectra-runs\20260605-140804-deliveries\Deliveries.spectra:6:type DimX = Int(0..DX);
+tmp\spectra-runs\20260605-140804-deliveries\Deliveries.spectra:7:type DimY = Int(0..DY);
+tmp\spectra-runs\20260605-140804-deliveries\Deliveries.spectra:8:type Coord = Int(0..DY);
+tmp\spectra-runs\20260605-140804-deliveries\Deliveries.spectra:10:sys DimX robotX0;
+tmp\spectra-runs\20260605-140804-deliveries\Deliveries.spectra:12:sys DimX robotX1;
+tmp\spectra-runs\20260605-140804-deliveries\Deliveries.spectra:15:gar ini robotX0=0 & robotY0=0 & robotX1=0 & robotY1=0;
+tmp\spectra-runs\20260605-140804-deliveries\Deliveries.spectra:17:gar alw robotX0 >= 0 & robotX0 <= DX &
+tmp\spectra-runs\20260605-140804-deliveries\Deliveries.spectra:19:        robotX1 >= 0 & robotX1 <= DX &
+assets\examples\L3_patterns\GridL3.spectra:7:type Coord = Int(0..upper);
+tmp\spectra-runs\20260605-124626-catching-intruder\CatchingIntruder.spectra:3:type Dim = Int(0..7);
+tmp\spectra-runs\20260605-124626-catching-intruder\CatchingIntruder.spectra:5:sys Dim robotX0;
+tmp\spectra-runs\20260605-124626-catching-intruder\CatchingIntruder.spectra:7:sys Dim robotX1;
+tmp\spectra-runs\20260605-122803-escapingguard\EscapingGuard.spectra:3:sys Int(0..7) robotX;
+tmp\spectra-runs\20260605-122803-escapingguard\EscapingGuard.spectra:4:sys Int(0..7) robotY;
+tmp\spectra-runs\20260605-122803-escapingguard\EscapingGuard.spectra:7:  ini robotX = 7 & robotY = 0;
+tmp\spectra-runs\20260603-114327-catching-intruder\CatchingIntruder.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260603-114327-catching-intruder\CatchingIntruder.spectra:4:type Turn = Int(0..3);
+tmp\spectra-runs\20260603-114327-catching-intruder\CatchingIntruder.spectra:10:sys Coord robotX0;
+tmp\spectra-runs\20260603-114327-catching-intruder\CatchingIntruder.spectra:12:sys Coord robotX1;
+assets\examples\L1_firstSpec\GridL1.spectra:3:env Int(0..4) robX;
+assets\examples\L1_firstSpec\GridL1.spectra:4:env Int(0..4) robY;
+tmp\spectra-runs\20260605-124049-escapingguard\EscapingGuard.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260605-124453-catchingintruder\CatchingIntruder.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260605-124453-catchingintruder\CatchingIntruder.spectra:8:sys Coord robotX0;
+tmp\spectra-runs\20260605-124453-catchingintruder\CatchingIntruder.spectra:10:sys Coord robotX1;
+tmp\spectra-runs\20260605-123452-escapingguard\EscapingGuard.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260605-120859-patrolling\Patrolling.spectra:3:sys Int(0..4) robotX;
+tmp\spectra-runs\20260605-120859-patrolling\Patrolling.spectra:4:sys Int(0..4) robotY;
+tmp\spectra-runs\20260605-123316-patrolling-empty\PatrollingEmpty.spectra:3:sys Int(0..4) robotX;
+tmp\spectra-runs\20260605-123316-patrolling-empty\PatrollingEmpty.spectra:4:sys Int(0..4) robotY;
+tmp\spectra-runs\20260608-190814-guard-dimensions\GuardDimensions.spectra:3:env Int(0..7) guard1;
+tmp\spectra-runs\20260608-190814-guard-dimensions\GuardDimensions.spectra:4:env Int(0..7) guard2;
+tmp\spectra-runs\20260605-123111-escaping-guard\EscapingGuard.spectra:5:type Dim = Int(0..D);
+tmp\spectra-runs\20260605-123111-escaping-guard\EscapingGuard.spectra:7:sys Dim robotX;
+tmp\spectra-runs\20260605-154918-escapingguard\EscapingGuard.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260605-154918-escapingguard\EscapingGuard.spectra:21:sys Coord robotX;
+tmp\spectra-runs\20260605-154918-escapingguard\EscapingGuard.spectra:33:gar ini robotX=0 & robotY=0;
+tmp\spectra-runs\20260605-153152-robot-position\RobotPosition.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260605-153152-robot-position\RobotPosition.spectra:5:sys Coord robotX;
+tmp\spectra-runs\20260603-113522-robot-initial-position\RobotInitialPosition.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260603-113522-robot-initial-position\RobotInitialPosition.spectra:5:sys Coord robotX;
+tmp\spectra-runs\20260603-113522-robot-initial-position\RobotInitialPosition.spectra:8:gar ini robotX=7 & robotY=0;
+tmp\spectra-runs\20260605-154159-patrolling\Patrolling.spectra:6:sys Int(0..DX) robotX;
+tmp\spectra-runs\20260605-154159-patrolling\Patrolling.spectra:7:sys Int(0..DY) robotY;
+tmp\spectra-runs\20260605-154733-escapingguard\EscapingGuard.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260605-154733-escapingguard\EscapingGuard.spectra:21:sys Coord robotX;
+tmp\spectra-runs\20260605-154733-escapingguard\EscapingGuard.spectra:24:gar ini robotX=0 & robotY=0;
+tmp\spectra-runs\20260605-154733-escapingguard\EscapingGuard.spectra:25:gar alw robotX=robotX & robotY=robotY;
+tmp\spectra-runs\20260605-141928-patrolling\Patrolling.spectra:3:sys Int(0..4) robotX;
+tmp\spectra-runs\20260605-141928-patrolling\Patrolling.spectra:4:sys Int(0..4) robotY;
+tmp\spectra-runs\20260605-141928-patrolling\Patrolling.spectra:6:gar alw robotX >= 0 & robotX <= 4 & robotY >= 0 & robotY <= 4;
+tmp\spectra-runs\20260605-141150-deliveries\Deliveries.spectra:6:type XCoord = Int(0..DX);
+tmp\spectra-runs\20260605-141150-deliveries\Deliveries.spectra:7:type YCoord = Int(0..DY);
+tmp\spectra-runs\20260605-141150-deliveries\Deliveries.spectra:9:sys XCoord robotX0;
+tmp\spectra-runs\20260605-141150-deliveries\Deliveries.spectra:11:sys XCoord robotX1;
+tmp\spectra-runs\20260619-101038-escapingguard\EscapingGuard.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260619-101038-escapingguard\EscapingGuard.spectra:5:sys Coord robotX;
+tmp\spectra-runs\20260619-101038-escapingguard\EscapingGuard.spectra:13:gar alw stepAtMostOne(robotX);
+tmp\spectra-runs\20260605-deliveries-method2\Deliveries.spectra:6:type XCoord = Int(0..DX);
+tmp\spectra-runs\20260605-deliveries-method2\Deliveries.spectra:7:type YCoord = Int(0..DY);
+tmp\spectra-runs\20260605-deliveries-method2\Deliveries.spectra:9:sys XCoord robotX0;
+tmp\spectra-runs\20260605-deliveries-method2\Deliveries.spectra:11:sys XCoord robotX1;
+tmp\spectra-runs\20260605-deliveries-method2\Deliveries.spectra:14:gar ini robotX0 = 0 & robotY0 = 0 & robotX1 = 0 & robotY1 = 0;
+tmp\spectra-runs\20260605-153952-patrolling\Patrolling.spectra:6:type XCoord = Int(0..DX);
+tmp\spectra-runs\20260605-153952-patrolling\Patrolling.spectra:7:type YCoord = Int(0..DY);
+tmp\spectra-runs\20260605-153952-patrolling\Patrolling.spectra:9:sys XCoord robotX;
+tmp\spectra-runs\20260605-140954-deliveries\Deliveries.spectra:3:sys Int(0..5) robotX0;
+tmp\spectra-runs\20260605-140954-deliveries\Deliveries.spectra:4:sys Int(0..5) robotY0;
+tmp\spectra-runs\20260605-140954-deliveries\Deliveries.spectra:5:sys Int(0..5) robotX1;
+tmp\spectra-runs\20260605-140954-deliveries\Deliveries.spectra:6:sys Int(0..5) robotY1;
+tmp\spectra-runs\20260608-185627-motor-distance\MotorDistance.spectra:3:env Int(0..100) distance;
+tmp\spectra-runs\20260605-141817-patrolling\Patrolling.spectra:3:sys Int(0..4) robotX;
+tmp\spectra-runs\20260605-141817-patrolling\Patrolling.spectra:4:sys Int(0..4) robotY;
+tmp\spectra-runs\20260619-100634-robot-grid-boundary\RobotGridBoundary.spectra:3:type Coord = Int(0..20);
+tmp\spectra-runs\20260608-190432-robot-grid-up\RobotGridUp.spectra:3:env Int(0..4) robX;
+tmp\spectra-runs\20260608-190432-robot-grid-up\RobotGridUp.spectra:4:env Int(0..4) robY;
+tmp\spectra-runs\20260605-escapingguard\EscapingGuard.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260605-escapingguard\EscapingGuard.spectra:5:sys Coord robotX;
+tmp\spectra-runs\20260603-113904-patrolling\Patrolling.spectra:3:sys Int(0..4) robotX;
+tmp\spectra-runs\20260603-113904-patrolling\Patrolling.spectra:4:sys Int(0..4) robotY;
+tmp\spectra-runs\20260603-113904-patrolling\Patrolling.spectra:6:gar alw robotX = 1;
+tmp\spectra-runs\20260605-154522-patrolling\Patrolling.spectra:3:sys Int(0..4) robotX;
+tmp\spectra-runs\20260605-154522-patrolling\Patrolling.spectra:4:sys Int(0..4) robotY;
+tmp\spectra-runs\20260605-153824-escapingguard\EscapingGuard.spectra:4:type Dim = Int(0..D);
+tmp\spectra-runs\20260605-153824-escapingguard\EscapingGuard.spectra:6:sys Dim robotX;
+tmp\spectra-runs\20260605-141645-patrolling\Patrolling.spectra:3:sys Int(0..4) robotX;
+tmp\spectra-runs\20260605-141645-patrolling\Patrolling.spectra:4:sys Int(0..4) robotY;
+tmp\spectra-runs\20260605-153402-escapingguard\EscapingGuard.spectra:5:type Coord = Int(0..D);
+tmp\spectra-runs\20260605-153402-escapingguard\EscapingGuard.spectra:7:sys Coord robotX;
+tmp\spectra-runs\20260605-154346-patrolling\Patrolling.spectra:6:sys Int(0..DX) robotX;
+tmp\spectra-runs\20260605-154346-patrolling\Patrolling.spectra:7:sys Int(0..DY) robotY;
+tmp\spectra-runs\20260608-190109-escaping-guard\EscapingGuard.spectra:3:sys Int(0..6) robotX;
+tmp\spectra-runs\20260608-190109-escaping-guard\EscapingGuard.spectra:4:sys Int(0..6) robotY;
+tmp\spectra-runs\20260608-190109-escaping-guard\EscapingGuard.spectra:7:  alw !((robotX = 2 & robotY = 6) | (robotX = 3 & robotY = 6));
+tmp\spectra-runs\20260610-134025-escapingguard\EscapingGuard.spectra:5:type Coord = Int(0..D);
+tmp\spectra-runs\20260610-134025-escapingguard\EscapingGuard.spectra:7:sys Coord robotX;
+tmp\spectra-runs\20260610-134025-escapingguard\EscapingGuard.spectra:13:gar ini robotX=0 & robotY=0;
+tmp\spectra-runs\20260610-134025-escapingguard\EscapingGuard.spectra:15:gar alw stepAtMostOne(robotX);
+tmp\spectra-runs\20260610-134824-escapingguard\EscapingGuard.spectra:3:env Int(0..7) guardX;
+tmp\spectra-runs\20260610-134824-escapingguard\EscapingGuard.spectra:4:env Int(0..7) guardY;
+tmp\spectra-runs\20260610-134517-escapingguard\EscapingGuard.spectra:5:type Coord = Int(0..D);
+tmp\spectra-runs\20260610-134517-escapingguard\EscapingGuard.spectra:7:sys Coord robotX;
+tmp\spectra-runs\20260610-134517-escapingguard\EscapingGuard.spectra:10:gar ini robotY = 0 & robotX = D;
+tmp\spectra-runs\20260610-133808-grid-boundary\GridBoundary.spectra:3:env Int(0..20) robX;
+tmp\spectra-runs\20260610-133808-grid-boundary\GridBoundary.spectra:4:env Int(0..20) robY;
+tmp\spectra-runs\20260610-154522-robot-obstacle-safety\RobotObstacleSafety.spectra:3:sys Int(0..5) robotX;
+tmp\spectra-runs\20260610-154522-robot-obstacle-safety\RobotObstacleSafety.spectra:4:sys Int(0..5) robotY;
+tmp\spectra-runs\20260610-154522-robot-obstacle-safety\RobotObstacleSafety.spectra:7:  robotX = 2 &
+tmp\spectra-runs\20260617-143125-escapingguard\EscapingGuard.spectra:3:type Coord = Int(0..6);
+tmp\spectra-runs\20260617-143125-escapingguard\EscapingGuard.spectra:5:sys Coord robotX;
+tmp\spectra-runs\20260617-143125-escapingguard\EscapingGuard.spectra:9:  alw !((robotX=2 & robotY=6) | (robotX=3 & robotY=6));
+tmp\spectra-runs\20260617-132114-catching-intruder\CatchingIntruder.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260617-132114-catching-intruder\CatchingIntruder.spectra:4:type Turn = Int(0..3);
+tmp\spectra-runs\20260617-132114-catching-intruder\CatchingIntruder.spectra:10:sys Coord robotX0;
+tmp\spectra-runs\20260617-132114-catching-intruder\CatchingIntruder.spectra:12:sys Coord robotX1;
+tmp\spectra-runs\20260610-154334-patrolling\Patrolling.spectra:3:type Coord = Int(0..3);
+tmp\spectra-runs\20260610-154334-patrolling\Patrolling.spectra:8:sys Coord robotX;
+tmp\spectra-runs\20260610-153403-patrolling\Patrolling.spectra:3:type Coord = Int(0..4);
+tmp\spectra-runs\20260610-153403-patrolling\Patrolling.spectra:4:type Counter = Int(0..10);
+tmp\spectra-runs\20260610-153403-patrolling\Patrolling.spectra:6:sys Coord robotX;
+tmp\spectra-runs\20260610-153403-patrolling\Patrolling.spectra:10:define atCharge := robotX=4 & robotY=0;
+tmp\spectra-runs\20260610-153403-patrolling\Patrolling.spectra:15:  (next(robotX)=robotX & next(robotY)=robotY) |
+tmp\spectra-runs\20260610-153403-patrolling\Patrolling.spectra:16:  (robotX < 4 & next(robotX)=robotX+1 & next(robotY)=robotY) |
+tmp\spectra-runs\20260610-153403-patrolling\Patrolling.spectra:17:  (robotX > 0 & next(robotX)=robotX-1 & next(robotY)=robotY) |
+tmp\spectra-runs\20260610-153403-patrolling\Patrolling.spectra:18:  (robotY < 4 & next(robotY)=robotY+1 & next(robotX)=robotX) |
+tmp\spectra-runs\20260610-153403-patrolling\Patrolling.spectra:19:  (robotY > 0 & next(robotY)=robotY-1 & next(robotX)=robotX)
+tmp\spectra-runs\20260611-141621-deliveries\Deliveries.spectra:3:type XCoord = Int(0..5);
+tmp\spectra-runs\20260611-141621-deliveries\Deliveries.spectra:4:type YCoord = Int(0..5);
+tmp\spectra-runs\20260611-141621-deliveries\Deliveries.spectra:6:sys XCoord robotX0;
+tmp\spectra-runs\20260611-141621-deliveries\Deliveries.spectra:8:sys XCoord robotX1;
+tmp\spectra-runs\20260610-154157-patrolling\Patrolling.spectra:3:type Coord = Int(0..4);
+tmp\spectra-runs\20260610-154157-patrolling\Patrolling.spectra:12:sys Coord robotX;
+tmp\spectra-runs\20260611-141445-deliveries\Deliveries.spectra:6:sys Int(0..DX) robotX0;
+tmp\spectra-runs\20260611-141445-deliveries\Deliveries.spectra:7:sys Int(0..DY) robotY0;
+tmp\spectra-runs\20260611-141445-deliveries\Deliveries.spectra:8:sys Int(0..DX) robotX1;
+tmp\spectra-runs\20260611-141445-deliveries\Deliveries.spectra:9:sys Int(0..DY) robotY1;
+tmp\spectra-runs\20260610-151929-deliveries\Deliveries.spectra:6:type DimX = Int(0..DX);
+tmp\spectra-runs\20260610-151929-deliveries\Deliveries.spectra:7:type DimY = Int(0..DY);
+tmp\spectra-runs\20260610-151929-deliveries\Deliveries.spectra:8:type Coord = Int(0..DY);
+tmp\spectra-runs\20260610-151929-deliveries\Deliveries.spectra:15:sys DimX robotX0;
+tmp\spectra-runs\20260610-151929-deliveries\Deliveries.spectra:17:sys DimX robotX1;
+tmp\spectra-runs\20260610-151929-deliveries\Deliveries.spectra:20:gar ini robotX0=0 & robotY0=0 & robotX1=0 & robotY1=0;
+tmp\spectra-runs\20260611-141309-deliveries\Deliveries.spectra:8:type XCoord = Int(0..MAX_X);
+tmp\spectra-runs\20260611-141309-deliveries\Deliveries.spectra:9:type YCoord = Int(0..MAX_Y);
+tmp\spectra-runs\20260611-141309-deliveries\Deliveries.spectra:11:sys XCoord robotX0;
+tmp\spectra-runs\20260611-141309-deliveries\Deliveries.spectra:13:sys XCoord robotX1;
+tmp\spectra-runs\20260611-141309-deliveries\Deliveries.spectra:22:  (robotX0 = p0X & robotY0 = p0Y) |
+tmp\spectra-runs\20260611-141309-deliveries\Deliveries.spectra:23:  (robotX0 = p1X & robotY0 = p1Y);
+tmp\spectra-runs\20260611-141309-deliveries\Deliveries.spectra:26:  (robotX1 = p0X & robotY1 = p0Y) |
+tmp\spectra-runs\20260611-141309-deliveries\Deliveries.spectra:27:  (robotX1 = p1X & robotY1 = p1Y);
+tmp\spectra-runs\20260610-153016-autonomous-vehicle\AutonomousVehicle.spectra:3:type Speed = Int(0..10);
+tmp\spectra-runs\20260611-141118-catching-intruder\CatchingIntruder.spectra:3:sys Int(0..7) robotX0;
+tmp\spectra-runs\20260611-141118-catching-intruder\CatchingIntruder.spectra:4:sys Int(0..7) robotY0;
+tmp\spectra-runs\20260611-141118-catching-intruder\CatchingIntruder.spectra:5:sys Int(0..7) robotX1;
+tmp\spectra-runs\20260611-141118-catching-intruder\CatchingIntruder.spectra:6:sys Int(0..7) robotY1;
+tmp\spectra-runs\20260611-141118-catching-intruder\CatchingIntruder.spectra:11:gar alw (next(robotY0)=7 & next(robotX0)=0) -> next(r1ReachedGround);
+tmp\spectra-runs\20260611-141118-catching-intruder\CatchingIntruder.spectra:13:gar alw (next(robotY0)!=7 & next(robotX0)!=0) -> (next(r1ReachedGround) <-> r1ReachedGround);
+tmp\spectra-runs\20260611-141118-catching-intruder\CatchingIntruder.spectra:15:gar alw !r1ReachedGround -> (next(robotX1)=0 & next(robotY1)=0);
+tmp\spectra-runs\20260610-154010-patrolling\Patrolling.spectra:3:sys Int(0..4) robotX;
+tmp\spectra-runs\20260610-154010-patrolling\Patrolling.spectra:4:sys Int(0..4) robotY;
+tmp\spectra-runs\20260610-154010-patrolling\Patrolling.spectra:5:sys Int(0..15) awayTimer;
+tmp\spectra-runs\20260610-154010-patrolling\Patrolling.spectra:6:sys Int(0..3) chargeTimer;
+tmp\spectra-runs\20260610-154010-patrolling\Patrolling.spectra:8:define atCharge := robotX=4 & robotY=0;
+tmp\spectra-runs\20260610-151421-blink5\Blink5.spectra:6:sys Int(0..5) blinkCount;
+tmp\spectra-runs\20260611-141014-intruder-turns\IntruderTurns.spectra:3:env Int(0..7) intruderX;
+tmp\spectra-runs\20260611-141014-intruder-turns\IntruderTurns.spectra:4:env Int(0..7) intruderY;
+tmp\spectra-runs\20260611-141014-intruder-turns\IntruderTurns.spectra:6:sys Int(0..7) robotX0;
+tmp\spectra-runs\20260611-141014-intruder-turns\IntruderTurns.spectra:7:sys Int(0..7) robotY0;
+tmp\spectra-runs\20260611-141014-intruder-turns\IntruderTurns.spectra:8:sys Int(0..7) robotX1;
+tmp\spectra-runs\20260611-141014-intruder-turns\IntruderTurns.spectra:9:sys Int(0..7) robotY1;
+tmp\spectra-runs\20260611-141014-intruder-turns\IntruderTurns.spectra:10:sys Int(0..3) turns;
+tmp\spectra-runs\20260617-140025-catchingintruder\CatchingIntruder.spectra:5:type Dim = Int(0..D);
+tmp\spectra-runs\20260617-140025-catchingintruder\CatchingIntruder.spectra:7:sys Dim robotX0;
+tmp\spectra-runs\20260617-140025-catchingintruder\CatchingIntruder.spectra:9:sys Dim robotX1;
+tmp\spectra-runs\20260610-152723-patrolling\Patrolling.spectra:7:sys Int(0..4) x;
+tmp\spectra-runs\20260610-152723-patrolling\Patrolling.spectra:8:sys Int(0..4) y;
+tmp\spectra-runs\20260610-152723-patrolling\Patrolling.spectra:9:sys Int(0..15) nonChargeCount;
+tmp\spectra-runs\20260610-152723-patrolling\Patrolling.spectra:10:sys Int(0..2) chargeHold;
+tmp\spectra-runs\20260611-140128-elevator-robot\ElevatorRobot.spectra:6:type XCoord = Int(0..DX);
+tmp\spectra-runs\20260611-140128-elevator-robot\ElevatorRobot.spectra:7:type YCoord = Int(0..DY);
+tmp\spectra-runs\20260611-140128-elevator-robot\ElevatorRobot.spectra:11:sys XCoord robotX0;
+tmp\spectra-runs\20260611-140128-elevator-robot\ElevatorRobot.spectra:13:sys XCoord robotX1;
+tmp\spectra-runs\20260611-140128-elevator-robot\ElevatorRobot.spectra:22:gar alw robotX0=0 -> robotY0=elevatorY;
+tmp\spectra-runs\20260611-140128-elevator-robot\ElevatorRobot.spectra:23:gar alw robotX1=0 -> robotY1=elevatorY;
+tmp\spectra-runs\20260608-191848-deliveries\Deliveries.spectra:6:type Coord = Int(0..DY);
+tmp\spectra-runs\20260608-191848-deliveries\Deliveries.spectra:8:sys Coord robotX0;
+tmp\spectra-runs\20260608-191848-deliveries\Deliveries.spectra:10:sys Coord robotX1;
+tmp\spectra-runs\20260608-191848-deliveries\Deliveries.spectra:13:gar ini robotX0 = 0 & robotY0 = 0 & robotX1 = DX & robotY1 = DY;
+tmp\spectra-runs\20260608-191848-deliveries\Deliveries.spectra:15:gar alw robotX0 >= 0 & robotX0 <= DX;
+tmp\spectra-runs\20260608-191848-deliveries\Deliveries.spectra:17:gar alw robotX1 >= 0 & robotX1 <= DX;
+tmp\spectra-runs\20260617-135541-catching-intruder\CatchingIntruder.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260617-135541-catching-intruder\CatchingIntruder.spectra:8:sys Coord robotX0;
+tmp\spectra-runs\20260617-135541-catching-intruder\CatchingIntruder.spectra:10:sys Coord robotX1;
+tmp\spectra-runs\20260617-escapingguard\EscapingGuard.spectra:3:sys Int(0..7) robotX;
+tmp\spectra-runs\20260617-escapingguard\EscapingGuard.spectra:4:sys Int(0..7) robotY;
+tmp\spectra-runs\20260617-escapingguard\EscapingGuard.spectra:6:gar ini robotX=7 & robotY=0;
+tmp\spectra-runs\20260611-140841-catchingintruder\CatchingIntruder.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260611-140841-catchingintruder\CatchingIntruder.spectra:5:sys Coord robotX0;
+tmp\spectra-runs\20260611-140841-catchingintruder\CatchingIntruder.spectra:7:sys Coord robotX1;
+tmp\spectra-runs\20260611-140841-catchingintruder\CatchingIntruder.spectra:19:gar ini robotX0=0 & robotY0=0;
+tmp\spectra-runs\20260611-140841-catchingintruder\CatchingIntruder.spectra:20:gar ini robotX1=7 & robotY1=0;
+tmp\spectra-runs\20260608-191712-intruder-robot-y1-ranges\IntruderRobotY1Ranges.spectra:3:type Coord = Int(0..10);
+tmp\spectra-runs\20260608-191712-intruder-robot-y1-ranges\IntruderRobotY1Ranges.spectra:8:sys Coord robotX0;
+tmp\spectra-runs\20260608-191712-intruder-robot-y1-ranges\IntruderRobotY1Ranges.spectra:10:sys Coord robotX1;
+tmp\spectra-runs\20260608-191712-intruder-robot-y1-ranges\IntruderRobotY1Ranges.spectra:15:gar alw robotY0=1 implies (robotX0<2 | robotX0>5);
+tmp\spectra-runs\20260608-191712-intruder-robot-y1-ranges\IntruderRobotY1Ranges.spectra:16:gar alw robotY1=1 implies (robotX1<2 | robotX1>5);
+tmp\spectra-runs\20260611-140706-escapingguard\EscapingGuard.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260611-140706-escapingguard\EscapingGuard.spectra:10:sys Coord robotX;
+tmp\spectra-runs\20260611-140706-escapingguard\EscapingGuard.spectra:16:gar ini robotX = 7 & robotY = 0;
+tmp\spectra-runs\20260611-140706-escapingguard\EscapingGuard.spectra:18:gar alw sameOrAdjacent(robotX, next(robotX));
+tmp\spectra-runs\20260617-distance-motor\distance_motor.spectra:3:type Distance = Int(0..100);
+tmp\spectra-runs\20260612-114720-robot-grid-edge-safety\RobotGridEdgeSafety.spectra:3:env Int(0..4) robX;
+tmp\spectra-runs\20260612-114720-robot-grid-edge-safety\RobotGridEdgeSafety.spectra:4:env Int(0..4) robY;
+tmp\spectra-runs\20260617-135326-escapingguard\EscapingGuard.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260611-140004-robot-obstacle-safety\RobotObstacleSafety.spectra:3:sys Int(0..5) robotX;
+tmp\spectra-runs\20260611-140004-robot-obstacle-safety\RobotObstacleSafety.spectra:4:sys Int(0..5) robotY;
+tmp\spectra-runs\20260611-140004-robot-obstacle-safety\RobotObstacleSafety.spectra:6:gar alw !((robotX = 2) & ((robotY = 2) | (robotY = 3) | (robotY = 4) | (robotY = 5)));
+tmp\spectra-runs\20260608-191517-two-robots-intruder\two_robots_intruder.spectra:3:type Coord = Int(0..6);
+tmp\spectra-runs\20260610-deliveries-method2\Deliveries.spectra:6:type XCoord = Int(0..DX);
+tmp\spectra-runs\20260610-deliveries-method2\Deliveries.spectra:7:type YCoord = Int(0..DY);
+tmp\spectra-runs\20260610-deliveries-method2\Deliveries.spectra:11:sys XCoord robotX0;
+tmp\spectra-runs\20260610-deliveries-method2\Deliveries.spectra:13:sys XCoord robotX1;
+tmp\spectra-runs\20260617-131344-patrolling\Patrolling.spectra:3:type Coord = Int(0..4);
+tmp\spectra-runs\20260617-131344-patrolling\Patrolling.spectra:5:sys Coord robotX;
+tmp\spectra-runs\20260617-131344-patrolling\Patrolling.spectra:8:gar always_robotX_is_1:
+tmp\spectra-runs\20260617-131344-patrolling\Patrolling.spectra:9:  alw robotX = 1;
+tmp\spectra-runs\20260617-deliveries-method3\Deliveries.spectra:3:type Coord = Int(0..5);
+tmp\spectra-runs\20260617-deliveries-method3\Deliveries.spectra:5:sys Coord robotX0;
+tmp\spectra-runs\20260617-deliveries-method3\Deliveries.spectra:7:sys Coord robotX1;
+tmp\spectra-runs\20260617-135100-escapingguard\EscapingGuard.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260611-140330-elevator-robots\elevator_robots.spectra:6:type XCoord = Int(0..DX);
+tmp\spectra-runs\20260611-140330-elevator-robots\elevator_robots.spectra:7:type YCoord = Int(0..DY);
+tmp\spectra-runs\20260611-140330-elevator-robots\elevator_robots.spectra:11:sys XCoord robotX0;
+tmp\spectra-runs\20260611-140330-elevator-robots\elevator_robots.spectra:13:sys XCoord robotX1;
+tmp\spectra-runs\20260611-140330-elevator-robots\elevator_robots.spectra:23:gar alw robotX0 = 0 -> next(robotY0) = elevatorPos;
+tmp\spectra-runs\20260611-140330-elevator-robots\elevator_robots.spectra:24:gar alw robotX1 = 0 -> next(robotY1) = elevatorPos;
+tmp\spectra-runs\20260617-catching-intruder-method3\CatchingIntruder.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260617-catching-intruder-method3\CatchingIntruder.spectra:8:sys Coord robotX0;
+tmp\spectra-runs\20260617-catching-intruder-method3\CatchingIntruder.spectra:10:sys Coord robotX1;
+tmp\spectra-runs\20260608-191340-catchingintruder\CatchingIntruder.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260608-191340-catchingintruder\CatchingIntruder.spectra:8:sys Coord robotX0;
+tmp\spectra-runs\20260608-191340-catchingintruder\CatchingIntruder.spectra:10:sys Coord robotX1;
+tmp\spectra-runs\20260608-191340-catchingintruder\CatchingIntruder.spectra:13:asm alw !(intruderX=robotX0 & intruderY=robotY0);
+tmp\spectra-runs\20260608-191340-catchingintruder\CatchingIntruder.spectra:14:asm alw !(intruderX=robotX1 & intruderY=robotY1);
+tmp\spectra-runs\20260611-140526-robot-guard-safety\RobotGuardSafety.spectra:3:type RobotCoord = Int(0..4);
+tmp\spectra-runs\20260611-140526-robot-guard-safety\RobotGuardSafety.spectra:4:type GuardCoord = Int(0..3);
+tmp\spectra-runs\20260611-140526-robot-guard-safety\RobotGuardSafety.spectra:9:sys RobotCoord robotX;
+tmp\spectra-runs\20260611-140526-robot-guard-safety\RobotGuardSafety.spectra:15:  (robotX = guardX & robotY = guardY) |
+tmp\spectra-runs\20260611-140526-robot-guard-safety\RobotGuardSafety.spectra:16:  (robotX = guardX + 1 & robotY = guardY) |
+tmp\spectra-runs\20260611-140526-robot-guard-safety\RobotGuardSafety.spectra:17:  (robotX = guardX & robotY = guardY + 1) |
+tmp\spectra-runs\20260611-140526-robot-guard-safety\RobotGuardSafety.spectra:18:  (robotX = guardX + 1 & robotY = guardY + 1)
+tmp\spectra-runs\20260612-123200-grid-a3\GridA3.spectra:3:type Coord = Int(0..5);
+tmp\spectra-runs\20260617-134841-escapingguard\EscapingGuard.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260617-134841-escapingguard\EscapingGuard.spectra:5:sys Coord robotX;
+tmp\spectra-runs\20260616-robot-initial-position\RobotInitialPosition.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260616-robot-initial-position\RobotInitialPosition.spectra:5:sys Coord robotX;
+tmp\spectra-runs\20260616-robot-initial-position\RobotInitialPosition.spectra:8:gar ini robotX=7 & robotY=0;
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\IntruderRobotY1.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\IntruderRobotY1.spectra:8:sys Coord robotX0;
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\IntruderRobotY1.spectra:10:sys Coord robotX1;
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\IntruderRobotY1.spectra:15:gar alw robotY0=1 implies (robotX0<2 | robotX0>5);
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\IntruderRobotY1.spectra:16:gar alw robotY1=1 implies (robotX1<2 | robotX1>5);
+tmp\spectra-runs\20260617-133241-patrolling\Patrolling.spectra:3:type Coord = Int(0..4);
+tmp\spectra-runs\20260617-133241-patrolling\Patrolling.spectra:5:sys Coord robotX;
+tmp\spectra-runs\20260612-122955-robot-grid\robot_grid.spectra:3:sys Int(0..7) robotX;
+tmp\spectra-runs\20260612-122955-robot-grid\robot_grid.spectra:4:sys Int(0..7) robotY;
+tmp\spectra-runs\20260612-122955-robot-grid\robot_grid.spectra:6:gar ini robotX=0 & robotY=0;
+tmp\spectra-runs\20260612-122955-robot-grid\robot_grid.spectra:8:gar alw (robotX=0 -> (next(robotX)=0 | next(robotX)=1));
+tmp\spectra-runs\20260612-122955-robot-grid\robot_grid.spectra:9:gar alw (robotX=7 -> (next(robotX)=6 | next(robotX)=7));
+tmp\spectra-runs\20260612-122955-robot-grid\robot_grid.spectra:10:gar alw ((robotX>0 & robotX<7) -> (next(robotX)=robotX-1 | next(robotX)=robotX | next(robotX)=robotX+1));
+tmp\spectra-runs\20260612-122955-robot-grid\robot_grid.spectra:16:gar alw (robotX=2 -> robotY=7);
+tmp\spectra-runs\20260612-122955-robot-grid\robot_grid.spectra:17:gar alw (robotX=5 -> robotY=0);
+tmp\spectra-runs\20260612-122955-robot-grid\robot_grid.spectra:19:gar alwEv (robotX=7 & robotY=7);
+tmp\spectra-runs\20260612-122815-color-swap\ColorSwap.spectra:3:type Index = Int(0..2);
+tmp\spectra-runs\20260612-122815-color-swap\ColorSwap.spectra:4:type Color = Int(0..2);
+tmp\spectra-runs\20260617-151536-catchingintruder\CatchingIntruder.spectra:3:type Coord = Int(0..7);
+tmp\spectra-runs\20260617-151536-catchingintruder\CatchingIntruder.spectra:8:sys Coord robotX0;
+tmp\spectra-runs\20260617-151536-catchingintruder\CatchingIntruder.spectra:10:sys Coord robotX1;
+tmp\spectra-runs\20260617-151536-catchingintruder\CatchingIntruder.spectra:13:asm alw !(intruderX=robotX0 & intruderY=robotY0);
+tmp\spectra-runs\20260617-151536-catchingintruder\CatchingIntruder.spectra:14:asm alw !(intruderX=robotX1 & intruderY=robotY1);
+tmp\spectra-runs\20260617-151738-grid-robots-method3\GridRobots.spectra:3:type Coord = Int(0..6);
+tmp\spectra-runs\20260617-132330-deliveries\Deliveries.spectra:3:type DimX = Int(0..5);
+tmp\spectra-runs\20260617-132330-deliveries\Deliveries.spectra:4:type DimY = Int(0..5);
+tmp\spectra-runs\20260617-132330-deliveries\Deliveries.spectra:5:type Coord = Int(0..5);
+tmp\spectra-runs\20260617-132330-deliveries\Deliveries.spectra:7:sys DimX robotX0;
+tmp\spectra-runs\20260617-132330-deliveries\Deliveries.spectra:9:sys DimX robotX1;
+tmp\spectra-runs\20260617-144944-guards\guards.spectra:3:type GuardPos = Int(0..7);
+tmp\spectra-runs\20260617-144224-robot-grid-up\RobotGridUp.spectra:3:type Coord = Int(0..4);
+
+ succeeded in 1095ms:
+20260619-112632
+
+codex
+I found local syntax examples for bounded integers and initial guarantees. I’m now creating a fresh run directory and saving a minimal `EscapingGuard.spectra`; there are no environment variables or assumptions because the description explicitly says none are defined.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "New-Item -ItemType Directory -Force tmp\\spectra-runs\\20260619-112632-escapingguard\\diagnostics, tmp\\spectra-runs\\20260619-112632-escapingguard\\tests, tmp\\spectra-runs\\20260619-112632-escapingguard\\synthesis | Out-Null" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 542ms:
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260619-112632-escapingguard\EscapingGuard.spectra
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..1cea8933c73ea34c9ee4bce7489ebc7c77515d1d
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+@@ -0,0 +1,9 @@
++spec EscapingGuard
++
++type Coord = Int(0..7);
++
++sys Coord robotX;
++sys Coord robotY;
++
++gar initial_position:
++  ini robotX = 7 & robotY = 0;
+
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..1cea8933c73ea34c9ee4bce7489ebc7c77515d1d
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+@@ -0,0 +1,9 @@
++spec EscapingGuard
++
++type Coord = Int(0..7);
++
++sys Coord robotX;
++sys Coord robotY;
++
++gar initial_position:
++  ini robotX = 7 & robotY = 0;
+
+codex
+The draft is saved. Next I’m running the Spectra CLI wrapper with a 120-second timeout to separate syntax/realizability issues from synthesis issues.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python .agents\\skills\\respect-method-3\\scripts\\run_spectra_cli.py --input tmp\\spectra-runs\\20260619-112632-escapingguard\\EscapingGuard.spectra --timeout 120" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 5147ms:
+{
+  "status": "realizable",
+  "input": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260619-112632-escapingguard\\EscapingGuard.spectra",
+  "jar": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+  "command": [
+    "java",
+    "-jar",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+    "-i",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260619-112632-escapingguard\\EscapingGuard.spectra"
+  ],
+  "exit_code": 0,
+  "synthesize": false,
+  "counter_strategy": false,
+  "counter_strategy_format": "default",
+  "output_dir": null,
+  "timeout_seconds": 120.0,
+  "raw_output": "Using BDD Package: CUDDFactory, Version: CUDD 3.0\nUsing BDD Package: CUDDFactory, Version: CUDD 3.0\nGR1GameImplC.checkRealizability: start\nGR1GameImplC.checkRealizability: end\nNodes num: 71\nNodes table size: 1022\nResult: Specification is realizable\n"
+}
+
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..1cea8933c73ea34c9ee4bce7489ebc7c77515d1d
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+@@ -0,0 +1,9 @@
++spec EscapingGuard
++
++type Coord = Int(0..7);
++
++sys Coord robotX;
++sys Coord robotY;
++
++gar initial_position:
++  ini robotX = 7 & robotY = 0;
+
+codex
+Validation reports the specification is realizable, with no syntax or unrealizability repair needed. I’m synthesizing the controller now and will then build/run the bounded test harness against the stated initial position.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python .agents\\skills\\respect-method-3\\scripts\\run_spectra_cli.py --input tmp\\spectra-runs\\20260619-112632-escapingguard\\EscapingGuard.spectra --synthesize --output-dir tmp\\spectra-runs\\20260619-112632-escapingguard\\synthesis --timeout 120" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 4883ms:
+{
+  "status": "synthesized",
+  "input": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260619-112632-escapingguard\\EscapingGuard.spectra",
+  "jar": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+  "command": [
+    "java",
+    "-jar",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+    "-i",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260619-112632-escapingguard\\EscapingGuard.spectra",
+    "-s",
+    "-o",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260619-112632-escapingguard\\synthesis"
+  ],
+  "exit_code": 0,
+  "synthesize": true,
+  "counter_strategy": false,
+  "counter_strategy_format": "default",
+  "output_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260619-112632-escapingguard\\synthesis",
+  "timeout_seconds": 120.0,
+  "raw_output": "Using BDD Package: CUDDFactory, Version: CUDD 3.0\nUsing BDD Package: CUDDFactory, Version: CUDD 3.0\nGR1GameImplC.checkRealizability: start\nGR1GameImplC.checkRealizability: end\nNodes num: 71\nNodes table size: 1022\nResult: Specification is realizable. Proceeding to synthesis\nCalculating controller info for storage\nGR(1) Calculated fixpoints BDD\nGR(1) Calculated trans BDD\nGR(1) Calculated justices BDD\nResult: Successfully synthesized a just-in-time controller in output folder\n"
+}
+
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..1cea8933c73ea34c9ee4bce7489ebc7c77515d1d
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+@@ -0,0 +1,9 @@
++spec EscapingGuard
++
++type Coord = Int(0..7);
++
++sys Coord robotX;
++sys Coord robotY;
++
++gar initial_position:
++  ini robotX = 7 & robotY = 0;
+
+codex
+Synthesis succeeded and produced a JIT controller. I’m checking the controller-test plan schema before writing the test, so the plan matches the local harness rather than guessing field names.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg -n \"initial_condition|variable_ownership|outputs|controller_dir|expect\" controller_tests .agents\\skills\\respect-method-3 tmp\\spectra-runs -g \"*.json\" -g \"*.java\" -g \"*.md\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-ChildItem tmp\\spectra-runs\\20260619-112632-escapingguard\\synthesis -Recurse | Select-Object FullName" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1611ms:
+.agents\skills\respect-method-3\SKILL.md:100:The test plan's `controller_dir` must point at the synthesized JIT folder, usually `<controller_output_dir>/jit`. The `spec_name` must match the `spec` name in the generated Spectra file.
+.agents\skills\respect-method-3\SKILL.md:104:- Use only the natural-language description, generated Spectra, CLI outputs, synthesized controller metadata, and controller-test outputs as repair evidence.
+.agents\skills\respect-method-3\SKILL.md:120:- Preserve all explicitly described inputs, outputs, initial conditions, safety requirements, liveness requirements, and update rules unless the description itself leaves room for the change.
+.agents\skills\respect-method-3\SKILL.md:129:- `variable_ownership`: use when the description identifies environment-controlled inputs and system-controlled outputs.
+.agents\skills\respect-method-3\SKILL.md:130:- `initial_condition`: use when the description states initial output or state requirements.
+.agents\skills\respect-method-3\SKILL.md:150:- Include top-level `outputs` so the harness reads only system-controlled outputs.
+.agents\skills\respect-method-3\SKILL.md:151:- Include `spectra_file`, `controller_dir`, and `spec_name`.
+.agents\skills\respect-method-3\SKILL.md:161:2. Compare the failed expectation against the natural-language description.
+controller_tests\examples\traffic_e2_plan.json:2:  "controller_dir": "assets/examples/E2_execution/out/jit",
+controller_tests\examples\traffic_e2_plan.json:7:      "kind": "variable_ownership",
+controller_tests\examples\traffic_e2_failing_plan.json:2:  "controller_dir": "assets/examples/E2_execution/out/jit",
+controller_tests\examples\traffic_e2_failing_plan.json:5:  "outputs": ["greenA", "greenB"],
+controller_tests\examples\traffic_e2_failing_plan.json:8:      "kind": "variable_ownership",
+controller_tests\examples\traffic_e2_exploration_plan.json:2:  "controller_dir": "assets/examples/E2_execution/out/jit",
+controller_tests\examples\traffic_e2_exploration_plan.json:5:  "outputs": ["greenA", "greenB"],
+controller_tests\examples\traffic_e2_exploration_plan.json:8:      "kind": "variable_ownership",
+controller_tests\src\main\java\respect\controller_tests\ControllerHarness.java:16:        // The Syntech executor expects the synthesized JIT folder and the original spec name.
+controller_tests\src\main\java\respect\controller_tests\ControllerHarness.java:31:        // Only read outputs requested by the test plan, because env variables are supplied as inputs.
+controller_tests\src\main\java\respect\controller_tests\ControllerHarness.java:32:        Map<String, String> outputs = new LinkedHashMap<>();
+controller_tests\src\main\java\respect\controller_tests\ControllerHarness.java:34:            outputs.put(output, executor.getCurrValue(output));
+controller_tests\src\main\java\respect\controller_tests\ControllerHarness.java:36:        return new StepResult(inputs, outputs);
+controller_tests\README.md:44:  "controller_dir": "path/to/controller/jit",
+controller_tests\README.md:49:      "kind": "variable_ownership",
+controller_tests\README.md:69:- `variable_ownership`: static check over the generated Spectra file.
+controller_tests\README.md:70:- `initial_condition`: checks outputs after `initState`.
+controller_tests\src\main\java\respect\controller_tests\ControllerTraceRunner.java:20:        String controllerDir = TestUtil.requiredString(controller, "controller_dir");
+controller_tests\src\main\java\respect\controller_tests\ControllerTraceRunner.java:22:        Set<String> outputs = new LinkedHashSet<>(TestUtil.stringList(plan.get("outputs"), "outputs"));
+controller_tests\src\main\java\respect\controller_tests\ControllerTraceRunner.java:23:        if (outputs.isEmpty()) {
+controller_tests\src\main\java\respect\controller_tests\ControllerTraceRunner.java:24:            throw new IllegalArgumentException("outputs must contain at least one variable");
+controller_tests\src\main\java\respect\controller_tests\ControllerTraceRunner.java:30:            ControllerHarness harness = new ControllerHarness(controllerDir, specName, outputs);
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:8:    private final Map<String, String> outputs;
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:10:    public StepResult(Map<String, String> inputs, Map<String, String> outputs) {
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:12:        this.outputs = new LinkedHashMap<>(outputs);
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:19:    public Map<String, String> outputs() {
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:20:        return outputs;
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:26:        combined.putAll(outputs);
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:33:        value.put("outputs", outputs);
+controller_tests\src\main\java\respect\controller_tests\Json.java:118:                throw error("Unexpected trailing input");
+controller_tests\src\main\java\respect\controller_tests\Json.java:126:                throw error("Unexpected end of input");
+controller_tests\src\main\java\respect\controller_tests\Json.java:154:            expect('{');
+controller_tests\src\main\java\respect\controller_tests\Json.java:164:                expect(':');
+controller_tests\src\main\java\respect\controller_tests\Json.java:171:                expect(',');
+controller_tests\src\main\java\respect\controller_tests\Json.java:176:            expect('[');
+controller_tests\src\main\java\respect\controller_tests\Json.java:190:                expect(',');
+controller_tests\src\main\java\respect\controller_tests\Json.java:195:            expect('"');
+controller_tests\src\main\java\respect\controller_tests\Json.java:269:        private boolean peek(char expected) {
+controller_tests\src\main\java\respect\controller_tests\Json.java:270:            return pos < text.length() && text.charAt(pos) == expected;
+controller_tests\src\main\java\respect\controller_tests\Json.java:273:        private void expect(char expected) {
+controller_tests\src\main\java\respect\controller_tests\Json.java:275:            if (!peek(expected)) {
+controller_tests\src\main\java\respect\controller_tests\Json.java:276:                throw error("Expected '" + expected + "'");
+controller_tests\src\main\java\respect\controller_tests\TestFactory.java:18:            case "variable_ownership":
+controller_tests\src\main\java\respect\controller_tests\TestFactory.java:20:            case "initial_condition":
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:22:        String controllerDir = TestUtil.stringValue(plan.get("controller_dir"), null);
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:25:        Set<String> outputs = new LinkedHashSet<>();
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:27:        // Prefer explicit output metadata; it prevents reading env variables as controller outputs.
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:28:        Object explicitOutputs = plan.get("outputs");
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:30:            outputs.addAll(TestUtil.stringList(explicitOutputs, "outputs"));
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:37:                    outputs.addAll(TestUtil.stringMap(test.get("sys")).keySet());
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:41:        // Fallback for small hand-written plans without top-level outputs or variable_ownership tests.
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:42:        if (outputs.isEmpty() && tests instanceof Iterable<?>) {
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:46:                    outputs.addAll(TestUtil.stringMap(test.get("expected")).keySet());
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:47:                    outputs.addAll(TestUtil.stringMap(test.get("forbidden")).keySet());
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:48:                    outputs.addAll(TestUtil.stringMap(test.get("then")).keySet());
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:49:                    outputs.addAll(TestUtil.stringMap(test.get("eventually")).keySet());
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:53:        return new TestContext(controllerDir, specName, spectraFile, outputs);
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:58:            throw new IllegalArgumentException("controller_dir and spec_name are required for controller tests");
+controller_tests\src\main\java\respect\controller_tests\TestUtil.java:129:    public static boolean matches(Map<String, String> actual, Map<String, String> expected) {
+controller_tests\src\main\java\respect\controller_tests\TestUtil.java:130:        for (Map.Entry<String, String> entry : expected.entrySet()) {
+controller_tests\src\main\java\respect\controller_tests\tests\VariableOwnershipTest.java:20:        this.name = TestUtil.optionalName(config, "variable_ownership");
+controller_tests\src\main\java\respect\controller_tests\tests\VariableOwnershipTest.java:28:            return TestResult.fail(name, "variable_ownership", "spectra_file is required", null);
+controller_tests\src\main\java\respect\controller_tests\tests\VariableOwnershipTest.java:43:            return TestResult.fail(name, "variable_ownership", "Missing or wrong ownership: " + missing, null);
+controller_tests\src\main\java\respect\controller_tests\tests\VariableOwnershipTest.java:45:        return TestResult.pass(name, "variable_ownership");
+controller_tests\src\main\java\respect\controller_tests\tests\EventuallyResponseTest.java:70:                    "Trace ended before expected response occurred at trace " + traceIndex,
+controller_tests\src\main\java\respect\controller_tests\tests\InitialConditionTest.java:16:    private final Map<String, String> expected;
+controller_tests\src\main\java\respect\controller_tests\tests\InitialConditionTest.java:19:        this.name = TestUtil.optionalName(config, "initial_condition");
+controller_tests\src\main\java\respect\controller_tests\tests\InitialConditionTest.java:21:        this.expected = TestUtil.stringMap(config.get("expected"));
+controller_tests\src\main\java\respect\controller_tests\tests\InitialConditionTest.java:28:        if (!TestUtil.matches(step.combined(), expected)) {
+controller_tests\src\main\java\respect\controller_tests\tests\InitialConditionTest.java:29:            return TestResult.fail(name, "initial_condition", "Initial condition did not match expected valuation", List.of(step.toJson()));
+controller_tests\src\main\java\respect\controller_tests\tests\InitialConditionTest.java:31:        return TestResult.pass(name, "initial_condition");
+tmp\spectra-runs\20260616-194701-minepump\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_highwater_pump_next","kind":"eventually_response","passed":true},{"name":"no_methane_pump_off_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260616-194701-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260616-194701-minepump/synthesis/jit",
+tmp\spectra-runs\20260616-194701-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260616-194701-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-132510-always-outputs\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_input_output_ownership","kind":"variable_ownership","passed":true},{"name":"output1_is_always_true","kind":"always_implication","passed":true},{"name":"output2_is_always_true","kind":"always_implication","passed":true}]}
+tmp\spectra-runs\20260617-132114-catching-intruder\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_variable_ownership","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260619-traffic-lights-method3\tests\test-results-1.json:1:{"status":"passed","passed":7,"failed":0,"total":7,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"initial_lights_off","kind":"initial_condition","passed":true},{"name":"never_both_green","kind":"exclusion","passed":true},{"name":"no_car_a_no_green_a","kind":"always_implication","passed":true},{"name":"no_car_b_no_green_b","kind":"always_implication","passed":true},{"name":"sustained_car_a_eventually_green_a","kind":"eventually_response","passed":true},{"name":"sustained_car_b_eventually_green_b","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-131909-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_true_pump_next","kind":"eventually_response","passed":true},{"name":"methane_false_pump_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-133241-patrolling\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_system_coordinates","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260619-traffic-lights-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260619-traffic-lights-method3/synthesis/jit",
+tmp\spectra-runs\20260619-traffic-lights-method3\tests\test-plan-1.json:5:  "outputs": ["greenA", "greenB"],
+tmp\spectra-runs\20260619-traffic-lights-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260619-traffic-lights-method3\tests\test-plan-1.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260619-traffic-lights-method3\tests\test-plan-1.json:17:      "expected": {"greenA": "false", "greenB": "false"}
+tmp\spectra-runs\20260617-132330-deliveries\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"robot coordinates are system controlled","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260617-132838-traffic-lights\tests\test-results-1.json:1:{"status":"passed","passed":2,"failed":0,"total":2,"results":[{"name":"declared_control_ownership","kind":"variable_ownership","passed":true},{"name":"never_both_green","kind":"exclusion","passed":true}]}
+tmp\spectra-runs\20260617-132114-catching-intruder\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-132114-catching-intruder/synthesis/jit",
+tmp\spectra-runs\20260617-132114-catching-intruder\tests\test-plan-1.json:5:  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
+tmp\spectra-runs\20260617-132114-catching-intruder\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-132114-catching-intruder\tests\test-plan-1.json:9:      "name": "declared_variable_ownership",
+tmp\spectra-runs\20260617-132510-always-outputs\tests\test-plan-1.json:2:  "spectra_file": "tmp/spectra-runs/20260617-132510-always-outputs/always_outputs.spectra",
+tmp\spectra-runs\20260617-132510-always-outputs\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260617-132510-always-outputs/controller/jit",
+tmp\spectra-runs\20260617-132510-always-outputs\tests\test-plan-1.json:5:  "outputs": ["output1", "output2"],
+tmp\spectra-runs\20260617-132510-always-outputs\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-132330-deliveries\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260617-132330-deliveries/synthesis/jit",
+tmp\spectra-runs\20260617-132330-deliveries\tests\test-plan-1.json:5:  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
+tmp\spectra-runs\20260617-132330-deliveries\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-131909-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-131909-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260617-131909-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-131909-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-133241-patrolling\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-133241-patrolling/controller/jit",
+tmp\spectra-runs\20260617-133241-patrolling\tests\test-plan-1.json:5:  "outputs": ["robotX", "robotY"],
+tmp\spectra-runs\20260617-133241-patrolling\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-132838-traffic-lights\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260617-132838-traffic-lights/controller/jit",
+tmp\spectra-runs\20260617-132838-traffic-lights\tests\test-plan-1.json:5:  "outputs": ["greenA", "greenB"],
+tmp\spectra-runs\20260617-132838-traffic-lights\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260619-101520-minepump\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"high_water_without_methane_turns_pump_on_within_one_step","kind":"eventually_response","passed":true},{"name":"methane_turns_pump_off_within_one_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-131617-traffic-e2-method3\tests\test-results-2.json:1:{"status":"passed","passed":4,"failed":0,"total":4,"results":[{"name":"declared_inputs_and_outputs","kind":"variable_ownership","passed":true},{"name":"never_both_green_exhaustive","kind":"exclusion","passed":true},{"name":"green_a_occurs_bounded","kind":"eventually_response","passed":true},{"name":"green_b_occurs_bounded","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260616-trafficl4-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"never_both_green_exhaustive","kind":"exclusion","passed":true},{"name":"car_a_waiting_gets_green_within_4","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-131617-traffic-e2-method3\tests\test-results-1.json:1:{"status":"failed","passed":3,"failed":1,"total":4,"results":[{"name":"declared_inputs_and_outputs","kind":"variable_ownership","passed":true},{"name":"never_both_green_exhaustive","kind":"exclusion","passed":true},{"name":"green_a_occurs_bounded","kind":"eventually_response","passed":false,"reason":"Trace ended before expected response occurred at trace 0","trace":[{"inputs":{"carA":"true","carB":"true"},"outputs":{"greenA":"true","greenB":"false"}},{"inputs":{"carA":"true","carB":"true"},"outputs":{"greenA":"false","greenB":"true"}},{"inputs":{"carA":"true","carB":"true"},"outputs":{"greenA":"true","greenB":"false"}},{"inputs":{"carA":"true","carB":"true"},"outputs":{"greenA":"false","greenB":"true"}},{"inputs":{"carA":"true","carB":"true"},"outputs":{"greenA":"true","greenB":"false"}},{"inputs":{"carA":"true","carB":"true"},"outputs":{"greenA":"false","greenB":"true"}}]},{"name":"green_b_occurs_bounded","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-142905-traffic-lights\tests\test-results-1.json:1:{"status":"passed","passed":4,"failed":0,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"never_both_green","kind":"exclusion","passed":true},{"name":"car_a_implies_green_a","kind":"always_implication","passed":true},{"name":"car_b_without_car_a_implies_green_b","kind":"always_implication","passed":true}]}
+tmp\spectra-runs\20260619-101520-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260619-101520-minepump/controller/jit",
+tmp\spectra-runs\20260619-101520-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260619-101520-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-131617-traffic-e2-method3\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260617-131617-traffic-e2-method3/synthesis/jit",
+tmp\spectra-runs\20260617-131617-traffic-e2-method3\tests\test-plan-2.json:5:  "outputs": ["greenA", "greenB"],
+tmp\spectra-runs\20260617-131617-traffic-e2-method3\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-131617-traffic-e2-method3\tests\test-plan-2.json:9:      "name": "declared_inputs_and_outputs",
+tmp\spectra-runs\20260616-trafficl4-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260616-trafficl4-method3/out/jit",
+tmp\spectra-runs\20260616-trafficl4-method3\tests\test-plan-1.json:5:  "outputs": ["greenA", "greenB"],
+tmp\spectra-runs\20260616-trafficl4-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-134354-minepump\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_true_pump_off_bounded","kind":"eventually_response","passed":true},{"name":"methane_false_pump_off_bounded","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-132659-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_true_pump_next","kind":"eventually_response","passed":true},{"name":"methane_false_pump_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-144944-guards\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"guards_are_environment_controlled","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260617-132659-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-132659-minepump-method3/controller/jit",
+tmp\spectra-runs\20260617-132659-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-132659-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-131344-patrolling\tests\test-results-2.json:1:{"status":"passed","passed":2,"failed":0,"total":2,"results":[{"name":"declared_robot_coordinates_as_system_outputs","kind":"variable_ownership","passed":true},{"name":"robotX_is_always_1_on_unconstrained_trace","kind":"always_implication","passed":true}]}
+tmp\spectra-runs\20260618-134354-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-134354-minepump/out/jit",
+tmp\spectra-runs\20260618-134354-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-134354-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-131617-traffic-e2-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-131617-traffic-e2-method3/synthesis/jit",
+tmp\spectra-runs\20260617-131617-traffic-e2-method3\tests\test-plan-1.json:5:  "outputs": ["greenA", "greenB"],
+tmp\spectra-runs\20260617-131617-traffic-e2-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-131617-traffic-e2-method3\tests\test-plan-1.json:9:      "name": "declared_inputs_and_outputs",
+tmp\spectra-runs\20260617-131344-patrolling\tests\test-results-1.json:1:{"status":"failed","passed":1,"failed":1,"total":2,"results":[{"name":"declared_robot_coordinates_as_system_outputs","kind":"variable_ownership","passed":false,"reason":"Missing or wrong ownership: [sys robotX, sys robotY]"},{"name":"robotX_is_always_1_on_unconstrained_trace","kind":"always_implication","passed":true}]}
+tmp\spectra-runs\20260617-144944-guards\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-144944-guards/synthesis/jit",
+tmp\spectra-runs\20260617-144944-guards\tests\test-plan-1.json:5:  "outputs": [],
+tmp\spectra-runs\20260617-144944-guards\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-131344-patrolling\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260617-131344-patrolling/synthesis-repaired-1/jit",
+tmp\spectra-runs\20260617-131344-patrolling\tests\test-plan-2.json:5:  "outputs": ["robotX", "robotY"],
+tmp\spectra-runs\20260617-131344-patrolling\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-131344-patrolling\tests\test-plan-2.json:9:      "name": "declared_robot_coordinates_as_system_outputs",
+tmp\spectra-runs\20260617-153414-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_present_pump_on_next","kind":"eventually_response","passed":true},{"name":"methane_absent_pump_off_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-131344-patrolling\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-131344-patrolling/synthesis/jit",
+tmp\spectra-runs\20260617-131344-patrolling\tests\test-plan-1.json:5:  "outputs": ["robotX", "robotY"],
+tmp\spectra-runs\20260617-131344-patrolling\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-131344-patrolling\tests\test-plan-1.json:9:      "name": "declared_robot_coordinates_as_system_outputs",
+tmp\spectra-runs\20260617-142905-traffic-lights\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-142905-traffic-lights/synthesis/jit",
+tmp\spectra-runs\20260617-142905-traffic-lights\tests\test-plan-1.json:5:  "outputs": ["greenA", "greenB"],
+tmp\spectra-runs\20260617-142905-traffic-lights\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-153414-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-153414-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260617-153414-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-153414-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260616-193056-minepump\tests\test-results-3.json:1:{"status":"passed","passed":4,"failed":0,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"initial_pump_off","kind":"initial_condition","passed":true},{"name":"no_methane_never_pump","kind":"exclusion","passed":true},{"name":"pump_never_activated_assumption_respecting_trace","kind":"exclusion","passed":true}]}
+tmp\spectra-runs\20260619-101038-escapingguard\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"robot_coordinates_are_system_controlled","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260617-135541-catching-intruder\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_position_ownership","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260616-193056-minepump\tests\test-results-1.json:1:{"status":"failed","passed":3,"failed":1,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"initial_pump_off","kind":"initial_condition","passed":true},{"name":"no_methane_never_pump","kind":"exclusion","passed":true},{"name":"assumed_pump_never_activated","kind":"exclusion","passed":false,"reason":"Forbidden valuation reached at trace 1, step 2","trace":[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"true"},"outputs":{"pump":"true"}}]}]}
+tmp\spectra-runs\20260619-101038-escapingguard\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260619-101038-escapingguard/synthesis/jit",
+tmp\spectra-runs\20260619-101038-escapingguard\tests\test-plan-1.json:5:  "outputs": ["robotX", "robotY"],
+tmp\spectra-runs\20260619-101038-escapingguard\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-135541-catching-intruder\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-135541-catching-intruder/controller/jit",
+tmp\spectra-runs\20260617-135541-catching-intruder\tests\test-plan-1.json:5:  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
+tmp\spectra-runs\20260617-135541-catching-intruder\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-151158-minepump-method3\tests\test-plan-2.json:3:  "controller_dir": "tmp/spectra-runs/20260617-151158-minepump-method3/synthesis-2/jit",
+tmp\spectra-runs\20260617-151158-minepump-method3\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-151158-minepump-method3\tests\test-plan-2.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-151158-minepump-method3\tests\test-results-3.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"environment_and_system_ownership","kind":"variable_ownership","passed":true},{"name":"methane_with_high_water_causes_pump_within_next_step","kind":"eventually_response","passed":true},{"name":"absence_of_methane_deactivates_pump_within_next_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-3.json:2:  "controller_dir": "tmp/spectra-runs/20260616-193056-minepump/controller-repaired-1/jit",
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-3.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-3.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-3.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-3.json:17:      "expected": {"pump": "false"}
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260616-193056-minepump/controller-repaired-1/jit",
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-2.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-2.json:17:      "expected": {"pump": "false"}
+tmp\spectra-runs\20260617-151158-minepump-method3\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260617-151158-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260617-151158-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-151158-minepump-method3\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-151158-minepump-method3\tests\test-results-2.json:1:{"status":"failed","passed":2,"failed":1,"total":3,"results":[{"name":"environment_and_system_ownership","kind":"variable_ownership","passed":true},{"name":"methane_with_high_water_causes_pump_within_next_step","kind":"eventually_response","passed":true},{"name":"absence_of_methane_deactivates_pump_within_next_step","kind":"eventually_response","passed":false,"reason":"Trace ended before expected response occurred at trace 9","trace":[{"inputs":{"methane":"false","highwater":"false"},"outputs":{"pump":"false"}},{"inputs":{"methane":"true","highwater":"false"},"outputs":{"pump":"false"}},{"inputs":{"methane":"false","highwater":"true"},"outputs":{"pump":"true"}}]}]}
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-results-2.json:1:{"status":"passed","passed":2,"failed":0,"total":2,"results":[{"name":"declared_system_outputs","kind":"variable_ownership","passed":true},{"name":"initial_position_is_7_0","kind":"initial_condition","passed":true}]}
+tmp\spectra-runs\20260617-142700-minepump\tests\test-results-1.json:1:{"status":"passed","passed":4,"failed":0,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"initial_safe_pump_off","kind":"initial_condition","passed":true},{"name":"highwater_without_methane_turns_pump_on_next","kind":"eventually_response","passed":true},{"name":"methane_turns_pump_off_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-151158-minepump-method3\tests\test-plan-3.json:3:  "controller_dir": "tmp/spectra-runs/20260617-151158-minepump-method3/synthesis-2/jit",
+tmp\spectra-runs\20260617-151158-minepump-method3\tests\test-plan-3.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-151158-minepump-method3\tests\test-plan-3.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260616-193056-minepump/controller/jit",
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-1.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260616-193056-minepump\tests\test-plan-1.json:17:      "expected": {"pump": "false"}
+tmp\spectra-runs\20260617-135326-escapingguard\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_array_ownership","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260618-134140-minepump\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declares_environment_and_system_variables","kind":"variable_ownership","passed":true},{"name":"methane_with_highwater_gets_pump_within_one_step","kind":"eventually_response","passed":true},{"name":"no_methane_gets_pump_off_within_one_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-results-1.json:1:{"status":"failed","passed":1,"failed":1,"total":2,"results":[{"name":"declared_system_outputs","kind":"variable_ownership","passed":false,"reason":"Missing or wrong ownership: [sys robotX, sys robotY]"},{"name":"initial_position_is_7_0","kind":"initial_condition","passed":true}]}
+tmp\spectra-runs\20260617-142700-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-142700-minepump/synthesis/jit",
+tmp\spectra-runs\20260617-142700-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-142700-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-142700-minepump\tests\test-plan-1.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260617-142700-minepump\tests\test-plan-1.json:19:      "expected": {"pump": "false"}
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260616-robot-initial-position/controller/jit",
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-plan-2.json:5:  "outputs": ["robotX", "robotY"],
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-plan-2.json:9:      "name": "declared_system_outputs",
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-plan-2.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-plan-2.json:17:      "expected": {
+tmp\spectra-runs\20260617-160450-minepump\tests\test-results-2.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_requires_pump_next_step_bounded","kind":"eventually_response","passed":true},{"name":"high_water_excludes_pump_without_prior_methane_obligation","kind":"exclusion","passed":true}]}
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260616-robot-initial-position/controller/jit",
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-plan-1.json:5:  "outputs": ["robotX", "robotY"],
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-plan-1.json:9:      "name": "declared_system_outputs",
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-plan-1.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260616-robot-initial-position\tests\test-plan-1.json:17:      "expected": {
+tmp\spectra-runs\20260618-134140-minepump\tests\test-plan-1.json:3:  "controller_dir": "C:/Users/mauri/OneDrive/Desktop/Repos/respect/tmp/spectra-runs/20260618-134140-minepump/controller/jit",
+tmp\spectra-runs\20260618-134140-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-134140-minepump\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-135326-escapingguard\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-135326-escapingguard/synthesis/jit",
+tmp\spectra-runs\20260617-135326-escapingguard\tests\test-plan-1.json:5:  "outputs": ["robot"],
+tmp\spectra-runs\20260617-135326-escapingguard\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260619-100634-robot-grid-boundary\tests\test-results-2.json:1:{"status":"passed","passed":5,"failed":0,"total":5,"results":[{"name":"declared_ownership","kind":"variable_ownership","passed":true},{"name":"left_edge_no_left","kind":"exclusion","passed":true},{"name":"right_edge_no_right","kind":"exclusion","passed":true},{"name":"top_edge_no_up","kind":"exclusion","passed":true},{"name":"bottom_edge_no_down","kind":"exclusion","passed":true}]}
+tmp\spectra-runs\20260617-153120-trafficA3b\tests\test-results-2.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"never_both_green_when_both_roads_have_cars","kind":"exclusion","passed":true},{"name":"never_both_green_no_cars_then_both_cars","kind":"exclusion","passed":true}]}
+tmp\spectra-runs\20260617-160450-minepump\tests\test-results-1.json:1:{"status":"failed","passed":2,"failed":1,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_requires_pump_next_step_bounded","kind":"eventually_response","passed":true},{"name":"high_water_excludes_pump","kind":"exclusion","passed":false,"reason":"Forbidden valuation reached at trace 6, step 3","trace":[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"true"},"outputs":{"pump":"true"}},{"inputs":{"highWater":"true","methane":"false"},"outputs":{"pump":"true"}}]}]}
+tmp\spectra-runs\20260619-100634-robot-grid-boundary\tests\test-results-1.json:1:{"status":"failed","passed":4,"failed":1,"total":5,"results":[{"name":"declared_ownership","kind":"variable_ownership","passed":false,"reason":"Missing or wrong ownership: [env robX, env robY, sys move]"},{"name":"left_edge_no_left","kind":"exclusion","passed":true},{"name":"right_edge_no_right","kind":"exclusion","passed":true},{"name":"top_edge_no_up","kind":"exclusion","passed":true},{"name":"bottom_edge_no_down","kind":"exclusion","passed":true}]}
+tmp\spectra-runs\20260617-160450-minepump\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260617-160450-minepump/out/jit",
+tmp\spectra-runs\20260617-160450-minepump\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-160450-minepump\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-140509-a-implies-b\tests\test-results-1.json:1:{"status":"passed","passed":2,"failed":0,"total":2,"results":[{"name":"a_env_b_sys","kind":"variable_ownership","passed":true},{"name":"a_true_implies_b_true","kind":"always_implication","passed":true}]}
+tmp\spectra-runs\20260617-160450-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-160450-minepump/out/jit",
+tmp\spectra-runs\20260617-160450-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-160450-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-153120-trafficA3b\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260617-153120-trafficA3b/synthesis/jit",
+tmp\spectra-runs\20260617-153120-trafficA3b\tests\test-plan-2.json:5:  "outputs": ["greenA", "greenB", "emergency"],
+tmp\spectra-runs\20260617-153120-trafficA3b\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260619-100634-robot-grid-boundary\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260619-100634-robot-grid-boundary/controller-2/jit",
+tmp\spectra-runs\20260619-100634-robot-grid-boundary\tests\test-plan-2.json:5:  "outputs": ["move"],
+tmp\spectra-runs\20260619-100634-robot-grid-boundary\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260619-100634-robot-grid-boundary\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260619-100634-robot-grid-boundary/controller/jit",
+tmp\spectra-runs\20260619-100634-robot-grid-boundary\tests\test-plan-1.json:5:  "outputs": ["move"],
+tmp\spectra-runs\20260619-100634-robot-grid-boundary\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-144224-robot-grid-up\tests\test-results-2.json:1:{"status":"passed","passed":6,"failed":0,"total":6,"results":[{"name":"ownership_matches_description","kind":"variable_ownership","passed":true},{"name":"initial_robot_position_zero_zero","kind":"initial_condition","passed":true},{"name":"left_edge_never_moves_left","kind":"exclusion","passed":true},{"name":"right_edge_never_moves_right","kind":"exclusion","passed":true},{"name":"top_edge_never_moves_up","kind":"exclusion","passed":true},{"name":"bottom_edge_never_moves_down","kind":"exclusion","passed":true}]}
+tmp\spectra-runs\20260617-153120-trafficA3b\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-153120-trafficA3b/synthesis/jit",
+tmp\spectra-runs\20260617-153120-trafficA3b\tests\test-plan-1.json:5:  "outputs": ["greenA", "greenB", "emergency"],
+tmp\spectra-runs\20260617-153120-trafficA3b\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-140509-a-implies-b\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260617-140509-a-implies-b/controller/jit",
+tmp\spectra-runs\20260617-140509-a-implies-b\tests\test-plan-1.json:5:  "outputs": ["b"],
+tmp\spectra-runs\20260617-140509-a-implies-b\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260616-192906-botv0\tests\test-results-1.json:1:{"status":"passed","passed":2,"failed":0,"total":2,"results":[{"name":"declared_motor_outputs","kind":"variable_ownership","passed":true},{"name":"initial_motors_stopped","kind":"initial_condition","passed":true}]}
+tmp\spectra-runs\20260617-144224-robot-grid-up\tests\test-plan-2.json:3:  "controller_dir": "tmp/spectra-runs/20260617-144224-robot-grid-up/controller/jit",
+tmp\spectra-runs\20260617-144224-robot-grid-up\tests\test-plan-2.json:5:  "outputs": ["move"],
+tmp\spectra-runs\20260617-144224-robot-grid-up\tests\test-plan-2.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-144224-robot-grid-up\tests\test-plan-2.json:15:      "kind": "initial_condition",
+tmp\spectra-runs\20260617-144224-robot-grid-up\tests\test-plan-2.json:20:      "expected": {
+tmp\spectra-runs\20260617-144224-robot-grid-up\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260617-144224-robot-grid-up/controller/jit",
+tmp\spectra-runs\20260617-144224-robot-grid-up\tests\test-plan-1.json:5:  "outputs": ["move"],
+tmp\spectra-runs\20260617-144224-robot-grid-up\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-144224-robot-grid-up\tests\test-plan-1.json:15:      "kind": "initial_condition",
+tmp\spectra-runs\20260617-144224-robot-grid-up\tests\test-plan-1.json:20:      "expected": {
+tmp\spectra-runs\20260617-140025-catchingintruder\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_coordinate_outputs","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260616-192906-botv0\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260616-192906-botv0/synthesis/jit",
+tmp\spectra-runs\20260616-192906-botv0\tests\test-plan-1.json:5:  "outputs": ["leftMotor", "rightMotor"],
+tmp\spectra-runs\20260616-192906-botv0\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260616-192906-botv0\tests\test-plan-1.json:9:      "name": "declared_motor_outputs",
+tmp\spectra-runs\20260616-192906-botv0\tests\test-plan-1.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260616-192906-botv0\tests\test-plan-1.json:17:      "expected": {
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\tests\test-results-2.json:1:{"status":"passed","passed":9,"failed":0,"total":9,"results":[{"name":"declared_variable_ownership","kind":"variable_ownership","passed":true},{"name":"robot0_y1_not_x2","kind":"exclusion","passed":true},{"name":"robot0_y1_not_x3","kind":"exclusion","passed":true},{"name":"robot0_y1_not_x4","kind":"exclusion","passed":true},{"name":"robot0_y1_not_x5","kind":"exclusion","passed":true},{"name":"robot1_y1_not_x2","kind":"exclusion","passed":true},{"name":"robot1_y1_not_x3","kind":"exclusion","passed":true},{"name":"robot1_y1_not_x4","kind":"exclusion","passed":true},{"name":"robot1_y1_not_x5","kind":"exclusion","passed":true}]}
+tmp\spectra-runs\20260617-140025-catchingintruder\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-140025-catchingintruder/synthesis/jit",
+tmp\spectra-runs\20260617-140025-catchingintruder\tests\test-plan-1.json:5:  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
+tmp\spectra-runs\20260617-140025-catchingintruder\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-140025-catchingintruder\tests\test-plan-1.json:9:      "name": "declared_coordinate_outputs",
+tmp\spectra-runs\20260617-135100-escapingguard\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_interface_ownership","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260617-135100-escapingguard\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-135100-escapingguard/synthesis/jit",
+tmp\spectra-runs\20260617-135100-escapingguard\tests\test-plan-1.json:5:  "outputs": ["robot"],
+tmp\spectra-runs\20260617-135100-escapingguard\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-2.json:3:  "controller_dir": "tmp/spectra-runs/20260617-144516-minepump/controller/jit",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-2.json:8:      "name": "environment_and_system_variable_ownership",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-2.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260617-144516-minepump/controller/jit",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-1.json:8:      "name": "environment_and_system_variable_ownership",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\tests\test-results-1.json:1:{"status":"failed","passed":8,"failed":1,"total":9,"results":[{"name":"declared_variable_ownership","kind":"variable_ownership","passed":false,"reason":"Missing or wrong ownership: [env intruderX, env intruderY, sys robotX0, sys robotY0, sys robotX1, sys robotY1]"},{"name":"robot0_y1_not_x2","kind":"exclusion","passed":true},{"name":"robot0_y1_not_x3","kind":"exclusion","passed":true},{"name":"robot0_y1_not_x4","kind":"exclusion","passed":true},{"name":"robot0_y1_not_x5","kind":"exclusion","passed":true},{"name":"robot1_y1_not_x2","kind":"exclusion","passed":true},{"name":"robot1_y1_not_x3","kind":"exclusion","passed":true},{"name":"robot1_y1_not_x4","kind":"exclusion","passed":true},{"name":"robot1_y1_not_x5","kind":"exclusion","passed":true}]}
+tmp\spectra-runs\20260617-152726-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_with_high_water_turns_pump_on_next_step","kind":"eventually_response","passed":true},{"name":"no_methane_turns_pump_off_next_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260617-151948-intruder-robot-y1/out-2/jit",
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\tests\test-plan-2.json:5:  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\tests\test-plan-2.json:9:      "name": "declared_variable_ownership",
+tmp\spectra-runs\20260617-143339-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-143339-minepump/synthesis/jit",
+tmp\spectra-runs\20260617-143339-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-143339-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-143339-minepump\tests\test-plan-1.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260617-143339-minepump\tests\test-plan-1.json:17:      "expected": {"pump": "false"}
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-4.json:3:  "controller_dir": "tmp/spectra-runs/20260617-144516-minepump/controller/jit",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-4.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-4.json:8:      "name": "environment_and_system_variable_ownership",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-4.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-151948-intruder-robot-y1/out/jit",
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\tests\test-plan-1.json:5:  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-151948-intruder-robot-y1\tests\test-plan-1.json:9:      "name": "declared_variable_ownership",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-3.json:3:  "controller_dir": "tmp/spectra-runs/20260617-144516-minepump/controller/jit",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-3.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-3.json:8:      "name": "environment_and_system_variable_ownership",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-3.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-152726-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-152726-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260617-152726-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-152726-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260619-095949-trafficl1-method3\tests\test-results-2.json:1:{"status":"passed","passed":4,"failed":0,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"initial_lights_off","kind":"initial_condition","passed":true},{"name":"never_both_green","kind":"exclusion","passed":true},{"name":"green_a_bounded_evidence","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-5.json:3:  "controller_dir": "tmp/spectra-runs/20260617-144516-minepump/controller/jit",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-5.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-5.json:8:      "name": "environment_and_system_variable_ownership",
+tmp\spectra-runs\20260617-144516-minepump\tests\test-plan-5.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-143339-minepump\tests\test-results-1.json:1:{"status":"passed","passed":4,"failed":0,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"pump_initially_off","kind":"initial_condition","passed":true},{"name":"highwater_without_methane_turns_pump_on_next_step","kind":"eventually_response","passed":true},{"name":"methane_turns_pump_off_next_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260619-095949-trafficl1-method3\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260619-095949-trafficl1-method3/controller/jit",
+tmp\spectra-runs\20260619-095949-trafficl1-method3\tests\test-plan-2.json:5:  "outputs": ["greenA", "greenB"],
+tmp\spectra-runs\20260619-095949-trafficl1-method3\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260619-095949-trafficl1-method3\tests\test-plan-2.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260619-095949-trafficl1-method3\tests\test-plan-2.json:20:      "expected": {
+tmp\spectra-runs\20260617-152943-minepump\tests\test-results-1.json:1:{"status":"passed","passed":4,"failed":0,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"pump_initially_off","kind":"initial_condition","passed":true},{"name":"methane_and_high_water_turns_pump_on_next","kind":"eventually_response","passed":true},{"name":"no_methane_turns_pump_off_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260619-095949-trafficl1-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260619-095949-trafficl1-method3/controller/jit",
+tmp\spectra-runs\20260619-095949-trafficl1-method3\tests\test-plan-1.json:5:  "outputs": ["greenA", "greenB"],
+tmp\spectra-runs\20260619-095949-trafficl1-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260619-095949-trafficl1-method3\tests\test-plan-1.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260619-095949-trafficl1-method3\tests\test-plan-1.json:20:      "expected": {
+tmp\spectra-runs\20260617-144516-minepump\tests\test-results-2.json:1:{"status":"failed","passed":2,"failed":1,"total":3,"results":[{"name":"environment_and_system_variable_ownership","kind":"variable_ownership","passed":true},{"name":"methane_with_high_water_activates_pump","kind":"always_implication","passed":true},{"name":"no_methane_deactivates_pump","kind":"always_implication","passed":false,"reason":"Implication violated at trace 0, step 1","trace":[{"inputs":{"highWater":"true","methane":"true"},"outputs":{"pump":"true"}},{"inputs":{"highWater":"true","methane":"false"},"outputs":{"pump":"true"}}]}]}
+tmp\spectra-runs\20260617-134841-escapingguard\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"robot_coordinates_are_system_outputs","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260617-134841-escapingguard\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-134841-escapingguard/synthesis/jit",
+tmp\spectra-runs\20260617-134841-escapingguard\tests\test-plan-1.json:5:  "outputs": ["robotX", "robotY"],
+tmp\spectra-runs\20260617-134841-escapingguard\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-134841-escapingguard\tests\test-plan-1.json:9:      "name": "robot_coordinates_are_system_outputs",
+tmp\spectra-runs\20260617-152943-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-152943-minepump/out/jit",
+tmp\spectra-runs\20260617-152943-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-152943-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-152943-minepump\tests\test-plan-1.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260617-152943-minepump\tests\test-plan-1.json:17:      "expected": {"pump": "false"}
+tmp\spectra-runs\20260617-143125-escapingguard\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-143125-escapingguard/controller/jit",
+tmp\spectra-runs\20260617-143125-escapingguard\tests\test-plan-1.json:5:  "outputs": ["robotX", "robotY"],
+tmp\spectra-runs\20260617-143125-escapingguard\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-143125-escapingguard\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_robot_coordinates","kind":"variable_ownership","passed":true},{"name":"never_touch_obstacle_2_6","kind":"exclusion","passed":true},{"name":"never_touch_obstacle_3_6","kind":"exclusion","passed":true}]}
+tmp\spectra-runs\20260617-151738-grid-robots-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-151738-grid-robots-method3/synthesis/jit",
+tmp\spectra-runs\20260617-151738-grid-robots-method3\tests\test-plan-1.json:5:  "outputs": ["robot1X", "robot1Y", "robot2X", "robot2Y"],
+tmp\spectra-runs\20260617-151738-grid-robots-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-151738-grid-robots-method3\tests\test-plan-1.json:9:      "name": "declared_variable_ownership",
+tmp\spectra-runs\20260617-151738-grid-robots-method3\tests\test-plan-1.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260617-151738-grid-robots-method3\tests\test-plan-1.json:17:      "expected": {
+tmp\spectra-runs\20260617-144516-minepump\tests\test-results-4.json:1:{"status":"failed","passed":2,"failed":1,"total":3,"results":[{"name":"environment_and_system_variable_ownership","kind":"variable_ownership","passed":true},{"name":"initial_methane_with_high_water_can_activate_pump","kind":"eventually_response","passed":false,"reason":"Trace ended before expected response occurred at trace 0","trace":[{"inputs":{"highWater":"true","methane":"true"},"outputs":{"pump":"false"}}]},{"name":"no_methane_keeps_pump_off_when_water_is_low","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-151536-catchingintruder\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-151536-catchingintruder/synthesis/jit",
+tmp\spectra-runs\20260617-151536-catchingintruder\tests\test-plan-1.json:5:  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
+tmp\spectra-runs\20260617-151536-catchingintruder\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-152420-minepump-method3\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260617-152420-minepump-method3/controller/jit",
+tmp\spectra-runs\20260617-152420-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-152420-minepump-method3\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-155651-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_sets_pump_within_one_step","kind":"eventually_response","passed":true},{"name":"no_methane_clears_pump_within_one_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-144516-minepump\tests\test-results-5.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"environment_and_system_variable_ownership","kind":"variable_ownership","passed":true},{"name":"methane_with_high_water_activates_pump_next","kind":"eventually_response","passed":true},{"name":"no_methane_keeps_pump_off_when_water_is_low","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-151738-grid-robots-method3\tests\test-results-1.json:1:{"status":"passed","passed":2,"failed":0,"total":2,"results":[{"name":"declared_variable_ownership","kind":"variable_ownership","passed":true},{"name":"initial_robot_positions","kind":"initial_condition","passed":true}]}
+tmp\spectra-runs\20260617-155651-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-155651-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260617-155651-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-155651-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-133802-minepump-method3\tests\test-results-2.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_inputs_and_output","kind":"variable_ownership","passed":true},{"name":"methane_with_high_water_turns_pump_on_next","kind":"eventually_response","passed":true},{"name":"no_methane_turns_pump_off_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-152420-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declares_environment_and_system_variables","kind":"variable_ownership","passed":true},{"name":"methane_present_drives_pump_on_within_one_step","kind":"eventually_response","passed":true},{"name":"methane_absent_drives_pump_off_within_one_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-155000-minepump\tests\test-plan-1.json:3:  "controller_dir": "C:/Users/mauri/OneDrive/Desktop/Repos/respect/tmp/spectra-runs/20260617-155000-minepump/synthesis/jit",
+tmp\spectra-runs\20260617-155000-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-155000-minepump\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-133414-minepump\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_environment_and_system_variables","kind":"variable_ownership","passed":true},{"name":"admissible_traces_never_have_high_water_without_methane","kind":"exclusion","passed":true},{"name":"no_methane_drives_pump_false_within_one_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-133802-minepump-method3\tests\test-results-1.json:1:{"status":"failed","passed":1,"failed":2,"total":3,"results":[{"name":"declared_inputs_and_output","kind":"variable_ownership","passed":true},{"name":"methane_with_high_water_turns_pump_on","kind":"always_implication","passed":false,"reason":"Implication violated at trace 3, step 3","trace":[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"true"}},{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"true","methane":"true"},"outputs":{"pump":"false"}}]},{"name":"no_methane_turns_pump_off","kind":"always_implication","passed":false,"reason":"Implication violated at trace 3, step 0","trace":[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"true"}}]}]}
+tmp\spectra-runs\20260619-095540-traffice2-method3\tests\test-results-2.json:1:{"status":"passed","passed":8,"failed":0,"total":8,"results":[{"name":"declared_environment_and_system_variables","kind":"variable_ownership","passed":true},{"name":"initially_both_green_lights_off","kind":"initial_condition","passed":true},{"name":"never_both_green","kind":"exclusion","passed":true},{"name":"emergency_forces_both_green_lights_off","kind":"always_implication","passed":true},{"name":"greenA_only_when_carA_present","kind":"always_implication","passed":true},{"name":"greenB_only_when_carB_present","kind":"always_implication","passed":true},{"name":"carA_served_when_present_without_emergency","kind":"eventually_response","passed":true},{"name":"carB_served_when_present_without_emergency","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-151536-catchingintruder\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260618-133802-minepump-method3\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260618-133802-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260618-133802-minepump-method3\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-133802-minepump-method3\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-133802-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-133802-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260618-133802-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-133802-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-130000-minepump\tests\test-results-1.json:1:{"status":"passed","passed":4,"failed":0,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_present_pump_on_within_one_step","kind":"eventually_response","passed":true},{"name":"methane_absent_pump_off_within_one_step","kind":"eventually_response","passed":true},{"name":"alternating_methane_responses_within_one_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260619-095540-traffice2-method3\tests\test-results-1.json:1:{"status":"failed","passed":6,"failed":2,"total":8,"results":[{"name":"declared_environment_and_system_variables","kind":"variable_ownership","passed":true},{"name":"initially_both_green_lights_off","kind":"initial_condition","passed":true},{"name":"never_both_green","kind":"exclusion","passed":true},{"name":"emergency_forces_both_green_lights_off","kind":"always_implication","passed":true},{"name":"greenA_only_when_carA_present","kind":"always_implication","passed":true},{"name":"greenB_only_when_carB_present","kind":"always_implication","passed":true},{"name":"carA_served_when_present_without_emergency","kind":"eventually_response","passed":false,"reason":"Trace ended before expected response occurred at trace 0","trace":[{"inputs":{"carA":"true","carB":"false","emergency":"false"},"outputs":{"greenA":"false","greenB":"false"}},{"inputs":{"carA":"true","carB":"false","emergency":"false"},"outputs":{"greenA":"true","greenB":"false"}},{"inputs":{"carA":"true","carB":"false","emergency":"false"},"outputs":{"greenA":"false","greenB":"false"}},{"inputs":{"carA":"true","carB":"false","emergency":"false"},"outputs":{"greenA":"true","greenB":"false"}},{"inputs":{"carA":"true","carB":"false","emergency":"false"},"outputs":{"greenA":"true","greenB":"false"}},{"inputs":{"carA":"true","carB":"false","emergency":"false"},"outputs":{"greenA":"false","greenB":"false"}}]},{"name":"carB_served_when_present_without_emergency","kind":"eventually_response","passed":false,"reason":"Trace ended before expected response occurred at trace 0","trace":[{"inputs":{"carA":"false","carB":"true","emergency":"false"},"outputs":{"greenA":"false","greenB":"false"}},{"inputs":{"carA":"false","carB":"true","emergency":"false"},"outputs":{"greenA":"false","greenB":"false"}},{"inputs":{"carA":"false","carB":"true","emergency":"false"},"outputs":{"greenA":"false","greenB":"true"}},{"inputs":{"carA":"false","carB":"true","emergency":"false"},"outputs":{"greenA":"false","greenB":"true"}},{"inputs":{"carA":"false","carB":"true","emergency":"false"},"outputs":{"greenA":"false","greenB":"false"}},{"inputs":{"carA":"false","carB":"true","emergency":"false"},"outputs":{"greenA":"false","greenB":"false"}}]}]}
+tmp\spectra-runs\20260617-133414-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-133414-minepump/synthesis/jit",
+tmp\spectra-runs\20260617-133414-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-133414-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-202324-minepump\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_and_high_water_turns_pump_on_next","kind":"eventually_response","passed":true},{"name":"no_methane_turns_pump_off_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-155000-minepump\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_environment_and_system_variables","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260618-130000-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-130000-minepump/out/jit",
+tmp\spectra-runs\20260618-130000-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-130000-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260619-095540-traffice2-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260619-095540-traffice2-method3/controller/jit",
+tmp\spectra-runs\20260619-095540-traffice2-method3\tests\test-plan-1.json:5:  "outputs": ["greenA", "greenB"],
+tmp\spectra-runs\20260619-095540-traffice2-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260619-095540-traffice2-method3\tests\test-plan-1.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260619-095540-traffice2-method3\tests\test-plan-1.json:17:      "expected": {"greenA": "false", "greenB": "false"}
+tmp\spectra-runs\20260617-202324-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-202324-minepump/out/jit",
+tmp\spectra-runs\20260617-202324-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-202324-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-000000-minepump-method3\tests\test-results-2.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_turns_pump_on_next_opportunity","kind":"eventually_response","passed":true},{"name":"no_methane_turns_pump_off_next_opportunity","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-000000-minepump-method3\tests\test-results-1.json:1:{"status":"failed","passed":3,"failed":1,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_turns_pump_on_next_opportunity","kind":"eventually_response","passed":true},{"name":"no_methane_turns_pump_off_next_opportunity","kind":"eventually_response","passed":true},{"name":"high_water_excludes_pump_operation","kind":"exclusion","passed":false,"reason":"Forbidden valuation reached at trace 6, step 3","trace":[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"true"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"true","methane":"false"},"outputs":{"pump":"true"}}]}]}
+tmp\spectra-runs\20260618-000000-minepump-method3\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260618-000000-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260618-000000-minepump-method3\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-000000-minepump-method3\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-distance-motor\tests\test-results-2.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260618-000000-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-000000-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260618-000000-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-000000-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260619-095349-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_sets_pump_next","kind":"eventually_response","passed":true},{"name":"no_methane_clears_pump_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-153558-minepump\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_and_highwater_pump_on_within_one_step","kind":"eventually_response","passed":true},{"name":"no_methane_pump_off_within_one_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-distance-motor\tests\test-results-1.json:1:{"status":"failed","passed":0,"failed":1,"total":1,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":false,"reason":"Missing or wrong ownership: [env distance, sys leftM, sys rightM]"}]}
+tmp\spectra-runs\20260619-095349-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260619-095349-minepump-method3/out/jit",
+tmp\spectra-runs\20260619-095349-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260619-095349-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-133303-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_present_pump_on_next_opportunity","kind":"eventually_response","passed":true},{"name":"methane_absent_pump_off_next_opportunity","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-153558-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-153558-minepump/synthesis/jit",
+tmp\spectra-runs\20260617-153558-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-153558-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-202059-minepump\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_turns_pump_on_next","kind":"eventually_response","passed":true},{"name":"no_methane_turns_pump_off_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-133303-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-133303-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260618-133303-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-133303-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-distance-motor\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260617-distance-motor/controller/jit",
+tmp\spectra-runs\20260617-distance-motor\tests\test-plan-2.json:5:  "outputs": ["leftM", "rightM"],
+tmp\spectra-runs\20260617-distance-motor\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-133457-minepump\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260618-133457-minepump/synthesis/jit",
+tmp\spectra-runs\20260618-133457-minepump\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-133457-minepump\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-202059-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-202059-minepump/controller/jit",
+tmp\spectra-runs\20260617-202059-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-202059-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-133457-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-133457-minepump/synthesis/jit",
+tmp\spectra-runs\20260618-133457-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-133457-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-deliveries-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-deliveries-method3/controller/jit",
+tmp\spectra-runs\20260617-deliveries-method3\tests\test-plan-1.json:5:  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
+tmp\spectra-runs\20260617-deliveries-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-deliveries-method3\tests\test-plan-1.json:9:      "name": "declared_robot_coordinates_are_system_outputs",
+tmp\spectra-runs\20260617-deliveries-method3\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_robot_coordinates_are_system_outputs","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260617-153959-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_highwater_pump_on_next","kind":"eventually_response","passed":true},{"name":"no_methane_pump_off_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-req-clear-grant-validate\tests\test-results-3.json:1:{"status":"passed","passed":2,"failed":0,"total":2,"results":[{"name":"declared input and output ownership","kind":"variable_ownership","passed":true},{"name":"bounded evidence of recurring simultaneous grant and validation","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-req-clear-grant-validate\tests\test-results-2.json:1:{"status":"failed","passed":1,"failed":1,"total":2,"results":[{"name":"declared input and output ownership","kind":"variable_ownership","passed":true},{"name":"grant and validation recur together under clear-inactive behavior","kind":"eventually_response","passed":false,"reason":"Trace ended before expected response occurred at trace 3","trace":[{"inputs":{"req":"false","cl":"false"},"outputs":{"gr":"false","val":"false"}},{"inputs":{"req":"false","cl":"false"},"outputs":{"gr":"true","val":"true"}},{"inputs":{"req":"false","cl":"false"},"outputs":{"gr":"true","val":"true"}},{"inputs":{"req":"false","cl":"false"},"outputs":{"gr":"true","val":"true"}},{"inputs":{"req":"true","cl":"false"},"outputs":{"gr":"true","val":"false"}},{"inputs":{"req":"true","cl":"false"},"outputs":{"gr":"true","val":"false"}}]}]}
+tmp\spectra-runs\20260617-153959-minepump-method3\tests\trace-methane-after-off.json:3:    "controller_dir": "tmp/spectra-runs/20260617-153959-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260617-153959-minepump-method3\tests\trace-methane-after-off.json:6:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-153959-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-153959-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260617-153959-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-153959-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-133042-minepump\tests\test-results-2.json:1:{"status":"passed","passed":4,"failed":0,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"initial_pump_off","kind":"initial_condition","passed":true},{"name":"high_water_forces_pump_off","kind":"eventually_response","passed":true},{"name":"methane_forces_pump_off","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-distance-motor\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-distance-motor/controller/jit",
+tmp\spectra-runs\20260617-distance-motor\tests\test-plan-1.json:5:  "outputs": ["leftM", "rightM"],
+tmp\spectra-runs\20260617-distance-motor\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-133457-minepump\tests\trace-methane-highwater-1-results.json:1:{"status":"success","total_traces":1,"traces":[[{"inputs":{"highWater":"true","methane":"true"},"outputs":{"pump":"true"}}]]}
+tmp\spectra-runs\20260618-133042-minepump\tests\test-results-1.json:1:{"status":"failed","passed":2,"failed":2,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"initial_pump_off","kind":"initial_condition","passed":true},{"name":"high_water_forces_pump_off","kind":"eventually_response","passed":false,"reason":"Trace ended before expected response occurred at trace 5","trace":[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"true","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"true","methane":"false"},"outputs":{"pump":"true"}}]},{"name":"methane_forces_pump_off","kind":"eventually_response","passed":false,"reason":"Trace ended before expected response occurred at trace 5","trace":[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"true"},"outputs":{"pump":"true"}},{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"true"},"outputs":{"pump":"true"}}]}]}
+tmp\spectra-runs\20260617-catching-intruder-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-catching-intruder-method3/controller/jit",
+tmp\spectra-runs\20260617-catching-intruder-method3\tests\test-plan-1.json:5:  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
+tmp\spectra-runs\20260617-catching-intruder-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-153959-minepump-method3\tests\trace-methane-after-off-results.json:1:{"status":"success","total_traces":1,"traces":[[{"inputs":{"highwater":"false","methane":"false"},"outputs":{"pump":"true"}},{"inputs":{"highwater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highwater":"true","methane":"true"},"outputs":{"pump":"false"}},{"inputs":{"highwater":"false","methane":"false"},"outputs":{"pump":"true"}}]]}
+tmp\spectra-runs\20260617-153959-minepump-method3\tests\trace-no-methane.json:3:    "controller_dir": "tmp/spectra-runs/20260617-153959-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260617-153959-minepump-method3\tests\trace-no-methane.json:6:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-133042-minepump\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260618-133042-minepump/out/jit",
+tmp\spectra-runs\20260618-133042-minepump\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-133042-minepump\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-133042-minepump\tests\test-plan-2.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260618-133042-minepump\tests\test-plan-2.json:17:      "expected": {"pump": "false"}
+tmp\spectra-runs\20260618-133457-minepump\tests\test-results-2.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_and_high_water_turns_pump_on_next_after_valid_prefix","kind":"eventually_response","passed":true},{"name":"no_methane_turns_pump_off_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-153959-minepump-method3\tests\trace-no-methane-results.json:1:{"status":"success","total_traces":1,"traces":[[{"inputs":{"highwater":"false","methane":"false"},"outputs":{"pump":"true"}},{"inputs":{"highwater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highwater":"false","methane":"false"},"outputs":{"pump":"false"}}]]}
+tmp\spectra-runs\20260617-req-clear-grant-validate\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260617-req-clear-grant-validate/controller/jit",
+tmp\spectra-runs\20260617-req-clear-grant-validate\tests\test-plan-1.json:5:  "outputs": ["gr", "val"],
+tmp\spectra-runs\20260617-req-clear-grant-validate\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-133457-minepump\tests\trace-methane-highwater-2.json:3:    "controller_dir": "tmp/spectra-runs/20260618-133457-minepump/synthesis/jit",
+tmp\spectra-runs\20260618-133457-minepump\tests\trace-methane-highwater-2.json:6:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-132804-minepump\tests\test-results-2.json:1:{"status":"passed","passed":2,"failed":0,"total":2,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_turns_pump_off_by_next_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-133042-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-133042-minepump/out/jit",
+tmp\spectra-runs\20260618-133042-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-133042-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-133042-minepump\tests\test-plan-1.json:14:      "kind": "initial_condition",
+tmp\spectra-runs\20260618-133042-minepump\tests\test-plan-1.json:17:      "expected": {"pump": "false"}
+tmp\spectra-runs\20260617-catching-intruder-method3\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_coordinate_ownership","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260618-133457-minepump\tests\trace-methane-highwater-1.json:3:    "controller_dir": "tmp/spectra-runs/20260618-133457-minepump/synthesis/jit",
+tmp\spectra-runs\20260618-133457-minepump\tests\trace-methane-highwater-1.json:6:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-req-clear-grant-validate\tests\test-plan-3.json:3:  "controller_dir": "tmp/spectra-runs/20260617-req-clear-grant-validate/controller/jit",
+tmp\spectra-runs\20260617-req-clear-grant-validate\tests\test-plan-3.json:5:  "outputs": ["gr", "val"],
+tmp\spectra-runs\20260617-req-clear-grant-validate\tests\test-plan-3.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-132804-minepump\tests\test-results-1.json:1:{"status":"failed","passed":1,"failed":1,"total":2,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_turns_pump_off_by_next_step","kind":"eventually_response","passed":false,"reason":"Trace ended before expected response occurred at trace 1","trace":[{"inputs":{"highwater":"false","methane":"false"},"outputs":{"pump":"true"}},{"inputs":{"highwater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highwater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highwater":"false","methane":"true"},"outputs":{"pump":"true"}}]}]}
+tmp\spectra-runs\20260617-req-clear-grant-validate\tests\test-plan-2.json:3:  "controller_dir": "tmp/spectra-runs/20260617-req-clear-grant-validate/controller/jit",
+tmp\spectra-runs\20260617-req-clear-grant-validate\tests\test-plan-2.json:5:  "outputs": ["gr", "val"],
+tmp\spectra-runs\20260617-req-clear-grant-validate\tests\test-plan-2.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-132804-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-132804-minepump/controller/jit",
+tmp\spectra-runs\20260618-132804-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-132804-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-132804-minepump\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260618-132804-minepump/controller/jit",
+tmp\spectra-runs\20260618-132804-minepump\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-132804-minepump\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-minepump\tests\test-results-2.json:1:{"status":"passed","passed":2,"failed":0,"total":2,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"sustained_no_methane_pump_off_within_one_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-results-4.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_and_high_water_activates_pump_next","kind":"eventually_response","passed":true},{"name":"no_methane_deactivates_pump_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-escapingguard\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260617-escapingguard/synthesis/jit",
+tmp\spectra-runs\20260617-escapingguard\tests\test-plan-1.json:5:  "outputs": ["robotX", "robotY"],
+tmp\spectra-runs\20260617-escapingguard\tests\test-plan-1.json:9:      "kind": "initial_condition",
+tmp\spectra-runs\20260617-escapingguard\tests\test-plan-1.json:11:      "expected": {
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-results-1.json:1:{"status":"failed","passed":1,"failed":2,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_and_high_water_activates_pump_next","kind":"always_implication","passed":false,"reason":"Implication violated at trace 3, step 3","trace":[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"true"}},{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"true","methane":"true"},"outputs":{"pump":"false"}}]},{"name":"no_methane_deactivates_pump_next","kind":"always_implication","passed":false,"reason":"Implication violated at trace 0, step 0","trace":[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"true"}}]}]}
+tmp\spectra-runs\20260618-minepump\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260618-minepump/synthesis/jit",
+tmp\spectra-runs\20260618-minepump\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-minepump\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-minepump/synthesis/jit",
+tmp\spectra-runs\20260618-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-201527-minepump\tests\test-results-2.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_and_high_water_activate_pump_next","kind":"eventually_response","passed":true},{"name":"no_methane_deactivates_pump_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-132145-minepump\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_and_high_water_turns_pump_on","kind":"eventually_response","passed":true},{"name":"absence_of_methane_turns_pump_off","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-plan-4.json:2:  "controller_dir": "tmp/spectra-runs/20260619-000000-minepump-method3/out/jit",
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-plan-4.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-plan-4.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-230100-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true}]}
+tmp\spectra-runs\20260618-230100-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-230100-minepump-method3/out/jit",
+tmp\spectra-runs\20260618-230100-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-230100-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-132145-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-132145-minepump/out/jit",
+tmp\spectra-runs\20260618-132145-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-132145-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-escapingguard\tests\test-results-1.json:1:{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"robotStartTopLeft","kind":"initial_condition","passed":true}]}
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-plan-3.json:2:  "controller_dir": "tmp/spectra-runs/20260619-000000-minepump-method3/out/jit",
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-plan-3.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-plan-3.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-231431-minepump\tests\trace-probe.json:3:    "controller_dir": "tmp/spectra-runs/20260618-231431-minepump/out/jit",
+tmp\spectra-runs\20260618-231431-minepump\tests\trace-probe.json:6:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-minepump-method3/controller/jit",
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260617-minepump-method3/controller/jit",
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-131937-minepump\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260618-131937-minepump/out/jit",
+tmp\spectra-runs\20260618-131937-minepump\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-131937-minepump\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-201527-minepump\tests\test-results-1.json:1:{"status":"failed","passed":2,"failed":1,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_and_high_water_activate_pump_next","kind":"eventually_response","passed":false,"reason":"Trace ended before expected response occurred at trace 3","trace":[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"true"}},{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"true","methane":"true"},"outputs":{"pump":"false"}}]},{"name":"no_methane_deactivates_pump_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260619-000000-minepump-method3/out/jit",
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-231431-minepump\tests\test-results-1.json:1:{"status":"passed","passed":2,"failed":0,"total":2,"results":[{"name":"declared_environment_and_system_variables","kind":"variable_ownership","passed":true},{"name":"no_methane_keeps_pump_off_on_low_water_trace","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-141650-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_environment_and_pump","kind":"variable_ownership","passed":true},{"name":"no_methane_turns_pump_off_next","kind":"always_implication","passed":true},{"name":"methane_with_high_water_turns_pump_on_next","kind":"always_implication","passed":true}]}
+tmp\spectra-runs\20260618-225754-minepump\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_turns_pump_on_next","kind":"eventually_response","passed":true},{"name":"no_methane_turns_pump_off_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-131937-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-131937-minepump/out/jit",
+tmp\spectra-runs\20260618-131937-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-131937-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260619-000000-minepump-method3/out/jit",
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260619-000000-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-201527-minepump\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260617-201527-minepump/synthesis/jit",
+tmp\spectra-runs\20260617-201527-minepump\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-201527-minepump\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-225754-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-225754-minepump/synthesis/jit",
+tmp\spectra-runs\20260618-225754-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-225754-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-141650-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-141650-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260618-141650-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-141650-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-231431-minepump\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260618-231431-minepump/out/jit",
+tmp\spectra-runs\20260618-231431-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-231431-minepump\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-131937-minepump\tests\test-results-2.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_absent_pump_inactive_next","kind":"eventually_response","passed":true},{"name":"methane_highwater_pump_active_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-131937-minepump\tests\test-results-1.json:1:{"status":"failed","passed":1,"failed":2,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_absent_pump_inactive","kind":"always_implication","passed":false,"reason":"Implication violated at trace 2, step 0","trace":[{"inputs":{"highwater":"false","methane":"false"},"outputs":{"pump":"true"}}]},{"name":"methane_highwater_pump_active","kind":"always_implication","passed":false,"reason":"Implication violated at trace 0, step 0","trace":[{"inputs":{"highwater":"true","methane":"true"},"outputs":{"pump":"false"}}]}]}
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-4.json:2:  "controller_dir": "tmp/spectra-runs/20260617-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-4.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-4.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-3.json:2:  "controller_dir": "tmp/spectra-runs/20260617-minepump-method3/controller/jit",
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-3.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-3.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-141248-minepump-method3\tests\test-results-2.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"pump_turns_off_after_methane_absent","kind":"eventually_response","passed":true},{"name":"pump_activates_for_methane_and_highwater","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-134852-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-134852-minepump/out/jit",
+tmp\spectra-runs\20260618-134852-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-134852-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-141248-minepump-method3\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260618-141248-minepump-method3/controller/jit",
+tmp\spectra-runs\20260618-141248-minepump-method3\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-141248-minepump-method3\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-201527-minepump\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260617-201527-minepump/synthesis/jit",
+tmp\spectra-runs\20260617-201527-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-201527-minepump\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-141248-minepump-method3\tests\test-results-1.json:1:{"status":"failed","passed":2,"failed":2,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"pump_off_when_methane_absent","kind":"always_implication","passed":false,"reason":"Implication violated at trace 0, step 0","trace":[{"inputs":{"highwater":"false","methane":"false"},"outputs":{"pump":"true"}}]},{"name":"pump_activates_for_methane_and_highwater","kind":"eventually_response","passed":true},{"name":"no_methane_continuation_after_pump_with_methane","kind":"exclusion","passed":false,"reason":"Forbidden valuation reached at trace 0, step 0","trace":[{"inputs":{"highwater":"true","methane":"true"},"outputs":{"pump":"true"}}]}]}
+tmp\spectra-runs\20260618-141248-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-141248-minepump-method3/controller/jit",
+tmp\spectra-runs\20260618-141248-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-141248-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-230258-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_environment_and_system_variables","kind":"variable_ownership","passed":true},{"name":"no_methane_leads_to_pump_off","kind":"eventually_response","passed":true},{"name":"methane_with_highwater_leads_to_pump_on","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-230644-minepump\tests\test-results-2.json:1:{"status":"passed","passed":2,"failed":0,"total":2,"results":[{"name":"declares_environment_and_system_variables","kind":"variable_ownership","passed":true},{"name":"methane_turns_pump_on_within_one_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-230644-minepump\tests\test-plan-2.json:3:  "controller_dir": "tmp/spectra-runs/20260618-230644-minepump/controller/jit",
+tmp\spectra-runs\20260618-230644-minepump\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-230644-minepump\tests\test-plan-2.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-230644-minepump\tests\trace-methane-false-results.json:1:{"status":"success","total_traces":1,"traces":[[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"true","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}}]]}
+tmp\spectra-runs\20260618-230644-minepump\tests\trace-methane-false.json:3:    "controller_dir": "tmp/spectra-runs/20260618-230644-minepump/controller/jit",
+tmp\spectra-runs\20260618-230644-minepump\tests\trace-methane-false.json:6:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-2253-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-2253-minepump-method3/controller/jit",
+tmp\spectra-runs\20260618-2253-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-2253-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-2253-minepump-method3\tests\test-plan-1.json:9:      "name": "declared_variable_ownership",
+tmp\spectra-runs\20260618-minepump-method3\tests\test-plan-2.json:2:  "controller_dir": "tmp/spectra-runs/20260618-minepump-method3/out-repair-1/jit",
+tmp\spectra-runs\20260618-minepump-method3\tests\test-plan-2.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-minepump-method3\tests\test-plan-2.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-minepump-method3\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-minepump-method3/out/jit",
+tmp\spectra-runs\20260618-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-minepump-method3\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-minepump-method3-134703\tests\test-plan-1.json:2:  "controller_dir": "tmp/spectra-runs/20260618-minepump-method3-134703/out/jit",
+tmp\spectra-runs\20260618-minepump-method3-134703\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-minepump-method3-134703\tests\test-plan-1.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-5.json:2:  "controller_dir": "tmp/spectra-runs/20260617-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-5.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-5.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-2253-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":4,"failed":0,"total":4,"results":[{"name":"declared_variable_ownership","kind":"variable_ownership","passed":true},{"name":"methane_present_turns_pump_on_next","kind":"eventually_response","passed":true},{"name":"methane_absent_turns_pump_off_next","kind":"eventually_response","passed":true},{"name":"previous_high_water_forces_pump_off","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-minepump-method3\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_environment_and_system_variables","kind":"variable_ownership","passed":true},{"name":"methane_with_highwater_requires_pump_next","kind":"eventually_response","passed":true},{"name":"no_methane_requires_pump_off_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-230258-minepump-method3\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260618-230258-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260618-230258-minepump-method3\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-230258-minepump-method3\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-230644-minepump\tests\trace-methane-true-results.json:1:{"status":"success","total_traces":1,"traces":[[{"inputs":{"highWater":"false","methane":"true"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"true","methane":"true"},"outputs":{"pump":"true"}},{"inputs":{"highWater":"false","methane":"true"},"outputs":{"pump":"true"}}]]}
+tmp\spectra-runs\20260618-134852-minepump\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_turns_pump_on_next","kind":"eventually_response","passed":true},{"name":"no_methane_turns_pump_off_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260618-230644-minepump\tests\test-plan-1.json:3:  "controller_dir": "tmp/spectra-runs/20260618-230644-minepump/controller/jit",
+tmp\spectra-runs\20260618-230644-minepump\tests\test-plan-1.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260618-230644-minepump\tests\test-plan-1.json:9:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-minepump-method3\tests\test-results-2.json:1:{"status":"passed","passed":4,"failed":0,"total":4,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_turns_pump_on_next_opportunity","kind":"eventually_response","passed":true},{"name":"no_methane_turns_pump_off_next_opportunity","kind":"eventually_response","passed":true},{"name":"high_water_never_with_pump_on","kind":"exclusion","passed":true}]}
+tmp\spectra-runs\20260618-230644-minepump\tests\trace-methane-true.json:3:    "controller_dir": "tmp/spectra-runs/20260618-230644-minepump/controller/jit",
+tmp\spectra-runs\20260618-230644-minepump\tests\trace-methane-true.json:6:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-6.json:2:  "controller_dir": "tmp/spectra-runs/20260617-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-6.json:5:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-minepump-method3\tests\test-plan-6.json:8:      "kind": "variable_ownership",
+tmp\spectra-runs\20260618-minepump-method3-134703\tests\test-results-1.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"no_methane_deactivates_pump_next","kind":"eventually_response","passed":true},{"name":"methane_with_high_water_activates_pump_next","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-minepump-method3\tests\test-results-1.json:1:{"status":"failed","passed":1,"failed":2,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_and_high_water_turns_pump_on","kind":"always_implication","passed":false,"reason":"Implication violated at trace 3, step 2","trace":[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highWater":"true","methane":"true"},"outputs":{"pump":"false"}}]},{"name":"no_methane_turns_pump_off","kind":"always_implication","passed":false,"reason":"Implication violated at trace 0, step 0","trace":[{"inputs":{"highWater":"false","methane":"false"},"outputs":{"pump":"true"}}]}]}
+tmp\spectra-runs\20260617-minepump-method3\tests\test-results-3.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"persistent_methane_high_water_pump_on_within_one_step","kind":"eventually_response","passed":true},{"name":"persistent_no_methane_pump_off_within_one_step","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-minepump-method3\tests\test-results-6.json:1:{"status":"passed","passed":3,"failed":0,"total":3,"results":[{"name":"declared_variables","kind":"variable_ownership","passed":true},{"name":"methane_absent_next_pump_off","kind":"eventually_response","passed":true},{"name":"methane_and_highwater_next_pump_on","kind":"eventually_response","passed":true}]}
+tmp\spectra-runs\20260617-minepump-method3\tests\trace-plan-1.json:3:    "controller_dir": "tmp/spectra-runs/20260617-minepump-method3/synthesis/jit",
+tmp\spectra-runs\20260617-minepump-method3\tests\trace-plan-1.json:6:  "outputs": ["pump"],
+tmp\spectra-runs\20260617-minepump-method3\tests\trace-results-1.json:1:{"status":"success","total_traces":2,"traces":[[{"inputs":{"highwater":"false","methane":"true"},"outputs":{"pump":"false"}},{"inputs":{"highwater":"false","methane":"false"},"outputs":{"pump":"false"}},{"inputs":{"highwater":"false","methane":"true"},"outputs":{"pump":"false"}},{"inputs":{"highwater":"true","methane":"true"},"outputs":{"pump":"true"}}],[{"inputs":{"highwater":"true","methane":"true"},"outputs":{"pump":"false"}},{"inputs":{"highwater":"true","methane":"true"},"outputs":{"pump":"true"}},{"inputs":{"highwater":"false","methane":"true"},"outputs":{"pump":"true"}}]]}
+
+ succeeded in 1324ms:
+
+FullName                                                                                                               
+--------                                                                                                               
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260619-112632-escapingguard\synthesis\jit             
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260619-112632-escapingguard\synthesis\jit\EscapingG...
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260619-112632-escapingguard\synthesis\jit\EscapingG...
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260619-112632-escapingguard\synthesis\jit\EscapingG...
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260619-112632-escapingguard\synthesis\jit\EscapingG...
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260619-112632-escapingguard\synthesis\jit\EscapingG...
+
+
+
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..1cea8933c73ea34c9ee4bce7489ebc7c77515d1d
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+@@ -0,0 +1,9 @@
++spec EscapingGuard
++
++type Coord = Int(0..7);
++
++sys Coord robotX;
++sys Coord robotY;
++
++gar initial_position:
++  ini robotX = 7 & robotY = 0;
+
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content controller_tests\\examples\\traffic_e2_plan.json" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content controller_tests\\README.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content controller_tests\\src\\main\\java\\respect\\controller_tests\\tests\\VariableOwnershipTest.java" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content controller_tests\\src\\main\\java\\respect\\controller_tests\\tests\\InitialConditionTest.java" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 912ms:
+# ReSpect Controller Tests
+
+Java test library for method-3 controller checks.
+
+The library executes synthesized Spectra JIT controllers through Syntech's
+`ControllerExecutor` and checks bounded, natural-language-derived properties.
+
+Workflow overview: [`controller_test_workflow.svg`](controller_test_workflow.svg)
+
+## Build
+
+From the repository root:
+
+```powershell
+javac -cp assets\examples\E2_execution\executor.jar -d controller_tests\build\classes (Get-ChildItem controller_tests\src\main\java -Recurse -Filter *.java).FullName
+```
+
+## Run
+
+First synthesize the example JIT controller if `assets/examples/E2_execution/out/jit`
+does not exist:
+
+```powershell
+python .agents\skills\respect-method-3\scripts\run_spectra_cli.py --input assets\examples\E2_execution\TrafficE2.spectra --synthesize --output-dir assets\examples\E2_execution\out --timeout 120
+```
+
+```powershell
+java "-Djava.library.path=." -cp "controller_tests\build\classes;assets\examples\E2_execution\executor.jar" respect.controller_tests.TestRunner --plan controller_tests\examples\traffic_e2_plan.json
+```
+
+On Linux/macOS use `:` instead of `;` in the classpath.
+
+If Java reports `ClassNotFoundException: respect.controller_tests.TestRunner`,
+run the build command first; `controller_tests/build/classes` is generated and is
+not committed.
+
+The controller directory in the plan must point at the synthesized JIT folder,
+for example `<controller_output_dir>/jit`.
+
+## Test Plan Format
+
+```json
+{
+  "controller_dir": "path/to/controller/jit",
+  "spec_name": "TrafficE2",
+  "spectra_file": "path/to/generated.spectra",
+  "tests": [
+    {
+      "kind": "variable_ownership",
+      "name": "declared_variables",
+      "env": ["carA", "carB"],
+      "sys": ["greenA", "greenB"]
+    },
+    {
+      "kind": "exclusion",
+      "name": "never_both_green",
+      "trace": [
+        {"carA": "true", "carB": "false"},
+        {"carA": "false", "carB": "true"}
+      ],
+      "forbidden": {"greenA": "true", "greenB": "true"}
+    }
+  ]
+}
+```
+
+Supported `kind` values:
+
+- `variable_ownership`: static check over the generated Spectra file.
+- `initial_condition`: checks outputs after `initState`.
+- `exclusion`: fails if a forbidden valuation appears at any step.
+- `always_implication`: whenever `when` matches, `then` must match in the same step.
+- `eventually_response`: whenever `when` matches, `eventually` must match within `within_steps`.
+  Set `require_closed_obligations` to `true` if a trace ending with an open
+  response obligation should fail. The default is `false`, which avoids failing
+  merely because a bounded trace ends before an unexpired deadline.
+
+Controller tests support three execution modes:
+
+- `trace`: execute the explicit `trace` array from the test plan.
+- `random`: generate `runs` random traces of length `max_depth` from `env` domains.
+- `exhaustive`: enumerate input traces up to `max_depth`, capped by `max_paths`.
+
+Example exploration test:
+
+```json
+{
+  "kind": "exclusion",
+  "name": "never_both_green",
+  "mode": "exhaustive",
+  "max_depth": 4,
+  "max_paths": 256,
+  "env": {
+    "carA": ["false", "true"],
+    "carB": ["false", "true"]
+  },
+  "forbidden": {"greenA": "true", "greenB": "true"}
+}
+```
+
+All controller tests are bounded black-box tests. They replay generated input
+traces against fresh controller instances. They are evidence for semantic
+quality, not full equivalence proofs.
+
+ succeeded in 941ms:
+{
+  "controller_dir": "assets/examples/E2_execution/out/jit",
+  "spec_name": "TrafficE2",
+  "spectra_file": "assets/examples/E2_execution/TrafficE2.spectra",
+  "tests": [
+    {
+      "kind": "variable_ownership",
+      "name": "declared_variables",
+      "env": ["carA", "carB"],
+      "sys": ["greenA", "greenB"]
+    },
+    {
+      "kind": "exclusion",
+      "name": "never_both_green",
+      "trace": [
+        {"carA": "true", "carB": "false"},
+        {"carA": "false", "carB": "true"},
+        {"carA": "true", "carB": "true"},
+        {"carA": "true", "carB": "false"}
+      ],
+      "forbidden": {"greenA": "true", "greenB": "true"}
+    },
+    {
+      "kind": "eventually_response",
+      "name": "car_a_eventually_green",
+      "trace": [
+        {"carA": "true", "carB": "false"},
+        {"carA": "true", "carB": "false"},
+        {"carA": "true", "carB": "false"},
+        {"carA": "true", "carB": "false"}
+      ],
+      "when": {"carA": "true"},
+      "eventually": {"greenA": "true"},
+      "within_steps": 4
+    }
+  ]
+}
+
+ succeeded in 962ms:
+package respect.controller_tests.tests;
+
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import respect.controller_tests.TestCase;
+import respect.controller_tests.TestContext;
+import respect.controller_tests.TestResult;
+import respect.controller_tests.TestUtil;
+
+public final class VariableOwnershipTest implements TestCase {
+    private final String name;
+    private final List<String> env;
+    private final List<String> sys;
+
+    public VariableOwnershipTest(Map<String, Object> config) {
+        this.name = TestUtil.optionalName(config, "variable_ownership");
+        this.env = TestUtil.stringList(config.get("env"), "env");
+        this.sys = TestUtil.stringList(config.get("sys"), "sys");
+    }
+
+    @Override
+    public TestResult run(TestContext context) throws Exception {
+        if (context.spectraFile() == null) {
+            return TestResult.fail(name, "variable_ownership", "spectra_file is required", null);
+        }
+        String source = Files.readString(context.spectraFile());
+        List<String> missing = new ArrayList<>();
+        for (String variable : env) {
+            if (!declared(source, "env", variable)) {
+                missing.add("env " + variable);
+            }
+        }
+        for (String variable : sys) {
+            if (!declared(source, "sys", variable)) {
+                missing.add("sys " + variable);
+            }
+        }
+        if (!missing.isEmpty()) {
+            return TestResult.fail(name, "variable_ownership", "Missing or wrong ownership: " + missing, null);
+        }
+        return TestResult.pass(name, "variable_ownership");
+    }
+
+    private static boolean declared(String source, String owner, String variable) {
+        // Handles simple declarations such as "env boolean carA;" and finite-domain declarations.
+        String regex = "(?m)^\\s*" + Pattern.quote(owner) + "\\s+(?:[A-Za-z_][A-Za-z0-9_]*\\s+)?"
+            + Pattern.quote(variable) + "\\s*(?:;|\\{|=)";
+        return Pattern.compile(regex).matcher(source).find();
+    }
+}
+
+ succeeded in 878ms:
+package respect.controller_tests.tests;
+
+import java.util.List;
+import java.util.Map;
+
+import respect.controller_tests.ControllerHarness;
+import respect.controller_tests.StepResult;
+import respect.controller_tests.TestCase;
+import respect.controller_tests.TestContext;
+import respect.controller_tests.TestResult;
+import respect.controller_tests.TestUtil;
+
+public final class InitialConditionTest implements TestCase {
+    private final String name;
+    private final Map<String, String> inputs;
+    private final Map<String, String> expected;
+
+    public InitialConditionTest(Map<String, Object> config) {
+        this.name = TestUtil.optionalName(config, "initial_condition");
+        this.inputs = TestUtil.stringMap(config.get("inputs"));
+        this.expected = TestUtil.stringMap(config.get("expected"));
+    }
+
+    @Override
+    public TestResult run(TestContext context) throws Exception {
+        ControllerHarness harness = context.newHarness();
+        StepResult step = harness.step(inputs);
+        if (!TestUtil.matches(step.combined(), expected)) {
+            return TestResult.fail(name, "initial_condition", "Initial condition did not match expected valuation", List.of(step.toJson()));
+        }
+        return TestResult.pass(name, "initial_condition");
+    }
+}
+
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..1cea8933c73ea34c9ee4bce7489ebc7c77515d1d
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+@@ -0,0 +1,9 @@
++spec EscapingGuard
++
++type Coord = Int(0..7);
++
++sys Coord robotX;
++sys Coord robotY;
++
++gar initial_position:
++  ini robotX = 7 & robotY = 0;
+
+codex
+The harness supports the two high-confidence tests this description justifies: variable ownership and the initial output valuation. I’m writing only those tests, since movement after the initial state is explicitly underspecified.
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260619-112632-escapingguard\tests\test-plan-1.json
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..1cea8933c73ea34c9ee4bce7489ebc7c77515d1d
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+@@ -0,0 +1,9 @@
++spec EscapingGuard
++
++type Coord = Int(0..7);
++
++sys Coord robotX;
++sys Coord robotY;
++
++gar initial_position:
++  ini robotX = 7 & robotY = 0;
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json b/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..851c363308315298c76d8b3a61c3f6838fb91c3f
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json
+@@ -0,0 +1,20 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260619-112632-escapingguard/synthesis/jit",
++  "spec_name": "EscapingGuard",
++  "spectra_file": "tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra",
++  "outputs": ["robotX", "robotY"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_system_coordinates",
++      "env": [],
++      "sys": ["robotX", "robotY"]
++    },
++    {
++      "kind": "initial_condition",
++      "name": "initial_robot_position",
++      "inputs": {},
++      "expected": {"robotX": "7", "robotY": "0"}
++    }
++  ]
++}
+
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..1cea8933c73ea34c9ee4bce7489ebc7c77515d1d
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+@@ -0,0 +1,9 @@
++spec EscapingGuard
++
++type Coord = Int(0..7);
++
++sys Coord robotX;
++sys Coord robotY;
++
++gar initial_position:
++  ini robotX = 7 & robotY = 0;
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json b/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..851c363308315298c76d8b3a61c3f6838fb91c3f
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json
+@@ -0,0 +1,20 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260619-112632-escapingguard/synthesis/jit",
++  "spec_name": "EscapingGuard",
++  "spectra_file": "tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra",
++  "outputs": ["robotX", "robotY"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_system_coordinates",
++      "env": [],
++      "sys": ["robotX", "robotY"]
++    },
++    {
++      "kind": "initial_condition",
++      "name": "initial_robot_position",
++      "inputs": {},
++      "expected": {"robotX": "7", "robotY": "0"}
++    }
++  ]
++}
+
+codex
+The test plan is in place. I’m compiling the Java test runner now, then I’ll execute the plan and inspect the result JSON if anything fails.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "javac -cp assets\\examples\\E2_execution\\executor.jar -d controller_tests\\build\\classes (Get-ChildItem controller_tests\\src\\main\\java -Recurse -Filter *.java).FullName" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1515ms:
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..1cea8933c73ea34c9ee4bce7489ebc7c77515d1d
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+@@ -0,0 +1,9 @@
++spec EscapingGuard
++
++type Coord = Int(0..7);
++
++sys Coord robotX;
++sys Coord robotY;
++
++gar initial_position:
++  ini robotX = 7 & robotY = 0;
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json b/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..851c363308315298c76d8b3a61c3f6838fb91c3f
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json
+@@ -0,0 +1,20 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260619-112632-escapingguard/synthesis/jit",
++  "spec_name": "EscapingGuard",
++  "spectra_file": "tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra",
++  "outputs": ["robotX", "robotY"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_system_coordinates",
++      "env": [],
++      "sys": ["robotX", "robotY"]
++    },
++    {
++      "kind": "initial_condition",
++      "name": "initial_robot_position",
++      "inputs": {},
++      "expected": {"robotX": "7", "robotY": "0"}
++    }
++  ]
++}
+
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "java \"-Djava.library.path=.\" -cp \"controller_tests\\build\\classes;assets\\examples\\E2_execution\\executor.jar\" respect.controller_tests.TestRunner --plan tmp\\spectra-runs\\20260619-112632-escapingguard\\tests\\test-plan-1.json --output tmp\\spectra-runs\\20260619-112632-escapingguard\\tests\\test-results-1.json" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 849ms:
+Using BDD Package: CUDDFactory, Version: CUDD 3.0
+Using BDD Package: CUDDFactory, Version: CUDD 3.0
+64 - Read Sizes
+64 - Loaded Justice BDD
+70 - Loaded Transition BDD
+78 - Loaded Fixed-Points BDD
+{"status":"passed","passed":2,"failed":0,"total":2,"results":[{"name":"declared_system_coordinates","kind":"variable_ownership","passed":true},{"name":"initial_robot_position","kind":"initial_condition","passed":true}]}
+
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..1cea8933c73ea34c9ee4bce7489ebc7c77515d1d
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+@@ -0,0 +1,9 @@
++spec EscapingGuard
++
++type Coord = Int(0..7);
++
++sys Coord robotX;
++sys Coord robotY;
++
++gar initial_position:
++  ini robotX = 7 & robotY = 0;
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json b/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..851c363308315298c76d8b3a61c3f6838fb91c3f
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json
+@@ -0,0 +1,20 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260619-112632-escapingguard/synthesis/jit",
++  "spec_name": "EscapingGuard",
++  "spectra_file": "tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra",
++  "outputs": ["robotX", "robotY"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_system_coordinates",
++      "env": [],
++      "sys": ["robotX", "robotY"]
++    },
++    {
++      "kind": "initial_condition",
++      "name": "initial_robot_position",
++      "inputs": {},
++      "expected": {"robotX": "7", "robotY": "0"}
++    }
++  ]
++}
+
+codex
+cli_status: synthesized  
+repair_loops: 0  
+syntax_repair_loops: 0  
+unrealizable_repair_loops: 0  
+test_repair_loops: 0  
+timeout_seconds: 120  
+used_counter_strategy: false  
+blocked_by_nl_conflict: false  
+diagnostic_file: none  
+test_plan_file: `tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json`  
+test_result_file: `tmp/spectra-runs/20260619-112632-escapingguard/tests/test-results-1.json`  
+tests_total: 2  
+tests_passed: 2  
+tests_failed: 0  
+spectra_file: `tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra`  
+controller_output_dir: `tmp/spectra-runs/20260619-112632-escapingguard/synthesis`
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..1cea8933c73ea34c9ee4bce7489ebc7c77515d1d
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra
+@@ -0,0 +1,9 @@
++spec EscapingGuard
++
++type Coord = Int(0..7);
++
++sys Coord robotX;
++sys Coord robotY;
++
++gar initial_position:
++  ini robotX = 7 & robotY = 0;
+diff --git a/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json b/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..851c363308315298c76d8b3a61c3f6838fb91c3f
+--- /dev/null
++++ b/tmp/spectra-runs/20260619-112632-escapingguard/tests/test-plan-1.json
+@@ -0,0 +1,20 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260619-112632-escapingguard/synthesis/jit",
++  "spec_name": "EscapingGuard",
++  "spectra_file": "tmp/spectra-runs/20260619-112632-escapingguard/EscapingGuard.spectra",
++  "outputs": ["robotX", "robotY"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_system_coordinates",
++      "env": [],
++      "sys": ["robotX", "robotY"]
++    },
++    {
++      "kind": "initial_condition",
++      "name": "initial_robot_position",
++      "inputs": {},
++      "expected": {"robotX": "7", "robotY": "0"}
++    }
++  ]
++}
+
+tokens used
+119.998

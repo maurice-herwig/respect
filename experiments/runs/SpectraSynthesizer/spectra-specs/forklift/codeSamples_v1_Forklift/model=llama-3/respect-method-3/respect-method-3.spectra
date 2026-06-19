@@ -1,0 +1,19 @@
+import "DwyerResponse.spectra"
+
+spec Forklift
+
+type Obstacle = {BLOCKED, CLEAR};
+type Motor = {STOP, FWD, BWD};
+
+env Obstacle obstacle;
+
+sys Motor lMot;
+sys Motor rMot;
+
+gar ini lMot=STOP & rMot=STOP;
+
+gar alw obstacle=BLOCKED -> !(lMot=FWD & rMot=FWD);
+
+gar alwEv lMot=FWD & rMot=FWD;
+
+asm S_responds_to_P_globally(obstacle=CLEAR, lMot=BWD | rMot=BWD);
