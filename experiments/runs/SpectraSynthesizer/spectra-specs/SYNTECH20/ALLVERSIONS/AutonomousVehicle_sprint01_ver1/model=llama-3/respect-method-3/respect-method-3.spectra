@@ -1,0 +1,15 @@
+spec AutonomousVehicle
+
+env boolean pedestrian;
+env boolean crosswalk;
+env {RED, YELLOW, GREEN} light;
+
+sys Int(0..10) speed;
+
+asm alwEv light=GREEN & !pedestrian;
+
+gar alw pedestrian implies speed=0;
+gar alw light!=GREEN implies speed=0;
+gar alw crosswalk implies speed<5;
+gar alw (light=GREEN & !pedestrian) implies speed>0;
+gar alwEv light=GREEN & !pedestrian & speed>0;

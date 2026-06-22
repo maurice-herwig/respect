@@ -1,0 +1,26 @@
+spec Patrolling
+
+type Coord = Int(0..4);
+
+sys Coord robotX;
+sys Coord robotY;
+
+define charging := robotX = 4 & robotY = 0;
+
+counter staysAtCharger(0..5) {
+  staysAtCharger = 0;
+  inc: charging & staysAtCharger < 5;
+  reset: !charging;
+  overflow: false;
+}
+
+counter stepsAway(0..10) {
+  stepsAway = 0;
+  inc: !charging;
+  reset: charging;
+  overflow: false;
+}
+
+gar alw charging & staysAtCharger < 5 -> next(charging);
+
+gar alw !charging & stepsAway = 9 -> next(charging);
