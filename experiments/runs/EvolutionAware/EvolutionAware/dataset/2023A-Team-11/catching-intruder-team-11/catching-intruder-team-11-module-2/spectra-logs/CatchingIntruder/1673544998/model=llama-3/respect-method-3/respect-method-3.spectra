@@ -1,0 +1,17 @@
+spec CatchingIntruder
+
+type Coord = Int(0..7);
+
+sys Coord robotX0;
+sys Coord robotY0;
+sys Coord robotX1;
+sys Coord robotY1;
+sys boolean r1ReachedGround;
+
+gar ini !r1ReachedGround;
+
+gar alw (next(robotY0)=7 & next(robotX0)=0) -> next(r1ReachedGround);
+
+gar alw (next(robotY0)!=7 & next(robotX0)!=0) -> (next(r1ReachedGround)=r1ReachedGround);
+
+gar alw !r1ReachedGround -> (next(robotX1)=0 & next(robotY1)=0);

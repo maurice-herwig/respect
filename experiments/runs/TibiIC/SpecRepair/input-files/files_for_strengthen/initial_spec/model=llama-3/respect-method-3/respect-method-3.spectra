@@ -1,0 +1,18 @@
+spec TrafficE2
+
+env boolean carA;
+env boolean emergency;
+env boolean police;
+
+sys boolean greenA;
+
+asm ini !carA & !emergency;
+asm alwEv carA;
+asm alwEv !police;
+
+asm alw (carA & !greenA) -> next(carA);
+asm alw (carA & greenA) -> next(!carA);
+
+gar ini !greenA;
+gar alwEv greenA;
+gar alwEv !carA;

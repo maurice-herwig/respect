@@ -1,0 +1,27 @@
+spec Deliveries
+
+type Coord = Int(0..4);
+
+sys Coord robotX0;
+sys Coord robotY0;
+sys Coord robotX1;
+sys Coord robotY1;
+
+predicate horizontalOrStay(Coord x, Coord y):
+  (next(x)=x & next(y)=y) |
+  (x < 4 & next(x)=x+1 & next(y)=y) |
+  (x > 0 & next(x)=x-1 & next(y)=y);
+
+predicate vertical(Coord x, Coord y):
+  (y < 4 & next(y)=y+1 & next(x)=x) |
+  (y > 0 & next(y)=y-1 & next(x)=x);
+
+predicate validMove(Coord x, Coord y):
+  horizontalOrStay(x, y) | vertical(x, y);
+
+gar ini robotY0=0 & robotY1=0 & robotX0=0 & robotX1=1;
+
+gar alw validMove(robotX0, robotY0);
+gar alw validMove(robotX1, robotY1);
+
+gar alw !(robotX0=robotX1 & robotY0=robotY1);

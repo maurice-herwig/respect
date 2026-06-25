@@ -1,0 +1,25 @@
+spec RobotGridDX7DY7
+
+type Coord = Int(0..7);
+
+sys Coord robotX;
+sys Coord robotY;
+
+gar ini robotX=0 & robotY=0;
+
+gar alw (
+  next(robotX)=robotX |
+  (robotX<7 & next(robotX)=robotX+1) |
+  (robotX>0 & next(robotX)=robotX-1)
+);
+
+gar alw (
+  next(robotY)=robotY |
+  (robotY<7 & next(robotY)=robotY+1) |
+  (robotY>0 & next(robotY)=robotY-1)
+);
+
+gar alw robotX=2 -> robotY=7;
+gar alw robotX=5 -> robotY=0;
+
+gar alwEv robotX=7 & robotY=7;

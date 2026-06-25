@@ -1,0 +1,20 @@
+spec CatchingIntruder
+
+type Coord = Int(0..7);
+
+sys Coord robotX0;
+sys Coord robotY0;
+sys Coord robotX1;
+sys Coord robotY1;
+
+predicate stay(Coord x, Coord y):
+  next(x)=x & next(y)=y;
+
+predicate moveDist(Coord x, Coord y):
+  (next(x)=x+1 & next(y)=y) |
+  (next(x)=x-1 & next(y)=y) |
+  (next(x)=x & next(y)=y+1) |
+  (next(x)=x & next(y)=y-1) |
+  stay(x, y);
+
+gar ini robotX0=0 & robotY0=0 & robotX1=7 & robotY1=0;

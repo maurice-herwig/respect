@@ -1,0 +1,25 @@
+spec ElevatorRobots
+
+type Coord = Int(0..5);
+
+env Coord elevator;
+
+sys Coord robotX0;
+sys Coord robotY0;
+sys Coord robotX1;
+sys Coord robotY1;
+
+asm alw (
+  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
+  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
+  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
+  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
+  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
+  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
+);
+
+asm alwEv elevator=0;
+asm alwEv elevator=5;
+
+gar alw robotX0=0 -> next(robotY0)=elevator;
+gar alw robotX1=0 -> next(robotY1)=elevator;

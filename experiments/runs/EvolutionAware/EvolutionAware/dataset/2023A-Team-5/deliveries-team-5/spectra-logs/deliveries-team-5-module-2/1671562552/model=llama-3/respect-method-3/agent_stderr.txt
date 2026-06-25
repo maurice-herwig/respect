@@ -1,0 +1,2174 @@
+OpenAI Codex v0.142.0
+--------
+workdir: C:\Users\mauri\OneDrive\Desktop\Repos\respect
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: medium
+reasoning summaries: none
+session id: 019ef8ad-2816-7780-abda-1090e06da975
+--------
+user
+Use $respect-method-3.
+
+The system interacts with an environment that controls the elevator position, which ranges from 0 to DY (5 units). The system controls the positions of two robots, each with initial x and y coordinates (robotX0, robotY0, robotX1, robotY1), within a grid of size DX (5 units) by DY (5 units).
+
+The environment is assumed to change the elevator position in a way that it never moves more than one unit up or down at a time. Additionally, the elevator is expected to visit the bottom (0) and top (DY) positions infinitely often.
+
+The system guarantees that whenever a robot's x-coordinate is 0, its y-coordinate will be updated to match the current elevator position in the next state. This rule applies to both robots. 
+
+Initially, the robots' positions are set within the defined grid, but their exact initial values are not specified. The system ensures that the robots' y-coordinates are updated according to the elevator position whenever their x-coordinates are 0, maintaining a relationship between the robots' movements and the elevator's position.
+
+codex
+Using `respect-method-3`; I’ll read its workflow reference first, then draft and validate a Spectra spec in a temporary run directory.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw .agents\\skills\\respect-method-3\\references\\spectra-workflow.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 501ms:
+# Spectra Workflow Reference
+
+## Use This Reference For
+
+- Converting free-form reactive-system requirements into a first Spectra draft
+- Interpreting `spectra-cli.jar` results
+- Repairing parser errors without drifting away from the user's intent
+- Using counter-strategy diagnostics to repair unrealizable drafts
+
+## Drafting Guidance
+
+- Start with one named `spec`.
+- Declare environment variables with `env` and system variables with `sys`.
+- Encode assumptions with `asm` and guarantees with `gar`.
+- Prefer a minimal complete model over speculative features.
+- If the description leaves key semantics unstated, make the smallest explicit assumption and report it.
+
+## Validation And Synthesis Branches
+
+Use this check command:
+
+```bash
+java -jar spectra-cli.jar -i <path-to-file>
+```
+
+Observed CLI result patterns in this repo:
+
+- Realizable: `Result: Specification is realizable`
+- Unrealizable: `Result: Specification is unrealizable`
+- Syntax failure: `Error: Could not prepare game input from Spectra file`
+
+Use this synthesis command only after a realizable result:
+
+```bash
+java -jar spectra-cli.jar -i <path-to-file> -s -o <output-dir>
+```
+
+Observed synthesis success pattern:
+
+- `Result: Successfully synthesized a just-in-time controller in output folder`
+
+## Counter-Strategy Diagnostics
+
+The current CLI exposes:
+
+```bash
+java -jar spectra-cli.jar -i <path-to-file> --counter-strategy
+java -jar spectra-cli.jar -i <path-to-file> --counter-strategy-jtlv-format
+```
+
+Use these only after the normal check reports `Result: Specification is unrealizable`.
+
+Read the counter-strategy as an environment-winning behavior that demonstrates why the system cannot force its guarantees. It is diagnostic evidence, not a target behavior to copy.
+
+## Syntax-Repair Loop
+
+1. Save the draft as a `.spectra` file.
+2. Run the CLI.
+3. If parsing fails, extract the parser message, for example `missing ';' at 'gar'`.
+4. Repair the file with the smallest syntax-preserving edit.
+5. Repeat until the file is syntactically valid or the attempt budget is exhausted.
+
+## Unrealizability-Repair Loop
+
+1. Run the CLI and confirm the specification is syntactically valid but unrealizable.
+2. Request a counter-strategy diagnostic.
+3. Identify a likely conflict between assumptions, guarantees, initial conditions, safety, liveness, or update rules.
+4. Compare any candidate repair against the natural-language description.
+5. Apply the candidate only when it is consistent with the description.
+6. Re-run the normal CLI check.
+7. Stop after 3 unrealizability-repair attempts or when all plausible repairs would contradict the description.
+
+Common repair patterns:
+
+- Add a missing environment assumption only when the description says the environment is constrained.
+- Repair an initial condition that conflicts with an immediate response requirement.
+- Replace an accidental always-immediate response with a next-step response if the description allows delayed reaction.
+- Remove an over-specific liveness condition only when the description does not require that recurrence.
+
+Common invalid repairs:
+
+- Deleting a stated guarantee solely to make synthesis succeed.
+- Adding an assumption that forbids inputs the description explicitly permits.
+- Weakening "must always" into "may sometimes" without textual support.
+- Ignoring a named input/output or changing control ownership.
+
+## Useful Local Sources
+
+- `assets/examples/A1_firstController/TrafficA1.spectra`
+- `assets/examples/A2_unrealizability/TrafficA2b.spectra`
+- `assets/examples/L1_firstSpec/`
+- `assets/examples/L2_defsArrays/`
+- `assets/examples/L3_patterns/`
+
+
+codex
+I’m checking the local Spectra examples for integer ranges and next-state syntax so the draft matches the parser this repo uses.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg \"Int\\(|0\\.\\.|next\\(|mod|spec \" assets\\examples -g \"*.spectra\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Date -Format "yyyyMMdd-HHmmss"' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 705ms:
+assets\examples\L3_patterns\DwyerPatterns.spectra:spec DwyerPatternsNamed
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!r & !p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !p & q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r) & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q & !r) | (r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p & !r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p & !r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!p & !r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p & !r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!r & !p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q & !p) | (q & r) | (!r & p) | (!q & r & p)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !r & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q & !p) | (q & r) | (!r & p) | (!q & r & p)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !r & !p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & !p) & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & TRUE & next(state=S5)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!r & !p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & !p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & !p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & !p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (!r & !p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (!r & p) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S6 & (!r) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S6 & (r) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S7 & TRUE & next(state=S7)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (!p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (p) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S6 & TRUE & next(state=S6)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !p & q) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p & q) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & !p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & p) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (!r & !p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (!r & p) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S6 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S6 & (!r & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S6 & (!r & p) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S7 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S7 & (!r & !p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S7 & (!r & p) & next(state=S7)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (p) & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p & q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !p & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & !p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r) & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q & !r) | (r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p & !r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p & !r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & !r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (p & !r) & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!r & !s & !p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & ((r) | (!r & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !s & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q) | (r & q) | (!r & s & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !s & !p & q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !s & p & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((r) | (!r & s)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & !s & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & !s & p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r) & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q & !r & !s) | (r) | (!r & s)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p & !r & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((r) | (!r & s)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!p & !r & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!p) | (p & s)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!s) & next(state=S1)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!r & !p) | (!r & p & s)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & ((q & !p) | (q & p & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((!p) | (p & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!s) & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & ((!r & !p & q) | (!r & p & s & q)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p & !s & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & ((!r & !p) | (!r & p & s)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & p & !s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & !s) & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q & !r) | (r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & ((q & !p & !r) | (q & p & !r & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((!p & !r) | (p & !r & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!p & s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (p & !t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!r & !p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((r & !t) | (t)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & p & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & !p & !t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & TRUE & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!p & !s & q) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (p & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!p & s & q) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & TRUE & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (p & !t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!p & !t) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !p & !s & q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !p & s & q) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & !p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & !p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((r & !t) | (t & !q) | (r & t & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & !p & !s & q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!r & p & !t) | (!r & p & t & q)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!r & !p & !t & !q) | (!r & !p & s & q)) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q) | (q & r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !r & !p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !r & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !r & p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((r & !t) | (!q & t) | (q & r & t)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((!q & !r & !p & !t) | (q & !r & !p & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (q & !r & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((!r & p & !t) | (q & !r & p & t)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & !p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!t) & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!p & !r & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & ((p) | (!p & r)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!p & !r & s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & TRUE & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & TRUE & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!t) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q) | (p & q) | (!p & r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!p & !r & !s & q) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!p & !r & s & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & ((p) | (!p & r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & !r & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & !t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & t) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q & !r) | (q & p) | (!p & r) | (!q & p & r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p & !r & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & !t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & ((p) | (!p & r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & !r & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p & s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (t & p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (t & !p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & ((!t) | (t & p & s)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (t & !p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (t & p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (t & !p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!t & p) | (t & p & s)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!t & !p) | (t & !p & s)) & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!r & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & t & p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((!r & !t & !p) | (!r & t & !p & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((!r & !t & p) | (!r & t & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & t & !p & !s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r & !p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & t & p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & t & !p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((r & !t) | (r & t & p)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!r & !t) | (!r & t & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & t & !p & !s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r & t & !p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & !p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & !p & !s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (r & !p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (!p) & next(state=S5)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (t & p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (t & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!t) | (t & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (t & !p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (t & p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (t & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!t & p) | (t & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!t & !p) | (t & !p & s)) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !s & q) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & s & q) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((!r & !t & !p) | (!r & t & !p & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & t & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((!r & !t & p) | (!r & t & p & s)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & t & !p & !s) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r & !p) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & t & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!r & !t & !p) | (!r & t & !p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!r & !t & p) | (!r & t & p & s)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & t & !p & !s) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r & !p) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((r & !t) | (r & t & p)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & t & !p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & t & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!r & !t) | (!r & t & p & s)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & t & !p & !s) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (r & t & !p) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (!r & !p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (!r & p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (!r & !p & !s) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (r & !p) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S6 & (r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S6 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S6 & (!r & !p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S6 & (!r & p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S6 & (!r & !p & !s) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S6 & (r & !p) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S7 & ((p & !q) | (r & p & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S7 & (!r & p & !s & q) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S7 & (!r & !p & s & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S7 & (!r & p & s & q) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S7 & (!r & !p & !s & q) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S7 & ((!p & !q) | (r & !p & q)) & next(state=S7)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q) | (q & r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !r & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !r & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r & !p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & !p & s) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((r & !t) | (r & t & p)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & t & p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & t & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!r & !t) | (!r & t & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r & t & !p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & t & !p & s) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!q & p) | (q & r & p)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (q & !r & p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (q & !r & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (q & !r & p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!q & !p) | (q & r & !p)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (q & !r & !p & s) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (!r & t & p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (!r & t & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & ((!r & !t & p) | (!r & t & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (r & !p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & ((!r & !t & !p) | (!r & t & !p & s)) & next(state=S5)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!s & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!s & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (s & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (s & !t) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!p & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (p & !s & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (p & !s & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (p & s & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!p & !t) | (p & s & !t)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!p & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (p & !s & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (p & !s & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (p & s & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!p & !t) | (p & s & !t)) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!r & !p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & !p & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!r & !p & !t) | (!r & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r & !t) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & TRUE & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!p & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!p & !t) | (p & s)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!p & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (p & s & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!p & !t) | (p & s & !t)) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p & s & q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p & !s & q) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !p & q) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((!r & !p & !t) | (!r & p & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r & !t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & !p & t) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & TRUE & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & !p) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & ((p & !s) | (p & s & z)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (p & s & !z) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!p & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((p & !s & t) | (p & s & z & t)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((!p & !z & !t) | (p & s & !z)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((p & !s & !t) | (!p & z & !t) | (p & s & z & !t)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (s & !z & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!s & !z & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (s & !z & !t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (z & !t) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & ((!s & t) | (s & z & t)) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!p & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (p & s & !z & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (p & !s & !z & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!p & !z & !t) | (p & s & !z & !t)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (z & !t) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((p & !s & t) | (p & s & z & t)) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (s & !z) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!s) | (s & z)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & (s & !z) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S5 & ((!s) | (s & z)) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!r & !p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & ((!r & p & !s) | (!r & p & s & z)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p & s & !z) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!r & !s) | (!r & s & z)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & s & !z) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & !p & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (r & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (r & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!r & p & !s) | (!r & !p & z & !t) | (!r & p & s & z)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!r & !p & !z & !t) | (!r & p & s & !z)) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (q & p & s & !z) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & ((q & p & !s) | (q & p & s & z)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (p & s & !z) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((p & !s) | (p & s & z)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (!p & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & ((!p & !z & !t) | (p & s & !z & !t)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & (p & s & !z & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & ((p & !s) | (!p & z & !t) | (p & s & z)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!p & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!p & !z & !t) | (p & s & !z)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((p & !s) | (!p & z & !t) | (p & s & z)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & TRUE & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & ((!r & p & !s & q) | (!r & p & s & z & q)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & !p & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S0 & (!r & p & s & !z & q) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & ((!r & !s) | (!r & s & z)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S1 & (!r & s & !z) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & ((!r & p & !s) | (!r & p & s & z)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & !p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S3 & (!r & p & s & !z) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (r & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!r & p & !s) | (!r & !p & z & !t) | (!r & p & s & z)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (r & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & (!r & !p & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:  (state=S4 & ((!r & !p & !z & !t) | (!r & p & s & !z)) & next(state=S4)));
+assets\examples\L2_defsArrays\GridL2.spectra:spec GridL2
+assets\examples\L2_defsArrays\GridL2.spectra:type Coord = Int(0..20);
+assets\examples\L2_defsArrays\GridL2.spectra: c=next(c);
+assets\examples\L2_defsArrays\GridL2.spectra:asm alw moveRob=UP implies next(rob[1])=rob[1]-1;
+assets\examples\A1_firstController\TrafficA1.spectra:spec TrafficA1
+assets\examples\L2_defsArrays\TrafficL2.spectra:spec TrafficL2
+assets\examples\L1_firstSpec\GridL1.spectra:spec GridL1
+assets\examples\L1_firstSpec\GridL1.spectra:env Int(0..4) robX;
+assets\examples\L1_firstSpec\GridL1.spectra:env Int(0..4) robY;
+assets\examples\L1_firstSpec\GridL1.spectra:asm alw move=UP implies next(robY)=robY-1;
+assets\examples\L1_firstSpec\TrafficL1.spectra:spec TrafficL1
+assets\examples\L3_patterns\TrafficL3.spectra:spec TrafficL3
+assets\examples\L3_patterns\GridL3.spectra:spec GridL3
+assets\examples\L3_patterns\GridL3.spectra:type Coord = Int(0..upper);
+assets\examples\L3_patterns\GridL3.spectra: c + 1 = next (c) | (c = upper & next(c)=c);
+assets\examples\L3_patterns\GridL3.spectra: c -1 = next (c) | (c = 0 & next(c)=c);
+assets\examples\L3_patterns\GridL3.spectra: next(c)=c;
+assets\examples\A2_unrealizability\TrafficA2b.spectra:spec TrafficA2b
+assets\examples\E2_execution\TrafficE2.spectra:spec TrafficE2
+
+ succeeded in 705ms:
+20260624-100943
+
+codex
+The local examples confirm bounded integers use `Int(0..n)` and next-state constraints use `next(var)`. I’m drafting a minimal model: elevator is the only environment input, robot coordinates are system outputs, with no invented robot motion policy beyond the stated elevator coupling.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'rg "test-plan|variable_ownership|always_implication|initial_condition|outputs" controller_tests -g "*.json" -g "*.java"' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw assets\\examples\\L1_firstSpec\\GridL1.spectra" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 737ms:
+controller_tests\src\main\java\respect\controller_tests\ControllerHarness.java:        // Only read outputs requested by the test plan, because env variables are supplied as inputs.
+controller_tests\src\main\java\respect\controller_tests\ControllerHarness.java:        Map<String, String> outputs = new LinkedHashMap<>();
+controller_tests\src\main\java\respect\controller_tests\ControllerHarness.java:            outputs.put(output, executor.getCurrValue(output));
+controller_tests\src\main\java\respect\controller_tests\ControllerHarness.java:        return new StepResult(inputs, outputs);
+controller_tests\src\main\java\respect\controller_tests\ControllerTraceRunner.java:        Set<String> outputs = new LinkedHashSet<>(TestUtil.stringList(plan.get("outputs"), "outputs"));
+controller_tests\src\main\java\respect\controller_tests\ControllerTraceRunner.java:        if (outputs.isEmpty()) {
+controller_tests\src\main\java\respect\controller_tests\ControllerTraceRunner.java:            throw new IllegalArgumentException("outputs must contain at least one variable");
+controller_tests\src\main\java\respect\controller_tests\ControllerTraceRunner.java:            ControllerHarness harness = new ControllerHarness(controllerDir, specName, outputs);
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:    private final Map<String, String> outputs;
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:    public StepResult(Map<String, String> inputs, Map<String, String> outputs) {
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:        this.outputs = new LinkedHashMap<>(outputs);
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:    public Map<String, String> outputs() {
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:        return outputs;
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:        combined.putAll(outputs);
+controller_tests\src\main\java\respect\controller_tests\StepResult.java:        value.put("outputs", outputs);
+controller_tests\examples\traffic_e2_exploration_plan.json:  "outputs": ["greenA", "greenB"],
+controller_tests\examples\traffic_e2_exploration_plan.json:      "kind": "variable_ownership",
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:        Set<String> outputs = new LinkedHashSet<>();
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:        // Prefer explicit output metadata; it prevents reading env variables as controller outputs.
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:        Object explicitOutputs = plan.get("outputs");
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:            outputs.addAll(TestUtil.stringList(explicitOutputs, "outputs"));
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:                    outputs.addAll(TestUtil.stringMap(test.get("sys")).keySet());
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:        // Fallback for small hand-written plans without top-level outputs or variable_ownership tests.
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:        if (outputs.isEmpty() && tests instanceof Iterable<?>) {
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:                    outputs.addAll(TestUtil.stringMap(test.get("expected")).keySet());
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:                    outputs.addAll(TestUtil.stringMap(test.get("forbidden")).keySet());
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:                    outputs.addAll(TestUtil.stringMap(test.get("then")).keySet());
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:                    outputs.addAll(TestUtil.stringMap(test.get("eventually")).keySet());
+controller_tests\src\main\java\respect\controller_tests\TestContext.java:        return new TestContext(controllerDir, specName, spectraFile, outputs);
+controller_tests\src\main\java\respect\controller_tests\TestFactory.java:            case "variable_ownership":
+controller_tests\src\main\java\respect\controller_tests\TestFactory.java:            case "initial_condition":
+controller_tests\src\main\java\respect\controller_tests\TestFactory.java:            case "always_implication":
+controller_tests\examples\traffic_e2_failing_plan.json:  "outputs": ["greenA", "greenB"],
+controller_tests\examples\traffic_e2_failing_plan.json:      "kind": "variable_ownership",
+controller_tests\examples\traffic_e2_failing_plan.json:      "kind": "always_implication",
+controller_tests\src\main\java\respect\controller_tests\tests\AlwaysImplicationTest.java:        this.name = TestUtil.optionalName(config, "always_implication");
+controller_tests\src\main\java\respect\controller_tests\tests\AlwaysImplicationTest.java:                    return TestResult.fail(name, "always_implication", "Implication violated at trace " + traceIndex + ", step " + i, observed);
+controller_tests\src\main\java\respect\controller_tests\tests\AlwaysImplicationTest.java:        return TestResult.pass(name, "always_implication");
+controller_tests\examples\traffic_e2_plan.json:      "kind": "variable_ownership",
+controller_tests\src\main\java\respect\controller_tests\tests\InitialConditionTest.java:        this.name = TestUtil.optionalName(config, "initial_condition");
+controller_tests\src\main\java\respect\controller_tests\tests\InitialConditionTest.java:            return TestResult.fail(name, "initial_condition", "Initial condition did not match expected valuation", List.of(step.toJson()));
+controller_tests\src\main\java\respect\controller_tests\tests\InitialConditionTest.java:        return TestResult.pass(name, "initial_condition");
+controller_tests\src\main\java\respect\controller_tests\tests\VariableOwnershipTest.java:        this.name = TestUtil.optionalName(config, "variable_ownership");
+controller_tests\src\main\java\respect\controller_tests\tests\VariableOwnershipTest.java:            return TestResult.fail(name, "variable_ownership", "spectra_file is required", null);
+controller_tests\src\main\java\respect\controller_tests\tests\VariableOwnershipTest.java:            return TestResult.fail(name, "variable_ownership", "Missing or wrong ownership: " + missing, null);
+controller_tests\src\main\java\respect\controller_tests\tests\VariableOwnershipTest.java:        return TestResult.pass(name, "variable_ownership");
+
+ succeeded in 724ms:
+spec GridL1
+
+env Int(0..4) robX;
+env Int(0..4) robY;
+
+sys {UP, DOWN, LEFT, RIGHT, STAY} move;
+
+asm ini robX=0 & robY=0;
+asm alw move=UP implies next(robY)=robY-1;
+
+// Extend specification GridL1.spectra with the following guarantee
+// When the robot is at the end of the grid, it does not try to move outside.
+
+
+codex
+I’m also checking the test harness schema before writing tests, so the post-synthesis plan only uses supported assertions.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw controller_tests\\examples\\traffic_e2_plan.json" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw controller_tests\\examples\\traffic_e2_exploration_plan.json" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw controller_tests\\src\\main\\java\\respect\\controller_tests\\tests\\AlwaysImplicationTest.java" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg \"alwEv|GF|eventually|ini|gar alw\" assets\\examples -g \"*.spectra\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 992ms:
+{
+  "controller_dir": "assets/examples/E2_execution/out/jit",
+  "spec_name": "TrafficE2",
+  "spectra_file": "assets/examples/E2_execution/TrafficE2.spectra",
+  "tests": [
+    {
+      "kind": "variable_ownership",
+      "name": "declared_variables",
+      "env": ["carA", "carB"],
+      "sys": ["greenA", "greenB"]
+    },
+    {
+      "kind": "exclusion",
+      "name": "never_both_green",
+      "trace": [
+        {"carA": "true", "carB": "false"},
+        {"carA": "false", "carB": "true"},
+        {"carA": "true", "carB": "true"},
+        {"carA": "true", "carB": "false"}
+      ],
+      "forbidden": {"greenA": "true", "greenB": "true"}
+    },
+    {
+      "kind": "eventually_response",
+      "name": "car_a_eventually_green",
+      "trace": [
+        {"carA": "true", "carB": "false"},
+        {"carA": "true", "carB": "false"},
+        {"carA": "true", "carB": "false"},
+        {"carA": "true", "carB": "false"}
+      ],
+      "when": {"carA": "true"},
+      "eventually": {"greenA": "true"},
+      "within_steps": 4
+    }
+  ]
+}
+
+
+ succeeded in 1025ms:
+{
+  "controller_dir": "assets/examples/E2_execution/out/jit",
+  "spec_name": "TrafficE2",
+  "spectra_file": "assets/examples/E2_execution/TrafficE2.spectra",
+  "outputs": ["greenA", "greenB"],
+  "tests": [
+    {
+      "kind": "variable_ownership",
+      "name": "declared_variables",
+      "env": ["carA", "carB"],
+      "sys": ["greenA", "greenB"]
+    },
+    {
+      "kind": "exclusion",
+      "name": "never_both_green_exhaustive",
+      "mode": "exhaustive",
+      "max_depth": 2,
+      "max_paths": 16,
+      "env": {
+        "carA": ["false", "true"],
+        "carB": ["false", "true"]
+      },
+      "forbidden": {"greenA": "true", "greenB": "true"}
+    },
+    {
+      "kind": "eventually_response",
+      "name": "initially_green_a_occurs_for_persistent_car_a",
+      "mode": "random",
+      "runs": 20,
+      "max_depth": 8,
+      "seed": 7,
+      "env": {
+        "carA": ["true"],
+        "carB": ["false"]
+      },
+      "when": {},
+      "eventually": {"greenA": "true"},
+      "within_steps": 4
+    }
+  ]
+}
+
+
+ succeeded in 996ms:
+package respect.controller_tests.tests;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import respect.controller_tests.ControllerHarness;
+import respect.controller_tests.Exploration;
+import respect.controller_tests.StepResult;
+import respect.controller_tests.TestCase;
+import respect.controller_tests.TestContext;
+import respect.controller_tests.TestResult;
+import respect.controller_tests.TestUtil;
+
+public final class AlwaysImplicationTest implements TestCase {
+    private final String name;
+    private final Map<String, String> when;
+    private final Map<String, String> then;
+    private final List<List<Map<String, String>>> traces;
+
+    public AlwaysImplicationTest(Map<String, Object> config) {
+        this.name = TestUtil.optionalName(config, "always_implication");
+        this.when = TestUtil.stringMap(config.get("when"));
+        this.then = TestUtil.stringMap(config.get("then"));
+        this.traces = Exploration.traces(config);
+    }
+
+    @Override
+    public TestResult run(TestContext context) throws Exception {
+        for (int traceIndex = 0; traceIndex < traces.size(); traceIndex++) {
+            ControllerHarness harness = context.newHarness();
+            List<Map<String, Object>> observed = new ArrayList<>();
+            List<Map<String, String>> trace = traces.get(traceIndex);
+            for (int i = 0; i < trace.size(); i++) {
+                StepResult step = harness.step(trace.get(i));
+                observed.add(step.toJson());
+                Map<String, String> combined = step.combined();
+                // Safety implication: whenever the trigger holds, the consequence must hold immediately.
+                if (TestUtil.matches(combined, when) && !TestUtil.matches(combined, then)) {
+                    return TestResult.fail(name, "always_implication", "Implication violated at trace " + traceIndex + ", step " + i, observed);
+                }
+            }
+        }
+        return TestResult.pass(name, "always_implication");
+    }
+}
+
+
+ succeeded in 1023ms:
+assets\examples\A1_firstController\TrafficA1.spectra:asm ini carA & !carB;
+assets\examples\A1_firstController\TrafficA1.spectra:asm alwEv carA;
+assets\examples\A1_firstController\TrafficA1.spectra:asm alwEv carB;
+assets\examples\A1_firstController\TrafficA1.spectra:gar ini !greenA & !greenB;
+assets\examples\A1_firstController\TrafficA1.spectra:gar alw !(greenA & greenB);
+assets\examples\A1_firstController\TrafficA1.spectra:gar alw !carA -> !greenA;
+assets\examples\A1_firstController\TrafficA1.spectra:gar alw !carB -> !greenB;
+assets\examples\A1_firstController\TrafficA1.spectra:gar alwEv greenA;
+assets\examples\A1_firstController\TrafficA1.spectra:gar alwEv greenB;
+assets\examples\L1_firstSpec\GridL1.spectra:asm ini robX=0 & robY=0;
+assets\examples\A2_unrealizability\TrafficA2b.spectra:gar alw !(greenA & greenB);
+assets\examples\A2_unrealizability\TrafficA2b.spectra:gar alwEv carA & greenA;
+assets\examples\A2_unrealizability\TrafficA2b.spectra:gar alwEv carB & greenB;
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S1);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S2);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S2);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2 | state=S3 | state=S4);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2 | state=S3 | state=S4 | state=S5 | state=S6);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2 | state=S3 | state=S4 | state=S5);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S3 | state=S4 | state=S5 | state=S6 | state=S7);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S2);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S2);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S2);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  // initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  ini state=S0;
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S2 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S2 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2 | state=S4);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S3 | state=S4);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2 | state=S4);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S2 | state=S3 | state=S4);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S2);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2 | state=S3 | state=S4);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2 | state=S4 | state=S5);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S2 | state=S4);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S5);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S3 | state=S4);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S3);
+assets\examples\L3_patterns\DwyerPatterns.spectra:  -- initial assignments: initial state
+assets\examples\L3_patterns\DwyerPatterns.spectra:  alwEv (state=S0 | state=S1 | state=S3 | state=S4);
+assets\examples\E2_execution\TrafficE2.spectra:asm alwEv carA;
+assets\examples\E2_execution\TrafficE2.spectra:asm alwEv carB;
+assets\examples\E2_execution\TrafficE2.spectra:gar alw !(greenA & greenB);
+assets\examples\E2_execution\TrafficE2.spectra:gar alwEv greenA;
+assets\examples\E2_execution\TrafficE2.spectra:gar alwEv greenB;
+assets\examples\L1_firstSpec\TrafficL1.spectra:gar ini !greenA & !greenB;
+assets\examples\L1_firstSpec\TrafficL1.spectra:gar alw !(greenA & greenB);
+assets\examples\L1_firstSpec\TrafficL1.spectra:gar alwEv greenA;
+assets\examples\L1_firstSpec\TrafficL1.spectra:asm ini carA & !carB;
+assets\examples\L1_firstSpec\TrafficL1.spectra:// Always eventually traffic will arrive at each light.
+assets\examples\L3_patterns\GridL3.spectra:asm ini p1;
+assets\examples\L3_patterns\GridL3.spectra:gar alwEv p2;
+assets\examples\L3_patterns\GridL3.spectra:gar alwEv p3;
+assets\examples\L2_defsArrays\GridL2.spectra:asm ini rob[0]=0 & rob[1]=0;
+assets\examples\L2_defsArrays\GridL2.spectra:gar alw (rob[0]=0 implies moveRob!=LEFT) & 
+assets\examples\L2_defsArrays\GridL2.spectra:gar alw moveRob=STAY -> fix(rob[0]) & fix(rob[1]);
+assets\examples\L2_defsArrays\GridL2.spectra:gar alw coordSum < 7;
+assets\examples\L3_patterns\TrafficL3.spectra:gar alw !(greenA & greenB);
+assets\examples\L3_patterns\TrafficL3.spectra:asm alwEv ONCE (HISTORICALLY (carA));
+assets\examples\L3_patterns\TrafficL3.spectra:gar alw greenA -> PREV(greenB);
+assets\examples\L3_patterns\TrafficL3.spectra:// Add an assumption that carA is always eventually followed by carB (use the pattern pRespondsToS).
+assets\examples\L2_defsArrays\TrafficL2.spectra:asm ini carA & !carB;
+assets\examples\L2_defsArrays\TrafficL2.spectra:asm alwEv carA;
+assets\examples\L2_defsArrays\TrafficL2.spectra:asm alwEv carB;
+assets\examples\L2_defsArrays\TrafficL2.spectra:gar ini !greenA & !greenB;
+assets\examples\L2_defsArrays\TrafficL2.spectra:gar alw !(greenA & greenB);
+assets\examples\L2_defsArrays\TrafficL2.spectra:gar alwEv !carWaiting;
+
+codex
+I’m writing the draft under `tmp/spectra-runs/20260624-100943-elevator-robots/`. The only behavioral guarantee I’m encoding is the next-step y update when a robot is at x=0; the exact initial coordinates stay unconstrained within their declared ranges, as described.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "New-Item -ItemType Directory -Force tmp\\spectra-runs\\20260624-100943-elevator-robots\\diagnostics, tmp\\spectra-runs\\20260624-100943-elevator-robots\\tests, tmp\\spectra-runs\\20260624-100943-elevator-robots\\out | Out-Null" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 601ms:
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260624-100943-elevator-robots\elevator_robots.spectra
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..55eb21e7e41c6a80b21ec4e7f3ba7e85eedf22aa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,23 @@
++spec ElevatorRobots
++
++env Int(0..5) elevator;
++
++sys Int(0..5) robotX0;
++sys Int(0..5) robotY0;
++sys Int(0..5) robotX1;
++sys Int(0..5) robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..55eb21e7e41c6a80b21ec4e7f3ba7e85eedf22aa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,23 @@
++spec ElevatorRobots
++
++env Int(0..5) elevator;
++
++sys Int(0..5) robotX0;
++sys Int(0..5) robotY0;
++sys Int(0..5) robotX1;
++sys Int(0..5) robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+
+codex
+The draft is saved. I’m running the Spectra wrapper now; if the parser rejects anything, I’ll repair only the syntax before checking realizability.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python .agents\\skills\\respect-method-3\\scripts\\run_spectra_cli.py --input tmp\\spectra-runs\\20260624-100943-elevator-robots\\elevator_robots.spectra --timeout 120" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 4996ms:
+{
+  "status": "realizable",
+  "input": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260624-100943-elevator-robots\\elevator_robots.spectra",
+  "jar": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+  "command": [
+    "java",
+    "-jar",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+    "-i",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260624-100943-elevator-robots\\elevator_robots.spectra"
+  ],
+  "exit_code": 0,
+  "synthesize": false,
+  "counter_strategy": false,
+  "counter_strategy_format": "default",
+  "output_dir": null,
+  "timeout_seconds": 120.0,
+  "raw_output": "Using BDD Package: CUDDFactory, Version: CUDD 3.0\nUsing BDD Package: CUDDFactory, Version: CUDD 3.0\nGR1GameImplC.checkRealizability: start\nGR1GameImplC.checkRealizability: end\nNodes num: 440\nNodes table size: 1022\nResult: Specification is realizable\n"
+}
+
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..55eb21e7e41c6a80b21ec4e7f3ba7e85eedf22aa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,23 @@
++spec ElevatorRobots
++
++env Int(0..5) elevator;
++
++sys Int(0..5) robotX0;
++sys Int(0..5) robotY0;
++sys Int(0..5) robotX1;
++sys Int(0..5) robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+
+codex
+Validation reports the spec is realizable with no syntax repairs. I’m synthesizing the controller into the run directory next, then I’ll build and run the NL-guided controller tests.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python .agents\\skills\\respect-method-3\\scripts\\run_spectra_cli.py --input tmp\\spectra-runs\\20260624-100943-elevator-robots\\elevator_robots.spectra --synthesize --output-dir tmp\\spectra-runs\\20260624-100943-elevator-robots\\out --timeout 120" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 4850ms:
+{
+  "status": "synthesized",
+  "input": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260624-100943-elevator-robots\\elevator_robots.spectra",
+  "jar": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+  "command": [
+    "java",
+    "-jar",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+    "-i",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260624-100943-elevator-robots\\elevator_robots.spectra",
+    "-s",
+    "-o",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260624-100943-elevator-robots\\out"
+  ],
+  "exit_code": 0,
+  "synthesize": true,
+  "counter_strategy": false,
+  "counter_strategy_format": "default",
+  "output_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260624-100943-elevator-robots\\out",
+  "timeout_seconds": 120.0,
+  "raw_output": "Using BDD Package: CUDDFactory, Version: CUDD 3.0\nUsing BDD Package: CUDDFactory, Version: CUDD 3.0\nGR1GameImplC.checkRealizability: start\nGR1GameImplC.checkRealizability: end\nNodes num: 440\nNodes table size: 1022\nResult: Specification is realizable. Proceeding to synthesis\nCalculating controller info for storage\nGR(1) Calculated fixpoints BDD\nGR(1) Calculated trans BDD\nGR(1) Calculated justices BDD\nResult: Successfully synthesized a just-in-time controller in output folder\n"
+}
+
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..55eb21e7e41c6a80b21ec4e7f3ba7e85eedf22aa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,23 @@
++spec ElevatorRobots
++
++env Int(0..5) elevator;
++
++sys Int(0..5) robotX0;
++sys Int(0..5) robotY0;
++sys Int(0..5) robotX1;
++sys Int(0..5) robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+
+codex
+Synthesis succeeded. For the test plan, the only supported high-confidence check is ownership: the described y-update is explicitly a next-state rule, while this harness’s implication test is same-step, and the robot x-coordinates are system outputs so a trace cannot force the trigger non-vacuously.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "javac -cp assets\\examples\\E2_execution\\executor.jar -d controller_tests\\build\\classes (Get-ChildItem controller_tests\\src\\main\\java -Recurse -Filter *.java).FullName" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1608ms:
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..55eb21e7e41c6a80b21ec4e7f3ba7e85eedf22aa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,23 @@
++spec ElevatorRobots
++
++env Int(0..5) elevator;
++
++sys Int(0..5) robotX0;
++sys Int(0..5) robotY0;
++sys Int(0..5) robotX1;
++sys Int(0..5) robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+
+codex
+The Java test harness built cleanly. I’m saving and running the small NL-guided test plan now.
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260624-100943-elevator-robots\tests\test-plan-1.json
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..55eb21e7e41c6a80b21ec4e7f3ba7e85eedf22aa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,23 @@
++spec ElevatorRobots
++
++env Int(0..5) elevator;
++
++sys Int(0..5) robotX0;
++sys Int(0..5) robotY0;
++sys Int(0..5) robotX1;
++sys Int(0..5) robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..55eb21e7e41c6a80b21ec4e7f3ba7e85eedf22aa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,23 @@
++spec ElevatorRobots
++
++env Int(0..5) elevator;
++
++sys Int(0..5) robotX0;
++sys Int(0..5) robotY0;
++sys Int(0..5) robotX1;
++sys Int(0..5) robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "java \"-Djava.library.path=.\" -cp \"controller_tests\\build\\classes;assets\\examples\\E2_execution\\executor.jar\" respect.controller_tests.TestRunner --plan tmp\\spectra-runs\\20260624-100943-elevator-robots\\tests\\test-plan-1.json --output tmp\\spectra-runs\\20260624-100943-elevator-robots\\tests\\test-results-1.json" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+2026-06-24T08:11:58.620856Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.9 seconds
+Output:
+{"status":"failed","passed":0,"failed":1,"total":1,"results":[{"name":"declared_elevator_and_robot_ownership","kind":"variable_ownership","passed":false,"reason":"Missing or wrong ownership: [env elevator, sys robotX0, sys robotY0, sys robotX1, sys robotY1]"}]}
+
+ exited 1 in 884ms:
+{"status":"failed","passed":0,"failed":1,"total":1,"results":[{"name":"declared_elevator_and_robot_ownership","kind":"variable_ownership","passed":false,"reason":"Missing or wrong ownership: [env elevator, sys robotX0, sys robotY0, sys robotX1, sys robotY1]"}]}
+
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..55eb21e7e41c6a80b21ec4e7f3ba7e85eedf22aa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,23 @@
++spec ElevatorRobots
++
++env Int(0..5) elevator;
++
++sys Int(0..5) robotX0;
++sys Int(0..5) robotY0;
++sys Int(0..5) robotX1;
++sys Int(0..5) robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+
+codex
+The first ownership test failed, so I’m inspecting the test implementation to determine whether this is a test-plan/schema issue rather than a Spectra mismatch. The failure says all variables are missing, which points at how the ownership parser reads declarations.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw controller_tests\\src\\main\\java\\respect\\controller_tests\\tests\\VariableOwnershipTest.java" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 562ms:
+package respect.controller_tests.tests;
+
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import respect.controller_tests.TestCase;
+import respect.controller_tests.TestContext;
+import respect.controller_tests.TestResult;
+import respect.controller_tests.TestUtil;
+
+public final class VariableOwnershipTest implements TestCase {
+    private final String name;
+    private final List<String> env;
+    private final List<String> sys;
+
+    public VariableOwnershipTest(Map<String, Object> config) {
+        this.name = TestUtil.optionalName(config, "variable_ownership");
+        this.env = TestUtil.stringList(config.get("env"), "env");
+        this.sys = TestUtil.stringList(config.get("sys"), "sys");
+    }
+
+    @Override
+    public TestResult run(TestContext context) throws Exception {
+        if (context.spectraFile() == null) {
+            return TestResult.fail(name, "variable_ownership", "spectra_file is required", null);
+        }
+        String source = Files.readString(context.spectraFile());
+        List<String> missing = new ArrayList<>();
+        for (String variable : env) {
+            if (!declared(source, "env", variable)) {
+                missing.add("env " + variable);
+            }
+        }
+        for (String variable : sys) {
+            if (!declared(source, "sys", variable)) {
+                missing.add("sys " + variable);
+            }
+        }
+        if (!missing.isEmpty()) {
+            return TestResult.fail(name, "variable_ownership", "Missing or wrong ownership: " + missing, null);
+        }
+        return TestResult.pass(name, "variable_ownership");
+    }
+
+    private static boolean declared(String source, String owner, String variable) {
+        // Handles simple declarations such as "env boolean carA;" and finite-domain declarations.
+        String regex = "(?m)^\\s*" + Pattern.quote(owner) + "\\s+(?:[A-Za-z_][A-Za-z0-9_]*\\s+)?"
+            + Pattern.quote(variable) + "\\s*(?:;|\\{|=)";
+        return Pattern.compile(regex).matcher(source).find();
+    }
+}
+
+
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..55eb21e7e41c6a80b21ec4e7f3ba7e85eedf22aa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,23 @@
++spec ElevatorRobots
++
++env Int(0..5) elevator;
++
++sys Int(0..5) robotX0;
++sys Int(0..5) robotY0;
++sys Int(0..5) robotX1;
++sys Int(0..5) robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+
+codex
+The failing test is justified by the natural-language ownership requirement, and the harness only recognizes simple typed declarations, not inline `Int(0..5)` declarations. I’m making a semantics-preserving Spectra edit by introducing a `Coord` type alias, then rerunning validation, synthesis, and a fresh test plan.
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260624-100943-elevator-robots\elevator_robots.spectra
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..9725684c59a78921da0a7e36821e192f2801a149
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,25 @@
++spec ElevatorRobots
++
++type Coord = Int(0..5);
++
++env Coord elevator;
++
++sys Coord robotX0;
++sys Coord robotY0;
++sys Coord robotX1;
++sys Coord robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..9725684c59a78921da0a7e36821e192f2801a149
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,25 @@
++spec ElevatorRobots
++
++type Coord = Int(0..5);
++
++env Coord elevator;
++
++sys Coord robotX0;
++sys Coord robotY0;
++sys Coord robotX1;
++sys Coord robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+
+codex
+The type-alias edit is in place. I’m rerunning the CLI and synthesis before testing again, since the controller must match the final spec file.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python .agents\\skills\\respect-method-3\\scripts\\run_spectra_cli.py --input tmp\\spectra-runs\\20260624-100943-elevator-robots\\elevator_robots.spectra --timeout 120" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 5034ms:
+{
+  "status": "realizable",
+  "input": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260624-100943-elevator-robots\\elevator_robots.spectra",
+  "jar": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+  "command": [
+    "java",
+    "-jar",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+    "-i",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260624-100943-elevator-robots\\elevator_robots.spectra"
+  ],
+  "exit_code": 0,
+  "synthesize": false,
+  "counter_strategy": false,
+  "counter_strategy_format": "default",
+  "output_dir": null,
+  "timeout_seconds": 120.0,
+  "raw_output": "Using BDD Package: CUDDFactory, Version: CUDD 3.0\nUsing BDD Package: CUDDFactory, Version: CUDD 3.0\nGR1GameImplC.checkRealizability: start\nGR1GameImplC.checkRealizability: end\nNodes num: 440\nNodes table size: 1022\nResult: Specification is realizable\n"
+}
+
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..9725684c59a78921da0a7e36821e192f2801a149
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,25 @@
++spec ElevatorRobots
++
++type Coord = Int(0..5);
++
++env Coord elevator;
++
++sys Coord robotX0;
++sys Coord robotY0;
++sys Coord robotX1;
++sys Coord robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python .agents\\skills\\respect-method-3\\scripts\\run_spectra_cli.py --input tmp\\spectra-runs\\20260624-100943-elevator-robots\\elevator_robots.spectra --synthesize --output-dir tmp\\spectra-runs\\20260624-100943-elevator-robots\\out --timeout 120" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 5067ms:
+{
+  "status": "synthesized",
+  "input": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260624-100943-elevator-robots\\elevator_robots.spectra",
+  "jar": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+  "command": [
+    "java",
+    "-jar",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+    "-i",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260624-100943-elevator-robots\\elevator_robots.spectra",
+    "-s",
+    "-o",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260624-100943-elevator-robots\\out"
+  ],
+  "exit_code": 0,
+  "synthesize": true,
+  "counter_strategy": false,
+  "counter_strategy_format": "default",
+  "output_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260624-100943-elevator-robots\\out",
+  "timeout_seconds": 120.0,
+  "raw_output": "Using BDD Package: CUDDFactory, Version: CUDD 3.0\nUsing BDD Package: CUDDFactory, Version: CUDD 3.0\nGR1GameImplC.checkRealizability: start\nGR1GameImplC.checkRealizability: end\nNodes num: 440\nNodes table size: 1022\nResult: Specification is realizable. Proceeding to synthesis\nCalculating controller info for storage\nGR(1) Calculated fixpoints BDD\nGR(1) Calculated trans BDD\nGR(1) Calculated justices BDD\nResult: Successfully synthesized a just-in-time controller in output folder\n"
+}
+
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..9725684c59a78921da0a7e36821e192f2801a149
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,25 @@
++spec ElevatorRobots
++
++type Coord = Int(0..5);
++
++env Coord elevator;
++
++sys Coord robotX0;
++sys Coord robotY0;
++sys Coord robotX1;
++sys Coord robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+
+codex
+The final spec remains realizable and synthesizes successfully after the type alias edit. I’m writing the fresh test plan and running it against the regenerated controller.
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260624-100943-elevator-robots\tests\test-plan-2.json
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..9725684c59a78921da0a7e36821e192f2801a149
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,25 @@
++spec ElevatorRobots
++
++type Coord = Int(0..5);
++
++env Coord elevator;
++
++sys Coord robotX0;
++sys Coord robotY0;
++sys Coord robotX1;
++sys Coord robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..9725684c59a78921da0a7e36821e192f2801a149
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,25 @@
++spec ElevatorRobots
++
++type Coord = Int(0..5);
++
++env Coord elevator;
++
++sys Coord robotX0;
++sys Coord robotY0;
++sys Coord robotX1;
++sys Coord robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "java \"-Djava.library.path=.\" -cp \"controller_tests\\build\\classes;assets\\examples\\E2_execution\\executor.jar\" respect.controller_tests.TestRunner --plan tmp\\spectra-runs\\20260624-100943-elevator-robots\\tests\\test-plan-2.json --output tmp\\spectra-runs\\20260624-100943-elevator-robots\\tests\\test-results-2.json" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 713ms:
+{"status":"passed","passed":1,"failed":0,"total":1,"results":[{"name":"declared_elevator_and_robot_ownership","kind":"variable_ownership","passed":true}]}
+
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..9725684c59a78921da0a7e36821e192f2801a149
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,25 @@
++spec ElevatorRobots
++
++type Coord = Int(0..5);
++
++env Coord elevator;
++
++sys Coord robotX0;
++sys Coord robotY0;
++sys Coord robotX1;
++sys Coord robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+
+codex
+cli_status: synthesized  
+repair_loops: 1  
+syntax_repair_loops: 0  
+unrealizable_repair_loops: 0  
+test_repair_loops: 1  
+timeout_seconds: 120  
+used_counter_strategy: false  
+blocked_by_nl_conflict: false  
+diagnostic_file: none  
+test_plan_file: `tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json`  
+test_result_file: `tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-results-2.json`  
+tests_total: 1  
+tests_passed: 1  
+tests_failed: 0  
+spectra_file: `tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra`  
+controller_output_dir: `tmp/spectra-runs/20260624-100943-elevator-robots/out`
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..9725684c59a78921da0a7e36821e192f2801a149
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra
+@@ -0,0 +1,25 @@
++spec ElevatorRobots
++
++type Coord = Int(0..5);
++
++env Coord elevator;
++
++sys Coord robotX0;
++sys Coord robotY0;
++sys Coord robotX1;
++sys Coord robotY1;
++
++asm alw (
++  (elevator=0 -> (next(elevator)=0 | next(elevator)=1)) &
++  (elevator=1 -> (next(elevator)=0 | next(elevator)=1 | next(elevator)=2)) &
++  (elevator=2 -> (next(elevator)=1 | next(elevator)=2 | next(elevator)=3)) &
++  (elevator=3 -> (next(elevator)=2 | next(elevator)=3 | next(elevator)=4)) &
++  (elevator=4 -> (next(elevator)=3 | next(elevator)=4 | next(elevator)=5)) &
++  (elevator=5 -> (next(elevator)=4 | next(elevator)=5))
++);
++
++asm alwEv elevator=0;
++asm alwEv elevator=5;
++
++gar alw robotX0=0 -> next(robotY0)=elevator;
++gar alw robotX1=0 -> next(robotY1)=elevator;
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-1.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+diff --git a/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..a53214fe3c66e4516dbd0328b3074e8fae3f0eaa
+--- /dev/null
++++ b/tmp/spectra-runs/20260624-100943-elevator-robots/tests/test-plan-2.json
+@@ -0,0 +1,14 @@
++{
++  "controller_dir": "tmp/spectra-runs/20260624-100943-elevator-robots/out/jit",
++  "spec_name": "ElevatorRobots",
++  "spectra_file": "tmp/spectra-runs/20260624-100943-elevator-robots/elevator_robots.spectra",
++  "outputs": ["robotX0", "robotY0", "robotX1", "robotY1"],
++  "tests": [
++    {
++      "kind": "variable_ownership",
++      "name": "declared_elevator_and_robot_ownership",
++      "env": ["elevator"],
++      "sys": ["robotX0", "robotY0", "robotX1", "robotY1"]
++    }
++  ]
++}
+
+tokens used
+91.999

@@ -1,0 +1,24 @@
+spec CargoStation
+
+env boolean atStation;
+env boolean cargo;
+
+type Mot = {STOP, FWD, BWD};
+type Lift = {LIFT, DROP};
+
+sys Mot mot;
+sys Lift lift;
+
+asm alwEv atStation;
+
+asm alw mot=STOP -> next(atStation)=atStation;
+asm alw lift=LIFT -> next(cargo)=false;
+asm alw lift=DROP -> next(cargo)=true;
+asm alw mot=BWD -> next(cargo)=false;
+
+gar alw mot=STOP -> next(atStation)=atStation;
+gar alw lift=LIFT -> next(cargo)=false;
+gar alw lift=DROP -> next(cargo)=true;
+gar alw mot=BWD -> next(cargo)=false;
+
+gar alw !(mot=BWD & lift=DROP);
