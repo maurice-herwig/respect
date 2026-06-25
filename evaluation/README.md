@@ -13,7 +13,7 @@ controller evaluations; it reads the existing JSONL files and reports one global
 summary.
 
 ```powershell
-python evaluation\summarize_all_results.py --skill respect-method-2 --model llama-3
+python summarize_all_results.py --skill respect-method-3 --model llama-3
 ```
 
 For machine-readable output:
