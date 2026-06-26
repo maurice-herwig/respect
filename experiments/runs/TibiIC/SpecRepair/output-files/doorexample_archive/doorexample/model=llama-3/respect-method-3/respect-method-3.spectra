@@ -1,0 +1,16 @@
+spec Door
+
+env boolean bellPressed;
+env boolean bellRinging;
+env boolean doorHit;
+env boolean knockSound;
+
+sys boolean doorAnswered;
+
+asm ini !bellRinging & !doorHit & !bellPressed & !knockSound;
+asm alw (doorHit -> bellRinging);
+asm alw (bellPressed -> bellRinging);
+
+gar ini !doorAnswered;
+gar alw (bellRinging -> doorAnswered);
+gar alw (knockSound -> doorAnswered);

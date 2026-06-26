@@ -1,0 +1,1264 @@
+OpenAI Codex v0.142.2
+--------
+workdir: C:\Users\mauri\OneDrive\Desktop\Repos\respect
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: medium
+reasoning summaries: none
+session id: 019f0381-8555-7563-8d33-d2ff158a37f7
+--------
+user
+Use $respect-method-3.
+
+The Minepump system is designed to interact with its environment, which controls the presence of high water and methane. The system controls the operation of a pump. 
+
+Initially, the environment is assumed to have no high water and no methane present, and the system's pump is initially off.
+
+The environment is expected to behave in such a way that if the pump was previously on and is currently on, then the water level will be low in the next state. Additionally, the environment is assumed to never introduce high water or methane without bound, specifically, if there is no high water, then either there will be no high water or no methane in the next state.
+
+The system guarantees that if high water is present, it will ensure the pump is on in the next state. Furthermore, the system ensures that if methane is detected, the pump will be turned off in the next state.
+
+In summary, the environment controls the high water and methane levels, while the system controls the pump. The system's behavior is constrained by the environment's assumptions, and it must guarantee specific responses to the environment's conditions, particularly regarding the presence of high water and methane.
+
+codex
+I’ll use `respect-method-3` for this run. I’m first reading the required Spectra workflow notes, then I’ll generate the spec in an isolated temp run directory and drive it through CLI validation, synthesis, and NL-guided controller tests.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-ChildItem -Force' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw .agents\\skills\\respect-method-3\\references\\spectra-workflow.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-ChildItem .agents\\skills\\respect-method-3 -Recurse -File | Select-Object FullName" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 854ms:
+# Spectra Workflow Reference
+
+## Use This Reference For
+
+- Converting free-form reactive-system requirements into a first Spectra draft
+- Interpreting `spectra-cli.jar` results
+- Repairing parser errors without drifting away from the user's intent
+- Using counter-strategy diagnostics to repair unrealizable drafts
+
+## Drafting Guidance
+
+- Start with one named `spec`.
+- Declare environment variables with `env` and system variables with `sys`.
+- Encode assumptions with `asm` and guarantees with `gar`.
+- Prefer a minimal complete model over speculative features.
+- If the description leaves key semantics unstated, make the smallest explicit assumption and report it.
+
+## Validation And Synthesis Branches
+
+Use this check command:
+
+```bash
+java -jar spectra-cli.jar -i <path-to-file>
+```
+
+Observed CLI result patterns in this repo:
+
+- Realizable: `Result: Specification is realizable`
+- Unrealizable: `Result: Specification is unrealizable`
+- Syntax failure: `Error: Could not prepare game input from Spectra file`
+
+Use this synthesis command only after a realizable result:
+
+```bash
+java -jar spectra-cli.jar -i <path-to-file> -s -o <output-dir>
+```
+
+Observed synthesis success pattern:
+
+- `Result: Successfully synthesized a just-in-time controller in output folder`
+
+## Counter-Strategy Diagnostics
+
+The current CLI exposes:
+
+```bash
+java -jar spectra-cli.jar -i <path-to-file> --counter-strategy
+java -jar spectra-cli.jar -i <path-to-file> --counter-strategy-jtlv-format
+```
+
+Use these only after the normal check reports `Result: Specification is unrealizable`.
+
+Read the counter-strategy as an environment-winning behavior that demonstrates why the system cannot force its guarantees. It is diagnostic evidence, not a target behavior to copy.
+
+## Syntax-Repair Loop
+
+1. Save the draft as a `.spectra` file.
+2. Run the CLI.
+3. If parsing fails, extract the parser message, for example `missing ';' at 'gar'`.
+4. Repair the file with the smallest syntax-preserving edit.
+5. Repeat until the file is syntactically valid or the attempt budget is exhausted.
+
+## Unrealizability-Repair Loop
+
+1. Run the CLI and confirm the specification is syntactically valid but unrealizable.
+2. Request a counter-strategy diagnostic.
+3. Identify a likely conflict between assumptions, guarantees, initial conditions, safety, liveness, or update rules.
+4. Compare any candidate repair against the natural-language description.
+5. Apply the candidate only when it is consistent with the description.
+6. Re-run the normal CLI check.
+7. Stop after 3 unrealizability-repair attempts or when all plausible repairs would contradict the description.
+
+Common repair patterns:
+
+- Add a missing environment assumption only when the description says the environment is constrained.
+- Repair an initial condition that conflicts with an immediate response requirement.
+- Replace an accidental always-immediate response with a next-step response if the description allows delayed reaction.
+- Remove an over-specific liveness condition only when the description does not require that recurrence.
+
+Common invalid repairs:
+
+- Deleting a stated guarantee solely to make synthesis succeed.
+- Adding an assumption that forbids inputs the description explicitly permits.
+- Weakening "must always" into "may sometimes" without textual support.
+- Ignoring a named input/output or changing control ownership.
+
+## Useful Local Sources
+
+- `assets/examples/A1_firstController/TrafficA1.spectra`
+- `assets/examples/A2_unrealizability/TrafficA2b.spectra`
+- `assets/examples/L1_firstSpec/`
+- `assets/examples/L2_defsArrays/`
+- `assets/examples/L3_patterns/`
+
+
+ succeeded in 958ms:
+
+
+    Verzeichnis: C:\Users\mauri\OneDrive\Desktop\Repos\respect
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+d-----        02.06.2026     08:44                .agents                                                              
+d--h--        25.06.2026     18:30                .git                                                                 
+d-----        26.06.2026     12:37                .idea                                                                
+d-----        16.06.2026     19:30                assets                                                               
+d-----        16.06.2026     18:49                controller_tests                                                     
+d-----        17.06.2026     19:34                dataset                                                              
+d-----        25.06.2026     12:03                evaluation                                                           
+d-----        26.06.2026     12:30                experiments                                                          
+d-----        22.06.2026     16:56                tmp                                                                  
+d-----        02.06.2026     11:40                venv                                                                 
+d-----        02.06.2026     17:16                __pycache__                                                          
+-a----        16.06.2026     11:56            273 .env                                                                 
+-a----        02.06.2026     14:42            146 .env.example                                                         
+-a----        17.06.2026     20:09           2519 .gitignore                                                           
+-a----        02.04.2026     16:16         269312 cudd.dll                                                             
+-a----        17.06.2026     12:06          80405 hs_err_pid18780.log                                                  
+-a----        17.06.2026     12:09         180080 hs_err_pid18952.log                                                  
+-a----        04.06.2026     10:20      105172629 Miniforge3-Linux-x86_64.sh                                           
+-a----        02.06.2026     17:11           2477 prompts.py                                                           
+-a----        16.06.2026     19:30           2757 ReadMe.md                                                            
+-a----        02.04.2026     16:22       48267388 spectra-cli.jar                                                      
+
+
+
+ succeeded in 977ms:
+
+FullName                                                                                                               
+--------                                                                                                               
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\.agents\skills\respect-method-3\SKILL.md                                 
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\.agents\skills\respect-method-3\agents\openai.yaml                       
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\.agents\skills\respect-method-3\references\spectra-workflow.md           
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\.agents\skills\respect-method-3\scripts\run_spectra_cli.py               
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\.agents\skills\respect-method-3\scripts\__pycache__\run_spectra_cli.cp...
+
+
+
+codex
+The workflow confirms the expected Spectra shape and CLI result patterns. I’m checking a small bundled example for exact syntax before writing the Minepump spec, so the first draft is a valid Spectra file rather than guessing grammar details.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw assets\\examples\\A1_firstController\\TrafficA1.spectra" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw assets\\examples\\A2_unrealizability\\TrafficA2b.spectra" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw .agents\\skills\\respect-method-3\\scripts\\run_spectra_cli.py" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 770ms:
+spec TrafficA1
+
+sys boolean greenA;
+sys boolean greenB;
+
+env boolean carA;
+env boolean carB;
+
+asm ini carA & !carB;
+asm alwEv carA;
+asm alwEv carB;
+
+gar ini !greenA & !greenB;
+gar alw !(greenA & greenB);
+gar alw !carA -> !greenA;
+gar alw !carB -> !greenB;
+gar alwEv greenA;
+gar alwEv greenB;
+
+
+ succeeded in 795ms:
+spec TrafficA2b
+
+sys boolean greenA;
+sys boolean greenB;
+
+env boolean carA;
+env boolean carB;
+
+gar alw !(greenA & greenB);
+
+gar alwEv carA & greenA;
+gar alwEv carB & greenB;
+
+ succeeded in 804ms:
+#!/usr/bin/env python3
+"""
+Run spectra-cli.jar and normalize its output for method-3 skill workflows.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+
+def default_jar_path() -> Path:
+    return Path(__file__).resolve().parents[4] / "spectra-cli.jar"
+
+
+def detect_status(stdout: str, synthesize: bool) -> str:
+    if "Could not prepare game input from Spectra file" in stdout or "ErrorsInSpectraException" in stdout:
+        return "syntax_error"
+    if "Result: Specification is unrealizable" in stdout:
+        return "unrealizable"
+    if "Result: Specification is realizable" in stdout:
+        if synthesize and "Successfully synthesized" in stdout:
+            return "synthesized"
+        return "realizable"
+    return "unknown"
+
+
+def build_command(
+    jar_path: Path,
+    input_path: Path,
+    output_dir: Path | None,
+    synthesize: bool,
+    counter_strategy: bool,
+    counter_strategy_jtlv_format: bool,
+) -> list[str]:
+    command = ["java", "-jar", str(jar_path), "-i", str(input_path)]
+    if synthesize:
+        command.append("-s")
+    if output_dir is not None:
+        command.extend(["-o", str(output_dir)])
+    if counter_strategy_jtlv_format:
+        command.append("--counter-strategy-jtlv-format")
+    elif counter_strategy:
+        command.append("--counter-strategy")
+    return command
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Run spectra-cli.jar and summarize the result.")
+    parser.add_argument("--input", required=True, help="Path to the .spectra file to check")
+    parser.add_argument("--jar", default=str(default_jar_path()), help="Path to spectra-cli.jar")
+    parser.add_argument("--output-dir", help="Output directory for synthesis artifacts")
+    parser.add_argument("--synthesize", action="store_true", help="Run controller synthesis with -s")
+    parser.add_argument(
+        "--counter-strategy",
+        action="store_true",
+        help="Generate a counter-strategy for an unrealizable specification",
+    )
+    parser.add_argument(
+        "--counter-strategy-jtlv-format",
+        action="store_true",
+        help="Generate a counter-strategy and print it in JTLV text format",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=120.0,
+        help="Maximum seconds to wait for spectra-cli.jar before returning status timeout",
+    )
+    args = parser.parse_args()
+
+    input_path = Path(args.input).resolve()
+    jar_path = Path(args.jar).resolve()
+    output_dir = Path(args.output_dir).resolve() if args.output_dir else None
+    counter_strategy = args.counter_strategy or args.counter_strategy_jtlv_format
+
+    if args.synthesize and counter_strategy:
+        print(json.dumps({"status": "error", "message": "Cannot combine synthesis and counter-strategy diagnostics."}))
+        return 2
+
+    if not input_path.is_file():
+        print(json.dumps({"status": "error", "message": f"Input file not found: {input_path}"}))
+        return 2
+
+    if not jar_path.is_file():
+        print(json.dumps({"status": "error", "message": f"spectra-cli.jar not found: {jar_path}"}))
+        return 2
+
+    if output_dir is not None:
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    command = build_command(
+        jar_path,
+        input_path,
+        output_dir,
+        args.synthesize,
+        args.counter_strategy,
+        args.counter_strategy_jtlv_format,
+    )
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=args.timeout)
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout or ""
+        stderr = exc.stderr or ""
+        combined_output = stdout if not stderr else f"{stdout}\n{stderr}".strip()
+        result = {
+            "status": "timeout",
+            "input": str(input_path),
+            "jar": str(jar_path),
+            "command": command,
+            "exit_code": None,
+            "synthesize": args.synthesize,
+            "counter_strategy": counter_strategy,
+            "counter_strategy_format": "jtlv" if args.counter_strategy_jtlv_format else "default",
+            "output_dir": str(output_dir) if output_dir else None,
+            "timeout_seconds": args.timeout,
+            "raw_output": combined_output,
+        }
+        print(json.dumps(result, indent=2))
+        return 0
+
+    stdout = completed.stdout or ""
+    stderr = completed.stderr or ""
+    combined_output = stdout if not stderr else f"{stdout}\n{stderr}".strip()
+
+    result = {
+        "status": detect_status(combined_output, args.synthesize),
+        "input": str(input_path),
+        "jar": str(jar_path),
+        "command": command,
+        "exit_code": completed.returncode,
+        "synthesize": args.synthesize,
+        "counter_strategy": counter_strategy,
+        "counter_strategy_format": "jtlv" if args.counter_strategy_jtlv_format else "default",
+        "output_dir": str(output_dir) if output_dir else None,
+        "timeout_seconds": args.timeout,
+        "raw_output": combined_output,
+    }
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+
+codex
+I’ve got the core mapping: `highWater` and `methane` are environment Booleans, `pump` is the system Boolean. The only delicate part is the “previously on and currently on” water rule, so I’m checking local Spectra examples for past/next operators before encoding that transition.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg \"PREV|prev|next|X\\(|'\" assets\\examples -n" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg \"alw.*->\" assets\\examples -n" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'rg "pump|methane|water|Mine" -n .agents assets controller_tests tmp experiments evaluation dataset' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1066ms:
+assets\examples\L1_firstSpec\GridL1.spectra:9:asm alw move=UP implies next(robY)=robY-1;
+assets\examples\L3_patterns\DwyerPatterns.spectra:18:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:19:  alw ((state=S0 & (!p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:20:  (state=S0 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:21:  (state=S1 & TRUE & next(state=S1)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:40:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:41:  alw ((state=S0 & (!r & !p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:42:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:43:  (state=S0 & (!r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:44:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:45:  (state=S2 & (!r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:46:  (state=S2 & (r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:47:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:66:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:67:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:68:  (state=S0 & (q & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:69:  (state=S0 & (q & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:70:  (state=S1 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:71:  (state=S1 & (p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:72:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:91:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:92:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:93:  (state=S0 & (!r & !p & q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:94:  (state=S0 & (!r & p & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:95:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:96:  (state=S1 & (!r & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:97:  (state=S1 & (!r & p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:98:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:99:  (state=S3 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:100:  (state=S3 & (!r) & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:119:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:120:  alw ((state=S0 & ((!q & !r) | (r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:121:  (state=S0 & (q & !p & !r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:122:  (state=S0 & (q & p & !r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:123:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:124:  (state=S1 & (!p & !r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:125:  (state=S1 & (p & !r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:126:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:145:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:146:  alw ((state=S0 & (!p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:147:  (state=S0 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:148:  (state=S1 & TRUE & next(state=S1)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:167:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:168:  alw ((state=S0 & (!r & !p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:169:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:170:  (state=S0 & (!r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:171:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:172:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:191:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:192:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:193:  (state=S0 & (q & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:194:  (state=S0 & (q & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:195:  (state=S1 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:196:  (state=S1 & (p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:197:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:216:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:217:  alw ((state=S0 & ((!q & !p) | (q & r) | (!r & p) | (!q & r & p)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:218:  (state=S0 & (q & !r & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:219:  (state=S1 & (!r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:220:  (state=S1 & (!r & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:221:  (state=S1 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:222:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:241:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:242:  alw ((state=S0 & ((!q & !p) | (q & r) | (!r & p) | (!q & r & p)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:243:  (state=S0 & (q & !r & !p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:244:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:245:  (state=S2 & (!r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:246:  (state=S2 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:247:  (state=S2 & (!r & !p) & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:267:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:268:  alw ((state=S0 & (!p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:269:  (state=S0 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:270:  (state=S1 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:271:  (state=S1 & (!p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:272:  (state=S2 & (!p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:273:  (state=S2 & (p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:274:  (state=S3 & (p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:275:  (state=S3 & (!p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:276:  (state=S4 & (!p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:277:  (state=S4 & (p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:278:  (state=S5 & TRUE & next(state=S5)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:297:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:298:  alw ((state=S0 & (!r & !p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:299:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:300:  (state=S0 & (!r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:301:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:302:  (state=S2 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:303:  (state=S2 & (!r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:304:  (state=S2 & (!r & !p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:305:  (state=S3 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:306:  (state=S3 & (!r & !p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:307:  (state=S3 & (!r & p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:308:  (state=S4 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:309:  (state=S4 & (!r & p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:310:  (state=S4 & (!r & !p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:311:  (state=S5 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:312:  (state=S5 & (!r & !p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:313:  (state=S5 & (!r & p) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:314:  (state=S6 & (!r) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:315:  (state=S6 & (r) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:316:  (state=S7 & TRUE & next(state=S7)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:337:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:338:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:339:  (state=S0 & (q & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:340:  (state=S0 & (q & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:341:  (state=S1 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:342:  (state=S1 & (p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:343:  (state=S2 & (p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:344:  (state=S2 & (!p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:345:  (state=S3 & (!p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:346:  (state=S3 & (p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:347:  (state=S4 & (p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:348:  (state=S4 & (!p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:349:  (state=S5 & (!p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:350:  (state=S5 & (p) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:351:  (state=S6 & TRUE & next(state=S6)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:370:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:371:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:372:  (state=S0 & (!r & !p & q) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:373:  (state=S0 & (!r & p & q) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:374:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:375:  (state=S1 & (!r & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:376:  (state=S1 & (!r & p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:377:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:378:  (state=S3 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:379:  (state=S3 & (!r & !p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:380:  (state=S3 & (!r & p) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:381:  (state=S4 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:382:  (state=S4 & (!r) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:383:  (state=S5 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:384:  (state=S5 & (!r & !p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:385:  (state=S5 & (!r & p) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:386:  (state=S6 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:387:  (state=S6 & (!r & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:388:  (state=S6 & (!r & p) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:389:  (state=S7 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:390:  (state=S7 & (!r & !p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:391:  (state=S7 & (!r & p) & next(state=S7)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:410:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:411:  alw ((state=S0 & (p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:412:  (state=S0 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:413:  (state=S1 & TRUE & next(state=S1)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:432:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:433:  alw ((state=S0 & (!r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:434:  (state=S0 & (!r & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:435:  (state=S0 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:436:  (state=S1 & (!r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:437:  (state=S1 & (r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:438:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:439:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:458:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:459:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:460:  (state=S0 & (q & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:461:  (state=S0 & (q & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:462:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:463:  (state=S2 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:464:  (state=S2 & (p) & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:483:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:484:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:485:  (state=S0 & (!r & p & q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:486:  (state=S0 & (!r & !p & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:487:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:488:  (state=S1 & (!r & p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:489:  (state=S1 & (!r & !p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:490:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:491:  (state=S3 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:492:  (state=S3 & (!r) & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:511:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:512:  alw ((state=S0 & ((!q & !r) | (r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:513:  (state=S0 & (q & !p & !r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:514:  (state=S0 & (q & p & !r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:515:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:516:  (state=S2 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:517:  (state=S2 & (!p & !r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:518:  (state=S2 & (p & !r) & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:537:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:538:  alw ((state=S0 & (!p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:539:  (state=S0 & (p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:540:  (state=S0 & (s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:541:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:542:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:561:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:562:  alw ((state=S0 & (!r & !s & !p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:563:  (state=S0 & ((r) | (!r & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:564:  (state=S0 & (!r & !s & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:565:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:566:  (state=S2 & (!r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:567:  (state=S2 & (r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:568:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:587:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:588:  alw ((state=S0 & ((!q) | (r & q) | (!r & s & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:589:  (state=S0 & (!r & !s & !p & q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:590:  (state=S0 & (!r & !s & p & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:591:  (state=S1 & ((r) | (!r & s)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:592:  (state=S1 & (!r & !s & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:593:  (state=S1 & (!r & !s & p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:594:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:595:  (state=S3 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:596:  (state=S3 & (!r) & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:615:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:616:  alw ((state=S0 & ((!q & !r & !s) | (r) | (!r & s)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:617:  (state=S0 & (q & !p & !r & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:618:  (state=S0 & (q & p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:619:  (state=S1 & ((r) | (!r & s)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:620:  (state=S1 & (!p & !r & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:621:  (state=S1 & (p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:622:  (state=S2 & TRUE & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:642:  // safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:643:  alw ((state=S0 & ((!p) | (p & s)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:644:  (state=S0 & (p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:645:  (state=S1 & (s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:646:  (state=S1 & (!s) & next(state=S1)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:666:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:667:  alw ((state=S0 & ((!r & !p) | (!r & p & s)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:668:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:669:  (state=S0 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:670:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:671:  (state=S2 & (!r & s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:672:  (state=S2 & (!r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:673:  (state=S2 & (r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:674:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:693:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:694:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:695:  (state=S0 & ((q & !p) | (q & p & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:696:  (state=S0 & (q & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:697:  (state=S1 & ((!p) | (p & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:698:  (state=S1 & (p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:699:  (state=S2 & (s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:700:  (state=S2 & (!s) & next(state=S2)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:719:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:720:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:721:  (state=S0 & ((!r & !p & q) | (!r & p & s & q)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:722:  (state=S0 & (!r & p & !s & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:723:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:724:  (state=S2 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:725:  (state=S2 & ((!r & !p) | (!r & p & s)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:726:  (state=S2 & (!r & p & !s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:727:  (state=S3 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:728:  (state=S3 & (!r & s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:729:  (state=S3 & (!r & !s) & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:748:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:749:  alw ((state=S0 & ((!q & !r) | (r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:750:  (state=S0 & ((q & !p & !r) | (q & p & !r & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:751:  (state=S0 & (q & p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:752:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:753:  (state=S1 & ((!p & !r) | (p & !r & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:754:  (state=S1 & (p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:755:  (state=S2 & (!r & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:756:  (state=S2 & (!r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:757:  (state=S2 & (r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:758:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:768: * <b>LTL:</b> (!p U (!p && s && X(!p U t))) || !F p
+assets\examples\L3_patterns\DwyerPatterns.spectra:777:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:778:  alw ((state=S0 & (!p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:779:  (state=S0 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:780:  (state=S0 & (!p & s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:781:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:782:  (state=S2 & (p & !t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:783:  (state=S2 & (!p & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:784:  (state=S2 & (t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:785:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:795: * <b>LTL:</b> (!p U (r || (!p && s && X(!p U t)))) || !F r
+assets\examples\L3_patterns\DwyerPatterns.spectra:804:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:805:  alw ((state=S0 & (!r & !p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:806:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:807:  (state=S0 & (!r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:808:  (state=S0 & (!r & !p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:809:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:810:  (state=S2 & (!r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:811:  (state=S2 & (r) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:812:  (state=S3 & ((r & !t) | (t)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:813:  (state=S3 & (!r & p & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:814:  (state=S3 & (!r & !p & !t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:815:  (state=S4 & TRUE & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:825: * <b>LTL:</b> G !q || (!q U ((!p U (!p && s && X(!p U t))) || !(q && F p)))
+assets\examples\L3_patterns\DwyerPatterns.spectra:834:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:835:  alw ((state=S0 & (!q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:836:  (state=S0 & (!p & !s & q) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:837:  (state=S0 & (p & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:838:  (state=S0 & (!p & s & q) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:839:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:840:  (state=S2 & (!p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:841:  (state=S2 & (p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:842:  (state=S2 & (!p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:843:  (state=S3 & TRUE & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:844:  (state=S4 & (t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:845:  (state=S4 & (p & !t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:846:  (state=S4 & (!p & !t) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:856: * <b>LTL:</b> G ((!p U (r || (!p && s && X(!p U t)))) || !(q && F r))
+assets\examples\L3_patterns\DwyerPatterns.spectra:865:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:866:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:867:  (state=S0 & (!r & !p & !s & q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:868:  (state=S0 & (!r & p & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:869:  (state=S0 & (!r & !p & s & q) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:870:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:871:  (state=S1 & (!r & !p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:872:  (state=S1 & (!r & p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:873:  (state=S1 & (!r & !p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:874:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:875:  (state=S3 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:876:  (state=S3 & (!r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:877:  (state=S4 & ((r & !t) | (t & !q) | (r & t & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:878:  (state=S4 & (!r & !p & !s & q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:879:  (state=S4 & ((!r & p & !t) | (!r & p & t & q)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:880:  (state=S4 & ((!r & !p & !t & !q) | (!r & !p & s & q)) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:890: * <b>LTL:</b> G (!q || (!p U (r || (!p && s && X(!p U t)))) || !F p)
+assets\examples\L3_patterns\DwyerPatterns.spectra:899:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:900:  alw ((state=S0 & ((!q) | (q & r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:901:  (state=S0 & (q & !r & !p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:902:  (state=S0 & (q & !r & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:903:  (state=S0 & (q & !r & p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:904:  (state=S1 & ((r & !t) | (!q & t) | (q & r & t)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:905:  (state=S1 & ((!q & !r & !p & !t) | (q & !r & !p & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:906:  (state=S1 & (q & !r & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:907:  (state=S1 & ((!r & p & !t) | (q & !r & p & t)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:908:  (state=S2 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:909:  (state=S2 & (!r & !p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:910:  (state=S2 & (!r & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:911:  (state=S2 & (!r & p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:912:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:931:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:932:  alw ((state=S0 & (!p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:933:  (state=S0 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:934:  (state=S0 & (!p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:935:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:936:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:937:  (state=S3 & (t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:938:  (state=S3 & (!t) & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:948: * <b>LTL:</b> (!(!r && s && X(!r U (!r && t))) U (p || r)) || !F r
+assets\examples\L3_patterns\DwyerPatterns.spectra:957:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:958:  alw ((state=S0 & (!p & !r & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:959:  (state=S0 & ((p) | (!p & r)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:960:  (state=S0 & (!p & !r & s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:961:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:962:  (state=S2 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:963:  (state=S2 & (!r & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:964:  (state=S2 & (!r & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:965:  (state=S3 & (!r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:966:  (state=S3 & (r) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:967:  (state=S4 & TRUE & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:986:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:987:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:988:  (state=S0 & (q & p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:989:  (state=S0 & (q & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:990:  (state=S0 & (q & !p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:991:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:992:  (state=S2 & (p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:993:  (state=S2 & (!p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:994:  (state=S2 & (!p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:995:  (state=S3 & TRUE & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:996:  (state=S4 & (t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:997:  (state=S4 & (!t) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1007: * <b>LTL:</b> G ((!(!r && s && X(!r U (!r && t))) U (p || r)) || !(q && F r))
+assets\examples\L3_patterns\DwyerPatterns.spectra:1016:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1017:  alw ((state=S0 & ((!q) | (p & q) | (!p & r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1018:  (state=S0 & (!p & !r & !s & q) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1019:  (state=S0 & (!p & !r & s & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1020:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1021:  (state=S2 & ((p) | (!p & r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1022:  (state=S2 & (!p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1023:  (state=S2 & (!p & !r & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1024:  (state=S3 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1025:  (state=S3 & (!r & !t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1026:  (state=S3 & (!r & t) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1027:  (state=S4 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1028:  (state=S4 & (!r) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1038: * <b>LTL:</b> G (!q || (!(!r && s && X(!r U (!r && t))) U (p || r)) || G !(s && XF t))
+assets\examples\L3_patterns\DwyerPatterns.spectra:1047:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1048:  alw ((state=S0 & ((!q & !r) | (q & p) | (!p & r) | (!q & p & r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1049:  (state=S0 & (q & !p & !r & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1050:  (state=S0 & (q & !p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1051:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1052:  (state=S1 & (!r & !t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1053:  (state=S1 & (!r & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1054:  (state=S2 & ((p) | (!p & r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1055:  (state=S2 & (!p & !r & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1056:  (state=S2 & (!p & !r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1057:  (state=S3 & TRUE & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1076:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1077:  alw ((state=S0 & (!s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1078:  (state=S0 & (s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1079:  (state=S1 & (p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1080:  (state=S1 & (!p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1081:  (state=S1 & (p & s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1082:  (state=S1 & (!p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1083:  (state=S2 & (t & p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1084:  (state=S2 & (t & !p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1085:  (state=S2 & ((!t) | (t & p & s)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1086:  (state=S2 & (t & !p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1087:  (state=S3 & (t & p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1088:  (state=S3 & (t & !p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1089:  (state=S3 & ((!t & p) | (t & p & s)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1090:  (state=S3 & ((!t & !p) | (t & !p & s)) & next(state=S3)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1100: * <b>LTL:</b> ((X(!r U (t && F p)) || !(s && X(!r U t))) U r) || !F r
+assets\examples\L3_patterns\DwyerPatterns.spectra:1109:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1110:  alw ((state=S0 & (!r & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1111:  (state=S0 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1112:  (state=S0 & (!r & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1113:  (state=S1 & (!r & t & p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1114:  (state=S1 & ((!r & !t & !p) | (!r & t & !p & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1115:  (state=S1 & (r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1116:  (state=S1 & ((!r & !t & p) | (!r & t & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1117:  (state=S1 & (!r & t & !p & !s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1118:  (state=S1 & (r & !p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1119:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1120:  (state=S3 & (!r & t & p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1121:  (state=S3 & (!r & t & !p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1122:  (state=S3 & ((r & !t) | (r & t & p)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1123:  (state=S3 & ((!r & !t) | (!r & t & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1124:  (state=S3 & (!r & t & !p & !s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1125:  (state=S3 & (r & t & !p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1126:  (state=S4 & (!r & p & !s) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1127:  (state=S4 & (!r & !p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1128:  (state=S4 & (r & p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1129:  (state=S4 & (!r & p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1130:  (state=S4 & (!r & !p & !s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1131:  (state=S4 & (r & !p) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1132:  (state=S5 & (p) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1133:  (state=S5 & (!p) & next(state=S5)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1143: * <b>LTL:</b> G (!q || G (X(!t U (t && F p)) || !(s && XF t)))
+assets\examples\L3_patterns\DwyerPatterns.spectra:1152:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1153:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1154:  (state=S0 & (q & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1155:  (state=S0 & (q & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1156:  (state=S1 & (!s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1157:  (state=S1 & (s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1158:  (state=S2 & (p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1159:  (state=S2 & (!p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1160:  (state=S2 & (p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1161:  (state=S2 & (!p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1162:  (state=S3 & (t & p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1163:  (state=S3 & (t & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1164:  (state=S3 & ((!t) | (t & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1165:  (state=S3 & (t & !p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1166:  (state=S4 & (t & p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1167:  (state=S4 & (t & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1168:  (state=S4 & ((!t & p) | (t & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1169:  (state=S4 & ((!t & !p) | (t & !p & s)) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1179: * <b>LTL:</b> G (((X(!r U (t && F p)) || !(s && X(!r U t))) U r) || !(q && F r))
+assets\examples\L3_patterns\DwyerPatterns.spectra:1188:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1189:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1190:  (state=S0 & (!r & !s & q) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1191:  (state=S0 & (!r & s & q) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1192:  (state=S1 & (r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1193:  (state=S1 & ((!r & !t & !p) | (!r & t & !p & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1194:  (state=S1 & (!r & t & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1195:  (state=S1 & ((!r & !t & p) | (!r & t & p & s)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1196:  (state=S1 & (!r & t & !p & !s) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1197:  (state=S1 & (r & !p) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1198:  (state=S2 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1199:  (state=S2 & (!r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1200:  (state=S2 & (!r & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1201:  (state=S3 & (r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1202:  (state=S3 & (!r & t & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1203:  (state=S3 & ((!r & !t & !p) | (!r & t & !p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1204:  (state=S3 & ((!r & !t & p) | (!r & t & p & s)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1205:  (state=S3 & (!r & t & !p & !s) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1206:  (state=S3 & (r & !p) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1207:  (state=S4 & ((r & !t) | (r & t & p)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1208:  (state=S4 & (!r & t & !p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1209:  (state=S4 & (!r & t & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1210:  (state=S4 & ((!r & !t) | (!r & t & p & s)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1211:  (state=S4 & (!r & t & !p & !s) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1212:  (state=S4 & (r & t & !p) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1213:  (state=S5 & (r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1214:  (state=S5 & (!r & !p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1215:  (state=S5 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1216:  (state=S5 & (!r & p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1217:  (state=S5 & (!r & !p & !s) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1218:  (state=S5 & (r & !p) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1219:  (state=S6 & (r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1220:  (state=S6 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1221:  (state=S6 & (!r & !p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1222:  (state=S6 & (!r & p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1223:  (state=S6 & (!r & !p & !s) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1224:  (state=S6 & (r & !p) & next(state=S7)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1225:  (state=S7 & ((p & !q) | (r & p & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1226:  (state=S7 & (!r & p & !s & q) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1227:  (state=S7 & (!r & !p & s & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1228:  (state=S7 & (!r & p & s & q) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1229:  (state=S7 & (!r & !p & !s & q) & next(state=S6)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1230:  (state=S7 & ((!p & !q) | (r & !p & q)) & next(state=S7)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1240: * <b>LTL:</b> G (!q || ((X(!r U (t && F p)) || !(s && X(!r U t))) U (r || G (X(!r U (t && F p)) || !(s && X(!r U t))))))
+assets\examples\L3_patterns\DwyerPatterns.spectra:1249:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1250:  alw ((state=S0 & ((!q) | (q & r)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1251:  (state=S0 & (q & !r & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1252:  (state=S0 & (q & !r & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1253:  (state=S1 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1254:  (state=S1 & (!r & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1255:  (state=S1 & (!r & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1256:  (state=S2 & (r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1257:  (state=S2 & (!r & p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1258:  (state=S2 & (!r & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1259:  (state=S2 & (!r & p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1260:  (state=S2 & (r & !p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1261:  (state=S2 & (!r & !p & s) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1262:  (state=S3 & ((r & !t) | (r & t & p)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1263:  (state=S3 & (!r & t & p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1264:  (state=S3 & (!r & t & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1265:  (state=S3 & ((!r & !t) | (!r & t & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1266:  (state=S3 & (r & t & !p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1267:  (state=S3 & (!r & t & !p & s) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1268:  (state=S4 & ((!q & p) | (q & r & p)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1269:  (state=S4 & (q & !r & p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1270:  (state=S4 & (q & !r & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1271:  (state=S4 & (q & !r & p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1272:  (state=S4 & ((!q & !p) | (q & r & !p)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1273:  (state=S4 & (q & !r & !p & s) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1274:  (state=S5 & (r & p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1275:  (state=S5 & (!r & t & p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1276:  (state=S5 & (!r & t & !p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1277:  (state=S5 & ((!r & !t & p) | (!r & t & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1278:  (state=S5 & (r & !p) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1279:  (state=S5 & ((!r & !t & !p) | (!r & t & !p & s)) & next(state=S5)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1298:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1299:  alw ((state=S0 & (!p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1300:  (state=S0 & (p & !s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1301:  (state=S0 & (p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1302:  (state=S1 & (!s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1303:  (state=S1 & (s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1304:  (state=S2 & (!s & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1305:  (state=S2 & (!s & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1306:  (state=S2 & (s & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1307:  (state=S2 & (s & !t) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1308:  (state=S3 & (!p & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1309:  (state=S3 & (p & !s & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1310:  (state=S3 & (p & !s & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1311:  (state=S3 & (p & s & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1312:  (state=S3 & ((!p & !t) | (p & s & !t)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1313:  (state=S4 & (!p & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1314:  (state=S4 & (p & !s & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1315:  (state=S4 & (p & !s & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1316:  (state=S4 & (p & s & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1317:  (state=S4 & ((!p & !t) | (p & s & !t)) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1327: * <b>LTL:</b> ((!p || (!r U (!r && s && X(!r U t)))) U r) || !F r
+assets\examples\L3_patterns\DwyerPatterns.spectra:1336:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1337:  alw ((state=S0 & (!r & !p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1338:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1339:  (state=S0 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1340:  (state=S0 & (!r & p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1341:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1342:  (state=S2 & (!r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1343:  (state=S2 & (!r & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1344:  (state=S2 & (r) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1345:  (state=S3 & (!r & !p & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1346:  (state=S3 & (r & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1347:  (state=S3 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1348:  (state=S3 & ((!r & !p & !t) | (!r & p & s)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1349:  (state=S3 & (r & !t) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1350:  (state=S4 & TRUE & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1369:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1370:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1371:  (state=S0 & (q & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1372:  (state=S0 & (q & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1373:  (state=S0 & (q & p & s) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1374:  (state=S1 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1375:  (state=S1 & (p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1376:  (state=S1 & (p & s) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1377:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1378:  (state=S3 & (!p & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1379:  (state=S3 & (p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1380:  (state=S3 & ((!p & !t) | (p & s)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1381:  (state=S4 & (!p & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1382:  (state=S4 & (p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1383:  (state=S4 & (p & s & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1384:  (state=S4 & ((!p & !t) | (p & s & !t)) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1394: * <b>LTL:</b> G (((!p || (!r U (!r && s && X(!r U t)))) U r) || !(q && F r))
+assets\examples\L3_patterns\DwyerPatterns.spectra:1403:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1404:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1405:  (state=S0 & (!r & p & s & q) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1406:  (state=S0 & (!r & p & !s & q) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1407:  (state=S0 & (!r & !p & q) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1408:  (state=S1 & (r & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1409:  (state=S1 & ((!r & !p & !t) | (!r & p & s)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1410:  (state=S1 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1411:  (state=S1 & (r & !t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1412:  (state=S1 & (!r & !p & t) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1413:  (state=S2 & (!r & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1414:  (state=S2 & (!r & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1415:  (state=S2 & (r) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1416:  (state=S3 & TRUE & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1417:  (state=S4 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1418:  (state=S4 & (!r & p & s) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1419:  (state=S4 & (!r & p & !s) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1420:  (state=S4 & (!r & !p) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1430: * <b>LTL:</b> G (!p || F (s && !z && X(!z U t)))
+assets\examples\L3_patterns\DwyerPatterns.spectra:1439:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1440:  alw ((state=S0 & (!p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1441:  (state=S0 & ((p & !s) | (p & s & z)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1442:  (state=S0 & (p & s & !z) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1443:  (state=S1 & (!p & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1444:  (state=S1 & ((p & !s & t) | (p & s & z & t)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1445:  (state=S1 & ((!p & !z & !t) | (p & s & !z)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1446:  (state=S1 & ((p & !s & !t) | (!p & z & !t) | (p & s & z & !t)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1447:  (state=S2 & (s & !z & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1448:  (state=S2 & (!s & !z & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1449:  (state=S2 & (s & !z & !t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1450:  (state=S2 & (z & !t) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1451:  (state=S2 & ((!s & t) | (s & z & t)) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1452:  (state=S3 & (!p & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1453:  (state=S3 & (p & s & !z & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1454:  (state=S3 & (p & !s & !z & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1455:  (state=S3 & ((!p & !z & !t) | (p & s & !z & !t)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1456:  (state=S3 & (z & !t) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1457:  (state=S3 & ((p & !s & t) | (p & s & z & t)) & next(state=S5)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1458:  (state=S4 & (s & !z) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1459:  (state=S4 & ((!s) | (s & z)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1460:  (state=S5 & (s & !z) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1461:  (state=S5 & ((!s) | (s & z)) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1471: * <b>LTL:</b> ((!p || (!r U (!r && s && !z && X((!r && !z) U t)))) U r) || !F r
+assets\examples\L3_patterns\DwyerPatterns.spectra:1480:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1481:  alw ((state=S0 & (!r & !p) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1482:  (state=S0 & (r) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1483:  (state=S0 & ((!r & p & !s) | (!r & p & s & z)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1484:  (state=S0 & (!r & p & s & !z) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1485:  (state=S1 & TRUE & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1486:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1487:  (state=S3 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1488:  (state=S3 & ((!r & !s) | (!r & s & z)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1489:  (state=S3 & (!r & s & !z) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1490:  (state=S4 & (!r & !p & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1491:  (state=S4 & (r & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1492:  (state=S4 & (r & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1493:  (state=S4 & ((!r & p & !s) | (!r & !p & z & !t) | (!r & p & s & z)) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1494:  (state=S4 & ((!r & !p & !z & !t) | (!r & p & s & !z)) & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1504: * <b>LTL:</b> G (!q || G (!p || (s && !z && X(!z U t))))
+assets\examples\L3_patterns\DwyerPatterns.spectra:1513:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1514:  alw ((state=S0 & (!q) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1515:  (state=S0 & (q & !p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1516:  (state=S0 & (q & p & s & !z) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1517:  (state=S0 & ((q & p & !s) | (q & p & s & z)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1518:  (state=S1 & (!p) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1519:  (state=S1 & (p & s & !z) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1520:  (state=S1 & ((p & !s) | (p & s & z)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1521:  (state=S2 & (!p & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1522:  (state=S2 & ((!p & !z & !t) | (p & s & !z & !t)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1523:  (state=S2 & (p & s & !z & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1524:  (state=S2 & ((p & !s) | (!p & z & !t) | (p & s & z)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1525:  (state=S3 & (!p & t) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1526:  (state=S3 & ((!p & !z & !t) | (p & s & !z)) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1527:  (state=S3 & ((p & !s) | (!p & z & !t) | (p & s & z)) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1528:  (state=S4 & TRUE & next(state=S4)));
+assets\examples\L3_patterns\DwyerPatterns.spectra:1538: * <b>LTL:</b> G (((!p || (!r U (!r && s && !z && X((!r && !z) U t)))) U r) || !(q && F r))
+assets\examples\L3_patterns\DwyerPatterns.spectra:1547:  -- safety this and next state
+assets\examples\L3_patterns\DwyerPatterns.spectra:1548:  alw ((state=S0 & ((!q) | (r & q)) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1549:  (state=S0 & ((!r & p & !s & q) | (!r & p & s & z & q)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1550:  (state=S0 & (!r & !p & q) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1551:  (state=S0 & (!r & p & s & !z & q) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1552:  (state=S1 & ((!r & !s) | (!r & s & z)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1553:  (state=S1 & (r) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1554:  (state=S1 & (!r & s & !z) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1555:  (state=S2 & TRUE & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1556:  (state=S3 & (r) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1557:  (state=S3 & ((!r & p & !s) | (!r & p & s & z)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1558:  (state=S3 & (!r & !p) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1559:  (state=S3 & (!r & p & s & !z) & next(state=S4)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1560:  (state=S4 & (r & t) & next(state=S0)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1561:  (state=S4 & ((!r & p & !s) | (!r & !p & z & !t) | (!r & p & s & z)) & next(state=S1)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1562:  (state=S4 & (r & !t) & next(state=S2)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1563:  (state=S4 & (!r & !p & t) & next(state=S3)) |
+assets\examples\L3_patterns\DwyerPatterns.spectra:1564:  (state=S4 & ((!r & !p & !z & !t) | (!r & p & s & !z)) & next(state=S4)));
+assets\examples\L2_defsArrays\GridL2.spectra:17: c=next(c);
+assets\examples\L2_defsArrays\GridL2.spectra:20:asm alw moveRob=UP implies next(rob[1])=rob[1]-1;
+assets\examples\L3_patterns\GridL3.spectra:23: c + 1 = next (c) | (c = upper & next(c)=c);
+assets\examples\L3_patterns\GridL3.spectra:25: c -1 = next (c) | (c = 0 & next(c)=c);
+assets\examples\L3_patterns\GridL3.spectra:27: next(c)=c;
+assets\examples\L3_patterns\TrafficL3.spectra:18:gar alw greenA -> PREV(greenB);
+assets\examples\E2_execution\src\traffic\TrafficSimulator.java:77:						carA = rand.nextBoolean();
+assets\examples\E2_execution\src\traffic\TrafficSimulator.java:78:						carB = rand.nextBoolean();
+assets\examples\E2_execution\src\traffic\TrafficSimulatorCmd.java:26:			String line = in.nextLine();
+assets\examples\E2_execution\src\traffic\TrafficSimulatorCmd.java:30:			line = in.nextLine();
+
+ succeeded in 1090ms:
+assets\examples\A1_firstController\TrafficA1.spectra:15:gar alw !carA -> !greenA;
+assets\examples\A1_firstController\TrafficA1.spectra:16:gar alw !carB -> !greenB;
+assets\examples\L2_defsArrays\GridL2.spectra:27:gar alw moveRob=STAY -> fix(rob[0]) & fix(rob[1]);
+assets\examples\L3_patterns\TrafficL3.spectra:18:gar alw greenA -> PREV(greenB);
+
+2026-06-26T10:38:15.179109Z ERROR codex_core::tools::router: error=Exit code: 124
+Wall time: 14.1 seconds
+Output:
+command timed out after 14070 milliseconds
+
+ exited 124 in 14070ms:
+codex
+I found local examples for both `next(...)` and `PREV(...)`, so the two-step pump history rule can be represented directly. I’m now creating a temporary run folder and saving the first Spectra draft there.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$stamp = Get-Date -Format '"'yyyyMMdd-HHmmss'; "'$dir = "tmp'"\\spectra-runs\\"'$stamp-minepump-method3"; New-Item -ItemType Directory -Force $dir, "$dir'"\\diagnostics\", \""'$dir'"\\tests\", \""'$dir'"\\controller\" | Out-Null; Resolve-Path "'$dir' in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 644ms:
+
+Path                                                                                           
+----                                                                                           
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260626-123821-minepump-method3
+
+
+
+codex
+The draft encodes the stated next-step guarantees literally: high water implies `pump` next, methane implies `!pump` next. Because those can conflict if both high water and methane hold at once, I’m keeping the environment’s stated bounded-introduction assumption and letting the CLI diagnose whether that is sufficient.
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\tmp\spectra-runs\20260626-123821-minepump-method3\Minepump.spectra
+diff --git a/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra b/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..c3a3a32c9afbd51899290f4b91f7e22f5757e5b1
+--- /dev/null
++++ b/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra
+@@ -0,0 +1,16 @@
++spec Minepump
++
++env boolean highWater;
++env boolean methane;
++
++sys boolean pump;
++
++asm ini !highWater & !methane;
++
++asm alw (PREV(pump) & pump) -> next(!highWater);
++asm alw !highWater -> (next(!highWater) | next(!methane));
++
++gar ini !pump;
++
++gar alw highWater -> next(pump);
++gar alw methane -> next(!pump);
+
+diff --git a/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra b/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..c3a3a32c9afbd51899290f4b91f7e22f5757e5b1
+--- /dev/null
++++ b/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra
+@@ -0,0 +1,16 @@
++spec Minepump
++
++env boolean highWater;
++env boolean methane;
++
++sys boolean pump;
++
++asm ini !highWater & !methane;
++
++asm alw (PREV(pump) & pump) -> next(!highWater);
++asm alw !highWater -> (next(!highWater) | next(!methane));
++
++gar ini !pump;
++
++gar alw highWater -> next(pump);
++gar alw methane -> next(!pump);
+
+codex
+The first draft is saved. I’m running the Spectra wrapper now with the required 120 second timeout; if it reports unrealizable, I’ll request the counter-strategy before changing anything.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python .agents\\skills\\respect-method-3\\scripts\\run_spectra_cli.py --input tmp\\spectra-runs\\20260626-123821-minepump-method3\\Minepump.spectra --timeout 120" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 5050ms:
+{
+  "status": "unrealizable",
+  "input": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260626-123821-minepump-method3\\Minepump.spectra",
+  "jar": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+  "command": [
+    "java",
+    "-jar",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+    "-i",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260626-123821-minepump-method3\\Minepump.spectra"
+  ],
+  "exit_code": 0,
+  "synthesize": false,
+  "counter_strategy": false,
+  "counter_strategy_format": "default",
+  "output_dir": null,
+  "timeout_seconds": 120.0,
+  "raw_output": "Using BDD Package: CUDDFactory, Version: CUDD 3.0\nUsing BDD Package: CUDDFactory, Version: CUDD 3.0\nGR1GameImplC.checkRealizability: start\nGR1GameImplC.checkRealizability: end\nNodes num: 35\nNodes table size: 1022\nResult: Specification is unrealizable\n"
+}
+
+diff --git a/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra b/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..c3a3a32c9afbd51899290f4b91f7e22f5757e5b1
+--- /dev/null
++++ b/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra
+@@ -0,0 +1,16 @@
++spec Minepump
++
++env boolean highWater;
++env boolean methane;
++
++sys boolean pump;
++
++asm ini !highWater & !methane;
++
++asm alw (PREV(pump) & pump) -> next(!highWater);
++asm alw !highWater -> (next(!highWater) | next(!methane));
++
++gar ini !pump;
++
++gar alw highWater -> next(pump);
++gar alw methane -> next(!pump);
+
+codex
+The draft is syntactically valid but unrealizable. I’m requesting the CLI counter-strategy diagnostic and saving it under the run directory before deciding whether the conflict is repairable from the natural-language requirements.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python .agents\\skills\\respect-method-3\\scripts\\run_spectra_cli.py --input tmp\\spectra-runs\\20260626-123821-minepump-method3\\Minepump.spectra --counter-strategy --timeout 120 | Tee-Object -FilePath tmp\\spectra-runs\\20260626-123821-minepump-method3\\diagnostics\\unrealizable-1.json" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 5118ms:
+{
+  "status": "unrealizable",
+  "input": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260626-123821-minepump-method3\\Minepump.spectra",
+  "jar": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+  "command": [
+    "java",
+    "-jar",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\spectra-cli.jar",
+    "-i",
+    "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\tmp\\spectra-runs\\20260626-123821-minepump-method3\\Minepump.spectra",
+    "--counter-strategy"
+  ],
+  "exit_code": 0,
+  "synthesize": false,
+  "counter_strategy": true,
+  "counter_strategy_format": "default",
+  "output_dir": null,
+  "timeout_seconds": 120.0,
+  "raw_output": "Using BDD Package: CUDDFactory, Version: CUDD 3.0\nUsing BDD Package: CUDDFactory, Version: CUDD 3.0\nGR1GameImplC.checkRealizability: start\nGR1GameImplC.checkRealizability: end\nNodes num: 35\nNodes table size: 1022\nResult: Specification is unrealizable\nextract strategy - Start\nextract strategy - End\nports:\n  in highWater = {false,true}\n  in methane = {false,true}\n\n  out pump = {false,true}\n\nautomaton:\n// number of states reduced from 5 to 4 by DFA minimization of strategy.\nstate INI[initial], S0, S1, DEAD;\n\nINI -> S0 {highWater:false, methane:false} / {pump:false};\nS0 -> S1 {highWater:true, methane:false} / {pump:false};\nS0 -> S1 {highWater:true, methane:false} / {pump:true};\nS1 -> DEAD {highWater:true, methane:true} / {pump:true};\n"
+}
+
+diff --git a/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra b/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..c3a3a32c9afbd51899290f4b91f7e22f5757e5b1
+--- /dev/null
++++ b/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra
+@@ -0,0 +1,16 @@
++spec Minepump
++
++env boolean highWater;
++env boolean methane;
++
++sys boolean pump;
++
++asm ini !highWater & !methane;
++
++asm alw (PREV(pump) & pump) -> next(!highWater);
++asm alw !highWater -> (next(!highWater) | next(!methane));
++
++gar ini !pump;
++
++gar alw highWater -> next(pump);
++gar alw methane -> next(!pump);
+
+codex
+The counter-strategy pinpoints a real conflict: after high water appears and the pump is on, the environment can set both `highWater` and `methane` true in the same step. The two literal next-step guarantees then require `pump` and `!pump` simultaneously in the next state.
+codex
+cli_status: unrealizable  
+repair_loops: 0  
+syntax_repair_loops: 0  
+unrealizable_repair_loops: 0  
+test_repair_loops: 0  
+timeout_seconds: 120  
+used_counter_strategy: true  
+blocked_by_nl_conflict: true  
+diagnostic_file: `tmp/spectra-runs/20260626-123821-minepump-method3/diagnostics/unrealizable-1.json`  
+test_plan_file: none  
+test_result_file: none  
+tests_total: 0  
+tests_passed: 0  
+tests_failed: 0  
+spectra_file: `tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra`  
+controller_output_dir: none  
+
+The generated spec is syntactically valid, but unrealizable. The counter-strategy shows the environment can make `highWater` and `methane` true together, forcing contradictory next-state guarantees: `pump` must be on because of high water and off because of methane. I did not repair it because the plausible fixes would either add an unstated environment exclusion or weaken one of the stated guarantees.
+diff --git a/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra b/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra
+new file mode 100644
+index 0000000000000000000000000000000000000000..c3a3a32c9afbd51899290f4b91f7e22f5757e5b1
+--- /dev/null
++++ b/tmp/spectra-runs/20260626-123821-minepump-method3/Minepump.spectra
+@@ -0,0 +1,16 @@
++spec Minepump
++
++env boolean highWater;
++env boolean methane;
++
++sys boolean pump;
++
++asm ini !highWater & !methane;
++
++asm alw (PREV(pump) & pump) -> next(!highWater);
++asm alw !highWater -> (next(!highWater) | next(!methane));
++
++gar ini !pump;
++
++gar alw highWater -> next(pump);
++gar alw methane -> next(!pump);
+
+tokens used
+37.949
