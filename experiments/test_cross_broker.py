@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 import threading
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 
 
@@ -17,11 +19,42 @@ BROKER = REPO_ROOT / "experiments" / "cross_broker.py"
 LEFT_SPEC = REPO_ROOT / "assets" / "examples" / "E2_execution" / "TrafficE2.spectra"
 RIGHT_SPEC = REPO_ROOT / "assets" / "examples" / "A1_firstController" / "TrafficA1.spectra"
 VERBOSE = os.environ.get("RESPECT_TEST_VERBOSE", "1") != "0"
+KEEP_ARTIFACTS = os.environ.get("RESPECT_TEST_KEEP_ARTIFACTS", "0") == "1"
+SHOW_FEEDBACK_JSON = os.environ.get("RESPECT_TEST_SHOW_FEEDBACK_JSON", "0") == "1"
 
 
 def log(message: str) -> None:
     if VERBOSE:
         print(f"[cross-broker-test] {message}", flush=True)
+
+
+@contextmanager
+def broker_runs_root():
+    """Yield a broker runs root, optionally preserving it for inspection."""
+    tmp_root = REPO_ROOT / "tmp"
+    tmp_root.mkdir(exist_ok=True)
+    if KEEP_ARTIFACTS:
+        runs_root = tmp_root / "cross-broker-inspect"
+        if runs_root.exists():
+            shutil.rmtree(runs_root)
+        runs_root.mkdir(parents=True)
+        try:
+            yield runs_root
+        finally:
+            log(f"kept artifacts at {runs_root}")
+        return
+
+    with tempfile.TemporaryDirectory(prefix="cross-broker-test-", dir=tmp_root) as tmp_dir:
+        yield Path(tmp_dir)
+
+
+def log_json_file(label: str, path: Path) -> None:
+    """Print a formatted JSON artifact when inspection output is enabled."""
+    if not SHOW_FEEDBACK_JSON:
+        return
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    print(f"[cross-broker-test] {label} {path}", flush=True)
+    print(json.dumps(payload, indent=2, sort_keys=True), flush=True)
 
 
 class CrossBrokerIntegrationTests(unittest.TestCase):
@@ -81,10 +114,7 @@ class CrossBrokerIntegrationTests(unittest.TestCase):
         if not LEFT_SPEC.is_file() or not RIGHT_SPEC.is_file():
             self.skipTest("Traffic example Spectra files are unavailable.")
 
-        tmp_root = REPO_ROOT / "tmp"
-        tmp_root.mkdir(exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix="cross-broker-test-", dir=tmp_root) as tmp_dir:
-            runs_root = Path(tmp_dir)
+        with broker_runs_root() as runs_root:
             run_id = "broker-buchi-test"
             log(f"runs_root={runs_root}")
             log(f"left_spec={LEFT_SPEC}")
@@ -125,19 +155,30 @@ class CrossBrokerIntegrationTests(unittest.TestCase):
                 self.skipTest(f"Buchi broker dependencies unavailable: {statuses}")
 
             for agent, (return_code, payload, stderr) in outputs.items():
+                feedback_file = Path(payload["feedback_file"]) if payload.get("feedback_file") else None
                 log(
                     f"{agent} feedback: witness_count={payload.get('witness_count')}, "
+                    f"semantic_relation={payload.get('semantic_relation')}, "
+                    f"accepted_by_you={len(payload.get('accepted_by_you_rejected_by_peer') or [])}, "
+                    f"rejected_by_you={len(payload.get('rejected_by_you_accepted_by_peer') or [])}, "
                     f"feedback_file={payload.get('feedback_file')}"
                 )
+                if feedback_file and feedback_file.is_file():
+                    log_json_file(f"{agent} feedback json:", feedback_file)
                 self.assertEqual(return_code, 0, (agent, payload, stderr))
                 self.assertEqual(payload.get("status"), "ready", (agent, payload))
                 self.assertEqual(payload.get("agent"), agent, payload)
-                self.assertIn("witnesses", payload)
-                self.assertIsInstance(payload["witnesses"], list)
+                self.assertIn(payload.get("semantic_relation"), {"equivalent", "different", "unknown"})
+                self.assertIn("accepted_by_you_rejected_by_peer", payload)
+                self.assertIn("rejected_by_you_accepted_by_peer", payload)
+                self.assertIsInstance(payload["accepted_by_you_rejected_by_peer"], list)
+                self.assertIsInstance(payload["rejected_by_you_accepted_by_peer"], list)
+                self.assertNotIn("witnesses", payload)
 
             comparison_file = runs_root / run_id / "round-0" / "comparison" / "comparison.json"
             log(f"comparison_file={comparison_file}")
             self.assertTrue(comparison_file.is_file())
+            log_json_file("comparison json:", comparison_file)
             comparison = json.loads(comparison_file.read_text(encoding="utf-8"))
             log(
                 "comparison: "
@@ -151,8 +192,16 @@ class CrossBrokerIntegrationTests(unittest.TestCase):
                 log(f"{direction}: words={len(words)}")
             self.assertEqual(comparison.get("mode"), "buchi_disagreement_languages", comparison)
             self.assertEqual(comparison.get("status"), "success", comparison)
+            self.assertEqual(comparison.get("semantic_relation"), "different", comparison)
             self.assertIn("left_minus_right", comparison.get("accepted_words", {}))
             self.assertIn("right_minus_left", comparison.get("accepted_words", {}))
+
+            agent_a = outputs["agent_a"][1]
+            agent_b = outputs["agent_b"][1]
+            self.assertEqual(len(agent_a["accepted_by_you_rejected_by_peer"]), 1, agent_a)
+            self.assertEqual(len(agent_a["rejected_by_you_accepted_by_peer"]), 0, agent_a)
+            self.assertEqual(len(agent_b["accepted_by_you_rejected_by_peer"]), 0, agent_b)
+            self.assertEqual(len(agent_b["rejected_by_you_accepted_by_peer"]), 1, agent_b)
 
 
 if __name__ == "__main__":

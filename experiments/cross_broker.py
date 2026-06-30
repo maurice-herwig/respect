@@ -148,37 +148,29 @@ def repo_relative_or_absolute(path: Path) -> str:
         return str(path.resolve())
 
 
-def direction_name_for_agent(agent: str, left_agent: str, right_agent: str, direction: str) -> str:
-    """Translate a global comparison direction into the submitting agent's view."""
-    if direction == "left_minus_right":
-        return "self_only" if agent == left_agent else "peer_only"
-    if direction == "right_minus_left":
-        return "self_only" if agent == right_agent else "peer_only"
-    return direction
-
-
-def build_witness_records(
+def words_for_agent(
     *,
     agent: str,
     left_agent: str,
     right_agent: str,
-    direction: str,
-    words_result: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """Convert accepted words into broker feedback witness records."""
-    records: list[dict[str, Any]] = []
-    for index, word in enumerate(words_result.get("words") or []):
-        records.append(
-            {
-                "direction": direction_name_for_agent(agent, left_agent, right_agent, direction),
-                "comparison_direction": direction,
-                "accepted_by": left_agent if direction == "left_minus_right" else right_agent,
-                "rejected_by": right_agent if direction == "left_minus_right" else left_agent,
-                "word_index": index,
-                "word": word,
-            }
-        )
-    return records
+    left_words: dict[str, Any],
+    right_words: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Return directed disagreement words from the submitting agent's view."""
+    if agent == left_agent:
+        return list(left_words.get("words") or []), list(right_words.get("words") or [])
+    if agent == right_agent:
+        return list(right_words.get("words") or []), list(left_words.get("words") or [])
+    return [], []
+
+
+def semantic_relation(left_words: dict[str, Any], right_words: dict[str, Any]) -> str:
+    """Classify the comparison from the extracted directed witness words."""
+    if left_words.get("status") == "empty" and right_words.get("status") == "empty":
+        return "equivalent"
+    if left_words.get("words") or right_words.get("words"):
+        return "different"
+    return "unknown"
 
 
 def build_feedback(
@@ -187,25 +179,25 @@ def build_feedback(
     peer: str | None,
     paths: dict[str, Path],
     comparison: dict[str, Any],
-    witnesses: list[dict[str, Any]],
+    accepted_by_you_rejected_by_peer: list[dict[str, Any]],
+    rejected_by_you_accepted_by_peer: list[dict[str, Any]],
 ) -> dict[str, Any]:
     """Build per-agent feedback in the shape expected by repair skills."""
     status = comparison.get("status", "other")
     if status == "success":
         status = "ready"
+    witness_count = len(accepted_by_you_rejected_by_peer) + len(rejected_by_you_accepted_by_peer)
     return {
         "status": status,
         "agent": agent,
         "peer": peer,
         "feedback_file": str(paths["comparison_dir"] / f"feedback_for_{agent}.json"),
         "comparison_file": str(paths["comparison"]),
-        "witnesses": witnesses,
-        "witness_count": len(witnesses),
+        "semantic_relation": comparison.get("semantic_relation", "unknown"),
+        "accepted_by_you_rejected_by_peer": accepted_by_you_rejected_by_peer,
+        "rejected_by_you_accepted_by_peer": rejected_by_you_accepted_by_peer,
+        "witness_count": witness_count,
         "message": comparison.get("message") or comparison.get("error") or "Buchi disagreement comparison completed.",
-        "instruction": (
-            "Treat broker witnesses as disagreement evidence, not as oracle counterexamples. "
-            "Revise only when the natural-language requirements justify it."
-        ),
     }
 
 
@@ -288,6 +280,9 @@ def compute_buchi_comparison(
             "left_minus_right": left_words,
             "right_minus_left": right_words,
         },
+        "semantic_relation": semantic_relation(left_words, right_words)
+        if result.get("status") == "success"
+        else "unknown",
         "witness_count": len(left_words.get("words") or []) + len(right_words.get("words") or []),
         "message": "Buchi disagreement comparison completed."
         if result.get("status") == "success"
@@ -298,22 +293,13 @@ def compute_buchi_comparison(
         peers = [candidate for candidate in expected_agents if candidate != agent]
         peer = peers[0] if peers else None
         feedback_paths = build_paths(runs_root, run_id, round_id, agent)
-        witnesses = [
-            *build_witness_records(
-                agent=agent,
-                left_agent=left_agent,
-                right_agent=right_agent,
-                direction="left_minus_right",
-                words_result=left_words,
-            ),
-            *build_witness_records(
-                agent=agent,
-                left_agent=left_agent,
-                right_agent=right_agent,
-                direction="right_minus_left",
-                words_result=right_words,
-            ),
-        ]
+        accepted_by_you, rejected_by_you = words_for_agent(
+            agent=agent,
+            left_agent=left_agent,
+            right_agent=right_agent,
+            left_words=left_words,
+            right_words=right_words,
+        )
         atomic_write_json(
             feedback_paths["feedback"],
             build_feedback(
@@ -321,7 +307,8 @@ def compute_buchi_comparison(
                 peer=peer,
                 paths=feedback_paths,
                 comparison=comparison,
-                witnesses=witnesses,
+                accepted_by_you_rejected_by_peer=accepted_by_you,
+                rejected_by_you_accepted_by_peer=rejected_by_you,
             ),
         )
     final_status = "ready" if result.get("status") == "success" else result.get("status", "comparison_failed")
