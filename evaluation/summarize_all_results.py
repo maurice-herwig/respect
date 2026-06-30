@@ -19,7 +19,7 @@ if str(REPO_ROOT) not in sys.path:
 from evaluation.evaluate_controller_distances import (  # noqa: E402
     DEFAULT_OUTPUT_ROOT as DEFAULT_CONTROLLER_DISTANCE_ROOT,
 )
-from evaluation.evaluate_reconstruction_distances import (  # noqa: E402
+from evaluation.buchi.evaluate_reconstruction_distances import (  # noqa: E402
     DEFAULT_OUTPUT_ROOT as DEFAULT_BUCHI_DISTANCE_ROOT,
     DEFAULT_RUNS_MANIFEST,
     load_jsonl,

@@ -9,12 +9,12 @@ import sys
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from evaluation import buchi_distance
-from evaluation.evaluate_reconstruction_distances import (
+from evaluation.buchi import buchi_distance
+from evaluation.buchi.evaluate_reconstruction_distances import (
     DEFAULT_JAR,
     automata_are_structurally_compatible,
     automaton_summary,
@@ -25,8 +25,8 @@ from evaluation.evaluate_reconstruction_distances import (
 )
 
 
-FIXTURE_DIR = REPO_ROOT / "evaluation" / "fixtures" / "distance_nonzero"
-DEFAULT_OUTPUT_DIR = REPO_ROOT / "evaluation" / "distance_results" / "fixtures" / "distance_nonzero"
+FIXTURE_DIR = REPO_ROOT / "evaluation" / "buchi" / "fixtures" / "distance_nonzero"
+DEFAULT_OUTPUT_DIR = REPO_ROOT / "evaluation" / "buchi" / "distance_results" / "fixtures" / "distance_nonzero"
 
 
 def parse_args() -> argparse.Namespace:

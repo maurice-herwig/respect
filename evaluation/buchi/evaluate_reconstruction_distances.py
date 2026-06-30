@@ -17,12 +17,12 @@ from pathlib import Path
 from typing import Any
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from evaluation import buchi_distance
-from evaluation import bounded_semantic_distance
+from evaluation.buchi import buchi_distance
+from evaluation.buchi import bounded_semantic_distance
 from evaluation.summarize_reconstruction_runs import extract_model_label
 from evaluation.signature_mapping import (
     DEFAULT_MAPPING_FILE,
@@ -35,7 +35,7 @@ from evaluation.signature_mapping import (
 
 DEFAULT_RUNS_MANIFEST = REPO_ROOT / "experiments" / "runs" / "runs.jsonl"
 DEFAULT_JAR = REPO_ROOT / "assets" / "cli_with_hoa_export" / "spectra-cli.jar"
-DEFAULT_OUTPUT_ROOT = REPO_ROOT / "evaluation" / "distance_results"
+DEFAULT_OUTPUT_ROOT = REPO_ROOT / "evaluation" / "buchi" / "distance_results"
 STATE_RE = re.compile(r"^State:\s+(\d+)(?:\s+\[(.*)\])?(?:\s+(\{[^}]*\}))?\s*$")
 EDGE_RE = re.compile(r"^\[(.*)\]\s+(\d+)(?:\s+(\{[^}]*\}))?\s*$")
 STATES_RE = re.compile(r"^States:\s+(\d+)\s*$")

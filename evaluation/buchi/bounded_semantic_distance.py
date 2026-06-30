@@ -7,7 +7,7 @@ import itertools
 import random
 from typing import Any
 
-from evaluation import buchi_distance
+from evaluation.buchi import buchi_distance
 
 
 @dataclass(frozen=True)

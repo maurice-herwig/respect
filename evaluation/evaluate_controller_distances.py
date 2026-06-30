@@ -20,7 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from evaluation.evaluate_reconstruction_distances import (  # noqa: E402
+from evaluation.buchi.evaluate_reconstruction_distances import (  # noqa: E402
     DEFAULT_RUNS_MANIFEST,
     append_jsonl,
     default_output_jsonl as _distance_default_output_jsonl,

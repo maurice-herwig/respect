@@ -22,12 +22,12 @@ from pathlib import Path
 from typing import Any
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from evaluation import buchi_distance
-from evaluation.evaluate_reconstruction_distances import (
+from evaluation.buchi import buchi_distance
+from evaluation.buchi.evaluate_reconstruction_distances import (
     DEFAULT_JAR,
     alphabet_diagnostics,
     automata_are_structurally_compatible,
@@ -41,7 +41,7 @@ from evaluation.evaluate_reconstruction_distances import (
 )
 
 
-DEFAULT_OUTPUT_DIR = REPO_ROOT / "evaluation" / "disagreement_languages"
+DEFAULT_OUTPUT_DIR = REPO_ROOT / "evaluation" / "buchi" / "disagreement_languages"
 
 
 @dataclass(frozen=True)

@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from evaluation import buchi_distance
-from evaluation import bounded_semantic_distance
+from evaluation.buchi import buchi_distance
+from evaluation.buchi import bounded_semantic_distance
 
 
 def load_hoa(source: str):
