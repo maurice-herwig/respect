@@ -143,5 +143,13 @@ non-zero distance smoke fixture:
 
 ```powershell
 python -m unittest evaluation.buchi.test_buchi_distance_semantics
+python -m unittest evaluation.buchi.test_disagreement_languages
 python evaluation\buchi\test_nonzero_distance_fixture.py
+```
+
+In WSL/Linux, run the Spot-dependent disagreement-language test from the
+repository root with the active Spot environment:
+
+```bash
+python -m unittest evaluation.buchi.test_disagreement_languages
 ```
