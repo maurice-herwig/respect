@@ -23,6 +23,7 @@ DEFAULT_OUTPUT_DIR = REPO_ROOT / "experiments" / "cross_runs"
 DEFAULT_AGENT_COMMAND = "codex --ask-for-approval never exec --ephemeral --sandbox danger-full-access -"
 DEFAULT_SKILL = "respect-method-cross-broker"
 DEFAULT_AGENTS = ("agent_a", "agent_b")
+DEFAULT_MAX_BROKER_REPAIR_LOOPS = 3
 
 
 def utc_now() -> str:
@@ -42,6 +43,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--agent-ids", nargs=2, default=list(DEFAULT_AGENTS))
     parser.add_argument("--timeout", type=float, default=1800.0)
     parser.add_argument("--broker-timeout", type=float, default=600.0)
+    parser.add_argument("--max-broker-repair-loops", type=int, default=DEFAULT_MAX_BROKER_REPAIR_LOOPS)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 
@@ -75,6 +77,7 @@ def build_prompt(
     round_id: int,
     agent_run_dir: Path,
     broker_timeout: float,
+    max_broker_repair_loops: int,
     expected_agents: list[str],
     natural_language_description: str,
 ) -> str:
@@ -96,13 +99,16 @@ Run metadata:
 - peer_agent_id: {peer_agent_id}
 - round_id: {round_id}
 - broker_timeout_seconds: {broker_timeout}
+- max_broker_repair_loops: {max_broker_repair_loops}
 - expected_agents: {expected_agents_text}
 
-After successful synthesis, call the broker with:
+After successful synthesis, call the broker with the current round id:
 
 ```powershell
 python experiments\\cross_broker.py submit-and-wait --run-id {run_id} --round {round_id} --agent {agent_id} --spec <path-to-current-spectra-file> --expected-agents {expected_agents_text} --timeout {broker_timeout}
 ```
+
+If broker feedback justifies a Spectra repair under the natural-language requirements, validate and synthesize the repaired Spectra, increment the round id by 1, and call the same broker command with the new round id. Stop after at most {max_broker_repair_loops} broker-repair loops or earlier if the broker reports semantic equivalence, unavailable feedback, or no justified repair.
 
 Natural-language requirements:
 
@@ -167,6 +173,7 @@ def main() -> int:
             "agent_ids": args.agent_ids,
             "broker_timeout_seconds": args.broker_timeout,
             "description_file": str(description_file),
+            "max_broker_repair_loops": args.max_broker_repair_loops,
             "round": args.round_id,
             "run_id": run_id,
             "skill": args.skill,
@@ -187,6 +194,7 @@ def main() -> int:
             round_id=args.round_id,
             agent_run_dir=agent_run_dir,
             broker_timeout=args.broker_timeout,
+            max_broker_repair_loops=args.max_broker_repair_loops,
             expected_agents=args.agent_ids,
             natural_language_description=natural_language_description,
         )

@@ -13,17 +13,17 @@ This skill implements a cross-agent ReSpect reconstruction condition:
 - Output: a generated Spectra specification plus CLI validation, diagnosis, synthesis, broker feedback, and repair results.
 - Feedback sources before broker submission: `spectra-cli.jar` parser/realizability/synthesis output and CLI counter-strategy diagnostics for unrealizable specifications.
 - Feedback source after successful synthesis: disagreement feedback returned by `experiments/cross_broker.py`.
-- Allowed repair signal in the current version: parser output, realizability status, counter-strategy output, generated Spectra, the natural-language description, and broker status/feedback.
+- Allowed repair signal: parser output, realizability status, counter-strategy output, generated Spectra, the natural-language description, and broker disagreement feedback.
 - Not allowed: `controller_tests`, generated controller tests, semantic equivalence checks against the benchmark, mutation checks, oracle-based tests, reading or comparing against the original/reference Spectra file, accepted dataset files, HOA distance results, or benchmark fixtures.
 
-The goal is to measure whether peer disagreement feedback can be introduced after the same syntax and unrealizability handling used by method 3, while avoiding the method-3 controller-test feedback source.
+The goal is to measure whether peer disagreement feedback can improve reconstruction after the same syntax and unrealizability handling used by method 3, while avoiding the method-3 controller-test feedback source.
 
 ## Workflow
 
 1. Read `references/spectra-workflow.md` before drafting a new specification.
 2. Translate the user's natural-language description into a complete Spectra specification.
 3. Save the draft to a temporary `.spectra` file before validation.
-4. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, `broker_repair_loops = 0`, and `broker_witnesses_received = 0`.
+4. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, `broker_repair_loops = 0`, `broker_witnesses_received = 0`, `accepted_by_self_rejected_by_peer_repaired = 0`, `accepted_by_self_rejected_by_peer_ignored = 0`, `rejected_by_self_accepted_by_peer_repaired = 0`, and `rejected_by_self_accepted_by_peer_ignored = 0`.
 5. Run `scripts/run_spectra_cli.py` on the saved file with an explicit timeout.
 6. If the result is `syntax_error`, inspect the parser message, increment both `repair_loops` and `syntax_repair_loops`, repair only the syntax, and rerun validation.
 7. Limit syntax-repair loops to at most 3 attempts and report the last parser error if repair still fails.
@@ -36,10 +36,15 @@ The goal is to measure whether peer disagreement feedback can be introduced afte
 14. After each unrealizability repair, increment both `repair_loops` and `unrealizable_repair_loops`, save the file, rerun validation, and continue from the appropriate branch.
 15. Limit unrealizability-repair loops to at most 3 attempts.
 16. If the result is `realizable`, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to broker submission.
-17. Submit the current synthesized Spectra file to the broker by running `experiments/cross_broker.py submit-and-wait` with the run id, round id, agent id, spec path, and timeout provided by the task prompt.
-18. Save the broker JSON response as `broker/feedback-<round>.json`.
-19. In the current version, do not repair the specification based on broker witnesses unless the user explicitly requests broker-witness repair logic. Record the broker feedback status and witness count, then report the final result.
-20. Always include the final method cross-broker result fields in the response.
+17. Submit the current synthesized Spectra file to the broker by running `experiments/cross_broker.py submit-and-wait` with the run id, current round id, agent id, spec path, expected agents, and timeout provided by the task prompt.
+18. Save the broker JSON response as `broker/feedback-<round>.json`. If the response contains a `feedback_file`, read that file and use it as the authoritative broker feedback for the round.
+19. If broker feedback is unavailable, has a non-ready status, or reports `semantic_relation = equivalent`, record the status and stop the broker loop.
+20. If broker feedback reports disagreement words, inspect both `accepted_by_you_rejected_by_peer` and `rejected_by_you_accepted_by_peer`. Treat them as peer disagreement evidence only, not as ground truth.
+21. Decide for each word whether the natural-language description supports a specification change. Count every word as either leading to repair or ignored, separately for each direction.
+22. If no word justifies a change, stop the broker loop and report that broker feedback was not applied.
+23. If at least one word justifies a change, make the minimal Spectra repair consistent with the natural-language description, increment both `repair_loops` and `broker_repair_loops`, save the file, rerun CLI validation, rerun synthesis, increment the broker round id, and submit the repaired Spectra to the broker again.
+24. Limit broker-repair loops to at most 3 attempts.
+25. Always include the final method cross-broker result fields in the response.
 
 ## Temporary File Handling
 
@@ -47,6 +52,8 @@ The goal is to measure whether peer disagreement feedback can be introduced afte
 - Save the generated specification as `<name>.spectra`.
 - Save the JSON output of each counter-strategy wrapper call as `diagnostics/unrealizable-<n>.json`. The actual counter-strategy text is preserved inside that JSON object's `raw_output` field.
 - Save broker responses as `broker/feedback-<round>.json`.
+- If the broker response references `feedback_file`, read that file and save a copy as `broker/feedback-detail-<round>.json` before making any repair decision.
+- Save a concise repair-decision log as `broker/repair-decisions-<round>.json`, including per-word decisions and counters.
 - Keep the final `.spectra` file and synthesis output long enough for inspection.
 - Do not overwrite unrelated files.
 
@@ -92,11 +99,26 @@ python experiments/cross_broker.py submit-and-wait --run-id <run-id> --round <ro
 
 Treat broker responses as structured experiment feedback:
 
-- `ready`: broker feedback is available; save it and count `witnesses`.
+- `ready`: broker feedback is available. Read the referenced `feedback_file` when present.
 - `timeout`: peer feedback was unavailable; do not invent broker feedback.
 - `comparison_failed`, `alphabet_mismatch`, or other non-ready statuses: report the broker status and do not continue to broker-based repair.
 
-Broker witnesses are disagreement evidence, not oracle counterexamples. Do not treat the peer specification as ground truth.
+The skill-facing feedback file has this shape:
+
+```json
+{
+  "status": "ready",
+  "semantic_relation": "equivalent|different|unknown",
+  "accepted_by_you_rejected_by_peer": [],
+  "rejected_by_you_accepted_by_peer": [],
+  "witness_count": 0,
+  "comparison_file": "..."
+}
+```
+
+`accepted_by_you_rejected_by_peer` contains ultimately-periodic words accepted by the current generated Spectra specification but rejected by the peer specification. `rejected_by_you_accepted_by_peer` contains ultimately-periodic words rejected by the current generated Spectra specification but accepted by the peer specification. Each word is represented as `prefix` and `loop`, where the loop repeats forever.
+
+Broker words are disagreement evidence, not oracle counterexamples. The peer specification was produced by another agent and may be wrong. Do not treat peer-accepted behavior as required or peer-rejected behavior as forbidden unless the natural-language requirements support that conclusion.
 
 ## Method Cross-Broker Boundaries
 
@@ -110,6 +132,7 @@ Broker witnesses are disagreement evidence, not oracle counterexamples. Do not t
 - Do not add environment assumptions that shift responsibility to the environment unless the description states or strongly implies that assumption.
 - Do not compare the generated Spectra file against an original/reference Spectra file.
 - Do not treat broker feedback as proof that the generated Spectra is wrong.
+- Do not repair solely to match the peer specification. Repair only to better satisfy the natural-language description.
 
 ## Unrealizability Repair Rules
 
@@ -124,19 +147,22 @@ Broker witnesses are disagreement evidence, not oracle counterexamples. Do not t
 
 ## Broker Feedback Handling
 
-In the current version, broker feedback is collected but not used for specification repair unless the user explicitly requests broker-witness repair logic.
-
 When broker feedback is ready:
 
-1. Read the broker JSON response from stdout.
-2. Save it under `broker/feedback-<round>.json`.
-3. Count the number of `witnesses`.
-4. Set `broker_feedback_status` to the broker `status`.
-5. Set `broker_witnesses_received` to the witness count.
-6. Set `broker_repair_decision = not_implemented`.
-7. Leave the Spectra file unchanged after broker feedback.
+1. Read the broker JSON response from stdout and save it as `broker/feedback-<round>.json`.
+2. If the JSON contains `feedback_file`, read that file and save a copy as `broker/feedback-detail-<round>.json`.
+3. Set `broker_feedback_status` to the feedback `status`.
+4. Set `broker_witnesses_received` to the total `witness_count`.
+5. If `semantic_relation = equivalent`, set `broker_repair_decision = equivalent` and stop.
+6. If no feedback file exists, the status is not `ready`, or the semantic relation is `unknown`, set `broker_repair_decision = no_repair` and stop.
+7. For each word in `accepted_by_you_rejected_by_peer`, decide whether the natural-language description says the behavior should be rejected. If yes, count it in `accepted_by_self_rejected_by_peer_repaired`; otherwise count it in `accepted_by_self_rejected_by_peer_ignored`.
+8. For each word in `rejected_by_you_accepted_by_peer`, decide whether the natural-language description says the behavior should be accepted. If yes, count it in `rejected_by_self_accepted_by_peer_repaired`; otherwise count it in `rejected_by_self_accepted_by_peer_ignored`.
+9. Save the per-word decisions and the counters as `broker/repair-decisions-<round>.json`.
+10. If no word supports a change, set `broker_repair_decision = ignored_feedback` and stop.
+11. If one or more words support a change, apply one minimal coherent repair that addresses the justified feedback without contradicting the natural-language description. Set `broker_repair_decision = repaired`, increment `repair_loops` and `broker_repair_loops`, rerun validation and synthesis, then submit the repaired Spectra in the next broker round.
+12. Stop after 3 broker-repair loops even if further disagreement remains.
 
-If broker-witness repair is later enabled, only revise the specification when the natural-language requirements clearly justify the change. Until then, do not perform broker-based repairs.
+For `accepted_by_you_rejected_by_peer`, a justified repair usually means strengthening or correcting the generated Spectra so that the disputed behavior is no longer accepted. For `rejected_by_you_accepted_by_peer`, a justified repair usually means relaxing or correcting the generated Spectra so that the disputed behavior becomes accepted. In both directions, the natural-language description is the deciding authority, not the peer.
 
 ## Final Response Format
 
@@ -155,7 +181,11 @@ diagnostic_file: <path or none>
 broker_feedback_status: <ready|timeout|comparison_failed|alphabet_mismatch|none|other>
 broker_feedback_file: <path or none>
 broker_witnesses_received: <number>
-broker_repair_decision: <not_implemented|none>
+broker_repair_decision: <equivalent|no_repair|ignored_feedback|repaired|none>
+accepted_by_self_rejected_by_peer_repaired: <number>
+accepted_by_self_rejected_by_peer_ignored: <number>
+rejected_by_self_accepted_by_peer_repaired: <number>
+rejected_by_self_accepted_by_peer_ignored: <number>
 spectra_file: <path>
 controller_output_dir: <path or none>
 ```

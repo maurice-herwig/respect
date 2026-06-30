@@ -22,6 +22,7 @@ DEFAULT_CROSS_RUNNER = "experiments/cross_repair_with_broker.py"
 DEFAULT_AGENT_COMMAND = "codex --ask-for-approval never exec --ephemeral --sandbox danger-full-access -"
 DEFAULT_SKILL = "respect-method-cross-broker"
 DEFAULT_AGENT_IDS = ("agent_a", "agent_b")
+DEFAULT_MAX_BROKER_REPAIR_LOOPS = 3
 PROMPT_VERSION = "cross_broker_prompt_v1"
 
 
@@ -37,6 +38,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--agent-ids", nargs=2, default=list(DEFAULT_AGENT_IDS))
     parser.add_argument("--timeout", type=float, default=1800.0)
     parser.add_argument("--broker-timeout", type=float, default=600.0)
+    parser.add_argument("--max-broker-repair-loops", type=int, default=DEFAULT_MAX_BROKER_REPAIR_LOOPS)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--refresh-before", default=None)
@@ -154,6 +156,7 @@ def make_run_key(
     agent_ids: list[str],
     timeout: float,
     broker_timeout: float,
+    max_broker_repair_loops: int,
     cross_runner: str,
 ) -> str:
     """Create a deterministic key for skip/resume behavior."""
@@ -167,6 +170,7 @@ def make_run_key(
                 "cross_runner": cross_runner,
                 "description_id": description_record.get("description_id"),
                 "description_response_sha256": description_record.get("response_sha256"),
+                "max_broker_repair_loops": max_broker_repair_loops,
                 "prompt_version": PROMPT_VERSION,
                 "skill": skill,
                 "timeout": timeout,
@@ -187,6 +191,7 @@ def build_cross_runner_command(
     agent_ids: list[str],
     timeout: float,
     broker_timeout: float,
+    max_broker_repair_loops: int,
     dry_run: bool,
 ) -> list[str]:
     """Build the single-description cross-runner command."""
@@ -210,6 +215,8 @@ def build_cross_runner_command(
         str(timeout),
         "--broker-timeout",
         str(broker_timeout),
+        "--max-broker-repair-loops",
+        str(max_broker_repair_loops),
     ]
     if dry_run:
         command.append("--dry-run")
@@ -243,6 +250,7 @@ def process_description(
         agent_ids=args.agent_ids,
         timeout=args.timeout,
         broker_timeout=args.broker_timeout,
+        max_broker_repair_loops=args.max_broker_repair_loops,
         cross_runner=str(cross_runner),
     )
     if not args.force and current_run_key in known_completed:
@@ -277,6 +285,7 @@ def process_description(
             agent_ids=args.agent_ids,
             timeout=args.timeout,
             broker_timeout=args.broker_timeout,
+            max_broker_repair_loops=args.max_broker_repair_loops,
             dry_run=args.dry_run,
         )
         try:
@@ -338,6 +347,7 @@ def process_description(
         "cross_runner_exit_code": exit_code,
         "timeout_seconds": args.timeout,
         "broker_timeout_seconds": args.broker_timeout,
+        "max_broker_repair_loops": args.max_broker_repair_loops,
         "run_started_at": started_at,
         "run_finished_at": finished_at,
         "duration_ms": duration_ms,
@@ -391,6 +401,7 @@ def main() -> int:
         "agent_model": args.agent_model,
         "agent_ids": args.agent_ids,
         "cross_runner": str(cross_runner),
+        "max_broker_repair_loops": args.max_broker_repair_loops,
         "force": args.force,
         "dry_run": args.dry_run,
         "refresh_before": refresh_before.isoformat() if refresh_before else None,
