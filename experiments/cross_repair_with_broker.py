@@ -12,6 +12,8 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import sys
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -66,6 +68,11 @@ def write_json(path: Path, payload: dict) -> None:
     """Write a JSON artifact with stable formatting."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def log(message: str) -> None:
+    """Print one orchestrator status line immediately."""
+    print(f"[cross-runner] {message}", flush=True)
 
 
 def build_prompt(
@@ -143,27 +150,70 @@ def start_agent(command: str, prompt: str | None) -> subprocess.Popen[str]:
     )
 
 
-def finish_agent(process: subprocess.Popen[str], prompt: str | None, timeout: float) -> tuple[int | None, str, str, str | None]:
-    """Wait for an agent process and return captured output plus any timeout."""
+def stream_pipe(pipe, label: str, output_stream, chunks: list[str]) -> None:
+    """Mirror one process pipe to the console while preserving captured text."""
+    if pipe is None:
+        return
+    for line in iter(pipe.readline, ""):
+        chunks.append(line)
+        print(f"[{label}] {line}", end="", file=output_stream, flush=True)
+
+
+def finish_agent_live(
+    process: subprocess.Popen[str],
+    prompt: str | None,
+    timeout: float,
+    agent_id: str,
+) -> tuple[int | None, str, str, str | None]:
+    """Wait for an agent while streaming and capturing stdout/stderr."""
+    stdout_chunks: list[str] = []
+    stderr_chunks: list[str] = []
+    stdout_thread = threading.Thread(
+        target=stream_pipe,
+        args=(process.stdout, f"{agent_id} stdout", sys.stdout, stdout_chunks),
+        daemon=True,
+    )
+    stderr_thread = threading.Thread(
+        target=stream_pipe,
+        args=(process.stderr, f"{agent_id} stderr", sys.stderr, stderr_chunks),
+        daemon=True,
+    )
+    stdout_thread.start()
+    stderr_thread.start()
+
+    if prompt is not None and process.stdin is not None:
+        try:
+            process.stdin.write(prompt)
+            process.stdin.close()
+        except BrokenPipeError:
+            pass
+
     try:
-        stdout, stderr = process.communicate(input=prompt, timeout=timeout)
-        return process.returncode, stdout, stderr, None
+        exit_code = process.wait(timeout=timeout)
+        error = None
     except subprocess.TimeoutExpired:
         process.kill()
-        stdout, stderr = process.communicate()
-        return None, stdout, stderr, f"Agent timed out after {timeout} seconds."
+        exit_code = None
+        error = f"Agent timed out after {timeout} seconds."
+
+    stdout_thread.join(timeout=5)
+    stderr_thread.join(timeout=5)
+    return exit_code, "".join(stdout_chunks), "".join(stderr_chunks), error
 
 
 def main() -> int:
     """Create prompts, run both agents in parallel, and write a summary."""
     args = parse_args()
     description_file = resolve_repo_path(args.description_file)
+    log(f"loading description from {description_file}")
     natural_language_description = description_file.read_text(encoding="utf-8")
 
     run_id = args.run_id or f"cross-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{uuid.uuid4().hex[:8]}"
     output_dir = resolve_repo_path(args.output_dir)
     run_dir = output_dir / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
+    log(f"run_id={run_id}")
+    log(f"run_dir={run_dir}")
 
     write_text(run_dir / "input_description.txt", natural_language_description)
     write_json(
@@ -186,6 +236,7 @@ def main() -> int:
     for agent_id in args.agent_ids:
         peer_ids = [candidate for candidate in args.agent_ids if candidate != agent_id]
         agent_run_dir = run_dir / agent_id
+        log(f"building prompt for {agent_id}; peer={peer_ids[0]}")
         prompt = build_prompt(
             skill=args.skill,
             agent_id=agent_id,
@@ -202,6 +253,7 @@ def main() -> int:
         write_text(prompt_file, prompt)
         prompts[agent_id] = prompt
         commands[agent_id] = build_command(args.agent_command, prompt_file)
+        log(f"wrote prompt for {agent_id}: {prompt_file}")
 
     if args.dry_run:
         summary = {"status": "dry_run", "run_id": run_id, "run_dir": str(run_dir)}
@@ -215,25 +267,40 @@ def main() -> int:
     # Start both agents before waiting for either one. This is required because
     # each agent may block inside cross_broker.py until the peer submits.
     for agent_id, (command, pass_prompt_on_stdin) in commands.items():
+        log(f"starting {agent_id}: {command}")
         processes[agent_id] = start_agent(command, prompts[agent_id] if pass_prompt_on_stdin else None)
+    log("both agents started; streaming output until completion")
 
-    results = {}
-    for agent_id, process in processes.items():
+    results: dict[str, dict] = {}
+
+    def finish_and_record(agent_id: str, process: subprocess.Popen[str]) -> None:
         _, pass_prompt_on_stdin = commands[agent_id]
-        exit_code, stdout, stderr, error = finish_agent(
+        log(f"waiting for {agent_id}")
+        exit_code, stdout, stderr, error = finish_agent_live(
             process,
             prompts[agent_id] if pass_prompt_on_stdin else None,
             args.timeout,
+            agent_id,
         )
         agent_dir = run_dir / agent_id
         write_text(agent_dir / "agent_stdout.txt", stdout)
         write_text(agent_dir / "agent_stderr.txt", stderr)
+        log(f"{agent_id} finished: exit_code={exit_code}, error={error}")
         results[agent_id] = {
             "exit_code": exit_code,
             "error": error,
             "stdout_file": str(agent_dir / "agent_stdout.txt"),
             "stderr_file": str(agent_dir / "agent_stderr.txt"),
         }
+
+    finish_threads = [
+        threading.Thread(target=finish_and_record, args=(agent_id, process), daemon=True)
+        for agent_id, process in processes.items()
+    ]
+    for thread in finish_threads:
+        thread.start()
+    for thread in finish_threads:
+        thread.join()
 
     summary = {
         "status": "success" if all(result["exit_code"] == 0 for result in results.values()) else "agent_error",
