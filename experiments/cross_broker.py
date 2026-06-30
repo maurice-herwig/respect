@@ -3,9 +3,9 @@
 
 The broker lets two independently running skills synchronize without a long
 running server. Each skill submits its current Spectra file, blocks until the
-peer has submitted too, and then receives JSON feedback. The current comparison
-implementation is intentionally a dummy placeholder; the file protocol around
-it is the part that the skills can already integrate with.
+peer has submitted too, and then receives JSON feedback. The comparison uses
+the Buchi disagreement-language helper to report directed witness words when
+one submitted specification accepts behavior that the other does not.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import argparse
 import json
 import os
 import shutil
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,8 +22,11 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 DEFAULT_RUNS_ROOT = REPO_ROOT / "experiments" / "cross_runs"
 DEFAULT_EXPECTED_AGENTS = ("agent_a", "agent_b")
+DEFAULT_MAX_WITNESSES_PER_DIRECTION = 3
 
 
 def utc_now() -> str:
@@ -136,49 +140,192 @@ def acquire_lock(lock_path: Path) -> bool:
     return True
 
 
-def build_dummy_feedback(agent: str, peer: str | None, paths: dict[str, Path]) -> dict[str, Any]:
-    """Build placeholder feedback in the shape expected by repair skills."""
+def repo_relative_or_absolute(path: Path) -> str:
+    """Return a repo-relative path when possible, otherwise an absolute path."""
+    try:
+        return str(path.resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path.resolve())
+
+
+def direction_name_for_agent(agent: str, left_agent: str, right_agent: str, direction: str) -> str:
+    """Translate a global comparison direction into the submitting agent's view."""
+    if direction == "left_minus_right":
+        return "self_only" if agent == left_agent else "peer_only"
+    if direction == "right_minus_left":
+        return "self_only" if agent == right_agent else "peer_only"
+    return direction
+
+
+def build_witness_records(
+    *,
+    agent: str,
+    left_agent: str,
+    right_agent: str,
+    direction: str,
+    words_result: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Convert accepted words into broker feedback witness records."""
+    records: list[dict[str, Any]] = []
+    for index, word in enumerate(words_result.get("words") or []):
+        records.append(
+            {
+                "direction": direction_name_for_agent(agent, left_agent, right_agent, direction),
+                "comparison_direction": direction,
+                "accepted_by": left_agent if direction == "left_minus_right" else right_agent,
+                "rejected_by": right_agent if direction == "left_minus_right" else left_agent,
+                "word_index": index,
+                "word": word,
+            }
+        )
+    return records
+
+
+def build_feedback(
+    *,
+    agent: str,
+    peer: str | None,
+    paths: dict[str, Path],
+    comparison: dict[str, Any],
+    witnesses: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Build per-agent feedback in the shape expected by repair skills."""
+    status = comparison.get("status", "other")
+    if status == "success":
+        status = "ready"
     return {
-        "status": "ready",
+        "status": status,
         "agent": agent,
         "peer": peer,
         "feedback_file": str(paths["comparison_dir"] / f"feedback_for_{agent}.json"),
-        "witnesses": [],
-        "message": "Dummy broker feedback; Buchi disagreement comparison is not implemented yet.",
+        "comparison_file": str(paths["comparison"]),
+        "witnesses": witnesses,
+        "witness_count": len(witnesses),
+        "message": comparison.get("message") or comparison.get("error") or "Buchi disagreement comparison completed.",
         "instruction": (
-            "Treat future broker witnesses as disagreement evidence, not as oracle counterexamples. "
+            "Treat broker witnesses as disagreement evidence, not as oracle counterexamples. "
             "Revise only when the natural-language requirements justify it."
         ),
     }
 
 
-def compute_dummy_comparison(
+def accepted_words_from_difference_hoa(path: Path, max_words: int) -> dict[str, Any]:
+    """Extract accepted ultimately-periodic words from a difference HOA file."""
+    from evaluation.buchi import disagreement_languages
+
+    if not path.is_file():
+        return {"status": "missing_hoa", "hoa_file": repo_relative_or_absolute(path), "words": []}
+    try:
+        return disagreement_languages.accepted_words_from_hoa(path, max_words=max_words)
+    except SystemExit as exc:
+        return {
+            "status": "word_extraction_failed",
+            "hoa_file": repo_relative_or_absolute(path),
+            "error": str(exc),
+            "words": [],
+        }
+    except Exception as exc:  # noqa: BLE001 - reported as structured broker feedback.
+        return {
+            "status": "word_extraction_failed",
+            "hoa_file": repo_relative_or_absolute(path),
+            "error": f"{type(exc).__name__}: {exc}",
+            "words": [],
+        }
+
+
+def compute_buchi_comparison(
     paths: dict[str, Path],
     runs_root: Path,
     run_id: str,
     round_id: int,
     expected_agents: list[str],
 ) -> None:
-    """Write dummy comparison artifacts and per-agent feedback files.
+    """Compute directed Buchi language differences and write feedback files."""
+    from evaluation.buchi import disagreement_languages
 
-    Replace this function, or call into a future witness-generation module from
-    here, when the Buchi language-difference implementation is ready.
-    """
     atomic_write_json(paths["status"], {"status": "running", "started_at": utc_now()})
+    if len(expected_agents) != 2:
+        raise ValueError("Buchi cross-broker comparison currently requires exactly two expected agents.")
+
+    left_agent, right_agent = expected_agents
+    left_paths = build_paths(runs_root, run_id, round_id, left_agent)
+    right_paths = build_paths(runs_root, run_id, round_id, right_agent)
+    left_spec = left_paths["spec"]
+    right_spec = right_paths["spec"]
+    comparison_output_dir = paths["comparison_dir"] / "buchi"
+
+    result = disagreement_languages.compute_spectra_language_differences(
+        left_spectra=left_spec,
+        right_spectra=right_spec,
+        output_dir=comparison_output_dir,
+        jar_path=disagreement_languages.DEFAULT_JAR,
+        write_difference_hoa=True,
+    )
+
+    left_words: dict[str, Any] = {"status": "not_computed", "words": []}
+    right_words: dict[str, Any] = {"status": "not_computed", "words": []}
+    if result.get("status") == "success":
+        left_words = accepted_words_from_difference_hoa(
+            comparison_output_dir / "left_minus_right.hoa",
+            DEFAULT_MAX_WITNESSES_PER_DIRECTION,
+        )
+        right_words = accepted_words_from_difference_hoa(
+            comparison_output_dir / "right_minus_left.hoa",
+            DEFAULT_MAX_WITNESSES_PER_DIRECTION,
+        )
+
     comparison = {
-        "status": "ready",
+        "status": result.get("status"),
         "created_at": utc_now(),
-        "mode": "dummy",
+        "mode": "buchi_disagreement_languages",
         "agents": expected_agents,
-        "witnesses": [],
+        "left_agent": left_agent,
+        "right_agent": right_agent,
+        "left_spectra": repo_relative_or_absolute(left_spec),
+        "right_spectra": repo_relative_or_absolute(right_spec),
+        "language_difference": result,
+        "accepted_words": {
+            "left_minus_right": left_words,
+            "right_minus_left": right_words,
+        },
+        "witness_count": len(left_words.get("words") or []) + len(right_words.get("words") or []),
+        "message": "Buchi disagreement comparison completed."
+        if result.get("status") == "success"
+        else result.get("error", "Buchi disagreement comparison did not produce witness feedback."),
     }
     atomic_write_json(paths["comparison"], comparison)
     for agent in expected_agents:
         peers = [candidate for candidate in expected_agents if candidate != agent]
         peer = peers[0] if peers else None
         feedback_paths = build_paths(runs_root, run_id, round_id, agent)
-        atomic_write_json(feedback_paths["feedback"], build_dummy_feedback(agent, peer, feedback_paths))
-    atomic_write_json(paths["status"], {"status": "ready", "finished_at": utc_now()})
+        witnesses = [
+            *build_witness_records(
+                agent=agent,
+                left_agent=left_agent,
+                right_agent=right_agent,
+                direction="left_minus_right",
+                words_result=left_words,
+            ),
+            *build_witness_records(
+                agent=agent,
+                left_agent=left_agent,
+                right_agent=right_agent,
+                direction="right_minus_left",
+                words_result=right_words,
+            ),
+        ]
+        atomic_write_json(
+            feedback_paths["feedback"],
+            build_feedback(
+                agent=agent,
+                peer=peer,
+                paths=feedback_paths,
+                comparison=comparison,
+                witnesses=witnesses,
+            ),
+        )
+    final_status = "ready" if result.get("status") == "success" else result.get("status", "comparison_failed")
+    atomic_write_json(paths["status"], {"status": final_status, "finished_at": utc_now()})
 
 
 def maybe_compute_comparison(
@@ -196,7 +343,7 @@ def maybe_compute_comparison(
     if not acquire_lock(paths["lock"]):
         return
     try:
-        compute_dummy_comparison(paths, runs_root, run_id, round_id, expected_agents)
+        compute_buchi_comparison(paths, runs_root, run_id, round_id, expected_agents)
     except Exception as exc:  # noqa: BLE001 - surfaced as structured broker output.
         atomic_write_json(
             paths["status"],
