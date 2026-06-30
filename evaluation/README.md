@@ -164,6 +164,32 @@ python evaluation/test_nonzero_distance_fixture.py --mode spectra-cli --force
 The distance step requires the LRDE/EPITA Spot Python bindings. On Windows, run
 it in the WSL/conda Spot environment described in the repository root README.
 
+## Directed Disagreement Languages
+
+`disagreement_languages.py` computes the two directed omega-language difference
+sets needed by the cross-broker experiment:
+
+```text
+L(left) \ L(right)
+L(right) \ L(left)
+```
+
+It reuses the existing Spectra-to-HOA export, HOA normalization, alphabet checks,
+and determinization helpers from the Buchi-distance pipeline. For a direct pair
+of Spectra files:
+
+```powershell
+python evaluation\disagreement_languages.py `
+  --left path\to\agent_a.spectra `
+  --right path\to\agent_b.spectra `
+  --output-dir evaluation\disagreement_languages\example `
+  --out evaluation\disagreement_languages\example\comparison.json
+```
+
+The helper writes `left_minus_right.hoa` and `right_minus_left.hoa` when the
+comparison succeeds. Human-readable witness rendering is intentionally separate
+and can be layered on top of these difference automata.
+
 ## Controller Output Distances For A Model And Skill
 
 `evaluate_controller_distances.py` evaluates synthesized runs by comparing the

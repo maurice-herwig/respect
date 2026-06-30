@@ -81,3 +81,51 @@ Each run directory stores:
 - `parsed_result.json`, if the agent prints a final JSON object
 - `respect-method-2.spectra`, if the agent reports a Spectra file
 - a row in `runs.jsonl`
+
+## Cross-Broker Reconstruction
+
+`reconstruct_with_cross_repair.py` reads natural-language descriptions from
+`dataset/nl_descriptions/descriptions.jsonl` like `reconstruct_with_skill.py`,
+but starts a paired cross-broker run for each description. Each run invokes
+`cross_repair_with_broker.py`, which starts two agents in parallel so they can
+synchronize through `cross_broker.py`.
+
+Dry-run the first three descriptions from the repository root:
+
+```powershell
+python experiments\reconstruct_with_cross_repair.py --limit 3 --dry-run
+```
+
+Run a limited real cross-broker experiment:
+
+```powershell
+python experiments\reconstruct_with_cross_repair.py --limit 10
+```
+
+Use an explicit skill or agent command:
+
+```powershell
+python experiments\reconstruct_with_cross_repair.py `
+  --skill respect-method-cross-broker `
+  --agent-command "codex --ask-for-approval never exec --ephemeral --sandbox danger-full-access -" `
+  --limit 10
+```
+
+Generated cross-broker artifacts are written to `experiments/cross_runs/`, which
+is ignored by Git. The batch manifest is:
+
+```text
+experiments/cross_runs/runs.jsonl
+```
+
+For debugging a single natural-language description without the dataset batch
+wrapper, call the single-run orchestrator directly:
+
+```powershell
+python experiments\cross_repair_with_broker.py `
+  --description-file path\to\description.txt `
+  --skill respect-method-cross-broker `
+  --dry-run
+```
+
+Remove `--dry-run` to start the two agent processes for that one description.
