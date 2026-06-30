@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 
 from evaluation.buchi import buchi_distance
@@ -22,6 +23,7 @@ class DisagreementLanguageTests(unittest.TestCase):
         right = self.translate(right_formula)
 
         differences, result = disagreement_languages.compute_disagreement_language_sets(left, right)
+        print(json.dumps(result, indent=2, sort_keys=True))
 
         self.assertEqual(result["status"], "success", result)
         self.assertIsNotNone(differences)
@@ -59,10 +61,36 @@ class DisagreementLanguageTests(unittest.TestCase):
         right = self.translate("GF b")
 
         differences, result = disagreement_languages.compute_disagreement_language_sets(left, right)
+        print(json.dumps(result, indent=2, sort_keys=True))
 
         self.assertIsNone(differences)
         self.assertEqual(result["status"], "alphabet_mismatch", result)
         self.assertIn("alphabet_diagnostics", result)
+
+    def test_accepted_words_from_difference_automaton(self):
+        left = self.translate("F a")
+        right = self.translate("G a")
+        differences, result = disagreement_languages.compute_disagreement_language_sets(left, right)
+        print(json.dumps(result, indent=2, sort_keys=True))
+        self.assertEqual(result["status"], "success", result)
+        self.assertIsNotNone(differences)
+        self.assertTrue(result["left_minus_right"]["nonempty"], result)
+
+        words = disagreement_languages.accepted_words_from_automaton(differences.left_minus_right, max_words=3)
+        print(json.dumps(words, indent=2, sort_keys=True))
+
+        self.assertEqual(words["status"], "success", words)
+        self.assertGreaterEqual(len(words["words"]), 1, words)
+        self.assertLessEqual(len(words["words"]), 3, words)
+        word = words["words"][0]
+        self.assertEqual(word["kind"], "ultimately_periodic")
+        self.assertIsInstance(word["prefix"], list)
+        self.assertIsInstance(word["loop"], list)
+        self.assertGreaterEqual(word["loop_length"], 1)
+        self.assertEqual(word["loop_length"], len(word["loop"]))
+        for letter in [*word["prefix"], *word["loop"]]:
+            self.assertIn("a", letter)
+            self.assertIsInstance(letter["a"], bool)
 
 
 if __name__ == "__main__":

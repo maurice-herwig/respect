@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -50,6 +51,16 @@ class DifferenceAutomata:
 
     left_minus_right: object
     right_minus_left: object
+
+
+@dataclass(frozen=True)
+class WordEdge:
+    """One concrete automaton edge used in an ultimately-periodic word."""
+
+    source: int
+    target: int
+    letter: dict[str, Any]
+    acceptance_sets: frozenset[int]
 
 
 def parse_args() -> argparse.Namespace:
@@ -124,6 +135,258 @@ def accepting_run_exists(automaton) -> bool | None:
     if hasattr(automaton, "accepting_run"):
         return automaton.accepting_run() is not None
     return None
+
+
+def concrete_letter_from_cube(automaton, cube) -> dict[str, Any]:
+    """Render one valid BDD cube as a concrete AP/variable valuation."""
+    buddy = buchi_distance.require_buddy()
+    bdd_dict = automaton.get_dict()
+    valuation: dict[str, Any] = {}
+
+    for ap in automaton.ap():
+        ap_name = str(ap)
+        variable_number = bdd_dict.varnum(ap)
+        is_true = cube & buddy.bdd_ithvar(variable_number) != buddy.bddfalse
+        parsed = buchi_distance.parse_spectra_value_ap(ap_name)
+        if parsed is not None:
+            variable, value = parsed
+            if is_true:
+                valuation[variable] = value
+            continue
+        valuation[ap_name.strip('"')] = bool(is_true)
+
+    return valuation
+
+
+def concrete_edge_graph(automaton) -> dict[int, list[WordEdge]]:
+    """Build a graph whose edges each carry one concrete valid letter."""
+    buddy = buchi_distance.require_buddy()
+    bdd_dict = automaton.get_dict()
+    atomic_propositions = tuple(str(ap) for ap in automaton.ap())
+    bdd_variables = tuple(bdd_dict.varnum(ap) for ap in automaton.ap())
+    alphabet = buchi_distance.build_letter_alphabet(atomic_propositions, bdd_variables)
+    graph: dict[int, list[WordEdge]] = {state: [] for state in range(automaton.num_states())}
+
+    for source in range(automaton.num_states()):
+        for edge in automaton.out(source):
+            selected_cube = None
+            for cube in alphabet.cubes:
+                if edge.cond & cube != buddy.bddfalse:
+                    selected_cube = cube
+                    break
+            if selected_cube is None:
+                continue
+            graph[source].append(
+                WordEdge(
+                    source=source,
+                    target=edge.dst,
+                    letter=concrete_letter_from_cube(automaton, selected_cube),
+                    acceptance_sets=frozenset(int(acc_set) for acc_set in edge.acc.sets()),
+                )
+            )
+
+    return graph
+
+
+def graph_sccs(graph: dict[int, list[WordEdge]], num_states: int) -> list[set[int]]:
+    """Return SCCs of a concrete-edge graph."""
+    index = 0
+    stack: list[int] = []
+    on_stack: set[int] = set()
+    indices: dict[int, int] = {}
+    lowlinks: dict[int, int] = {}
+    components: list[set[int]] = []
+
+    def visit(state: int) -> None:
+        nonlocal index
+        indices[state] = index
+        lowlinks[state] = index
+        index += 1
+        stack.append(state)
+        on_stack.add(state)
+
+        for edge in graph.get(state, []):
+            successor = edge.target
+            if successor not in indices:
+                visit(successor)
+                lowlinks[state] = min(lowlinks[state], lowlinks[successor])
+            elif successor in on_stack:
+                lowlinks[state] = min(lowlinks[state], indices[successor])
+
+        if lowlinks[state] == indices[state]:
+            component: set[int] = set()
+            while True:
+                member = stack.pop()
+                on_stack.remove(member)
+                component.add(member)
+                if member == state:
+                    break
+            components.append(component)
+
+    for state in range(num_states):
+        if state not in indices:
+            visit(state)
+
+    return components
+
+
+def accepting_components(automaton, graph: dict[int, list[WordEdge]]) -> list[set[int]]:
+    """Return SCCs whose internal edges satisfy the automaton acceptance."""
+    components = graph_sccs(graph, automaton.num_states())
+    accepting: list[set[int]] = []
+    for component in components:
+        seen: set[int] = set()
+        for state in component:
+            for edge in graph[state]:
+                if edge.target in component:
+                    seen.update(edge.acceptance_sets)
+        if buchi_distance.evaluate_acceptance_condition(automaton.get_acceptance(), frozenset(seen)):
+            accepting.append(component)
+    return accepting
+
+
+def shortest_edge_path(graph: dict[int, list[WordEdge]], start: int, goals: set[int]) -> list[WordEdge] | None:
+    """Find a shortest concrete-edge path from start to any goal state."""
+    if start in goals:
+        return []
+    queue: deque[int] = deque([start])
+    predecessor: dict[int, tuple[int, WordEdge]] = {}
+    seen = {start}
+
+    while queue:
+        state = queue.popleft()
+        for edge in graph.get(state, []):
+            if edge.target in seen:
+                continue
+            predecessor[edge.target] = (state, edge)
+            if edge.target in goals:
+                path: list[WordEdge] = []
+                cursor = edge.target
+                while cursor != start:
+                    previous, path_edge = predecessor[cursor]
+                    path.append(path_edge)
+                    cursor = previous
+                path.reverse()
+                return path
+            seen.add(edge.target)
+            queue.append(edge.target)
+    return None
+
+
+def path_between_within_component(graph: dict[int, list[WordEdge]], start: int, goal: int, component: set[int]) -> list[WordEdge] | None:
+    """Find a path that stays inside one SCC."""
+    if start == goal:
+        return []
+    filtered = {
+        state: [edge for edge in graph[state] if edge.target in component]
+        for state in component
+    }
+    return shortest_edge_path(filtered, start, {goal})
+
+
+def accepting_loop(
+    graph: dict[int, list[WordEdge]],
+    component: set[int],
+    acceptance_condition,
+    *,
+    start: int | None = None,
+) -> list[WordEdge] | None:
+    """Construct a finite loop inside an accepting SCC."""
+    internal_edges = [
+        edge
+        for state in sorted(component)
+        for edge in graph[state]
+        if edge.target in component
+    ]
+    if not internal_edges:
+        return None
+
+    if start is None:
+        start = sorted(component)[0]
+    if start not in component:
+        return None
+    loop: list[WordEdge] = []
+    current = start
+    seen_acceptance_sets: set[int] = set()
+
+    for edge in internal_edges:
+        path = path_between_within_component(graph, current, edge.source, component)
+        if path is None:
+            return None
+        loop.extend(path)
+        loop.append(edge)
+        seen_acceptance_sets.update(edge.acceptance_sets)
+        current = edge.target
+
+    closing_path = path_between_within_component(graph, current, start, component)
+    if closing_path is None:
+        return None
+    loop.extend(closing_path)
+    for edge in closing_path:
+        seen_acceptance_sets.update(edge.acceptance_sets)
+
+    if not loop:
+        return None
+    if not buchi_distance.evaluate_acceptance_condition(acceptance_condition, frozenset(seen_acceptance_sets)):
+        return None
+    return loop
+
+
+def edge_path_to_letters(path: list[WordEdge]) -> list[dict[str, Any]]:
+    """Convert a concrete edge path to a sequence of input letters."""
+    return [edge.letter for edge in path]
+
+
+def accepted_words_from_automaton(automaton, *, max_words: int = 3) -> dict[str, Any]:
+    """Return ultimately-periodic words accepted by a Spot automaton.
+
+    Each word is represented as `prefix` and `loop`, where the loop repeats
+    forever. The current implementation returns at most one word per accepting
+    SCC, up to `max_words`.
+    """
+    graph = concrete_edge_graph(automaton)
+    words: list[dict[str, Any]] = []
+    for component in accepting_components(automaton, graph):
+        for loop_start in sorted(component):
+            prefix_path = shortest_edge_path(graph, automaton.get_init_state_number(), {loop_start})
+            if prefix_path is None:
+                continue
+            loop_path = accepting_loop(graph, component, automaton.get_acceptance(), start=loop_start)
+            if loop_path is None:
+                continue
+            words.append(
+                {
+                    "kind": "ultimately_periodic",
+                    "prefix": edge_path_to_letters(prefix_path),
+                    "loop": edge_path_to_letters(loop_path),
+                    "prefix_length": len(prefix_path),
+                    "loop_length": len(loop_path),
+                    "raw": {
+                        "prefix_states": [edge.source for edge in prefix_path] + ([prefix_path[-1].target] if prefix_path else [loop_start]),
+                        "loop_states": [edge.source for edge in loop_path] + ([loop_path[-1].target] if loop_path else []),
+                        "loop_acceptance_sets": sorted({acc for edge in loop_path for acc in edge.acceptance_sets}),
+                    },
+                }
+            )
+            if len(words) >= max_words:
+                break
+        if len(words) >= max_words:
+            break
+
+    return {
+        "status": "success" if words else "empty",
+        "automaton": automaton_summary(automaton),
+        "words": words,
+    }
+
+
+def accepted_words_from_hoa(hoa_path: Path, *, max_words: int = 3) -> dict[str, Any]:
+    """Load a HOA automaton and return accepted ultimately-periodic words."""
+    spot = buchi_distance.require_spot()
+    automaton = spot.automaton(str(hoa_path))
+    result = accepted_words_from_automaton(automaton, max_words=max_words)
+    result["hoa_file"] = repo_relative_or_absolute(hoa_path)
+    return result
 
 
 def compute_difference_automata(left_automaton, right_automaton, *, determinize: bool = True) -> tuple[DifferenceAutomata | None, dict[str, Any]]:
