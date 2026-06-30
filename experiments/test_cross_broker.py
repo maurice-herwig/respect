@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -15,6 +16,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 BROKER = REPO_ROOT / "experiments" / "cross_broker.py"
 LEFT_SPEC = REPO_ROOT / "assets" / "examples" / "E2_execution" / "TrafficE2.spectra"
 RIGHT_SPEC = REPO_ROOT / "assets" / "examples" / "A1_firstController" / "TrafficA1.spectra"
+VERBOSE = os.environ.get("RESPECT_TEST_VERBOSE", "1") != "0"
+
+
+def log(message: str) -> None:
+    if VERBOSE:
+        print(f"[cross-broker-test] {message}", flush=True)
 
 
 class CrossBrokerIntegrationTests(unittest.TestCase):
@@ -49,6 +56,7 @@ class CrossBrokerIntegrationTests(unittest.TestCase):
             "--poll-interval",
             "0.2",
         ]
+        log(f"starting {agent}: {' '.join(command)}")
         completed = subprocess.run(
             command,
             cwd=REPO_ROOT,
@@ -63,6 +71,10 @@ class CrossBrokerIntegrationTests(unittest.TestCase):
             payload = json.loads(completed.stdout)
         except json.JSONDecodeError:
             payload = {"status": "invalid_json", "stdout": completed.stdout}
+        log(
+            f"finished {agent}: return_code={completed.returncode}, "
+            f"status={payload.get('status')}, stderr_len={len(completed.stderr)}"
+        )
         output[agent] = (completed.returncode, payload, completed.stderr)
 
     def test_submit_and_wait_returns_buchi_witness_feedback(self):
@@ -74,6 +86,9 @@ class CrossBrokerIntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="cross-broker-test-", dir=tmp_root) as tmp_dir:
             runs_root = Path(tmp_dir)
             run_id = "broker-buchi-test"
+            log(f"runs_root={runs_root}")
+            log(f"left_spec={LEFT_SPEC}")
+            log(f"right_spec={RIGHT_SPEC}")
             outputs: dict[str, tuple[int, dict, str]] = {}
             threads = [
                 threading.Thread(
@@ -104,11 +119,16 @@ class CrossBrokerIntegrationTests(unittest.TestCase):
 
             self.assertEqual({"agent_a", "agent_b"}, set(outputs))
             statuses = {agent: payload.get("status") for agent, (_code, payload, _stderr) in outputs.items()}
+            log(f"agent statuses={statuses}")
             unavailable = {"spot_unavailable", "export_failed"}
             if any(status in unavailable for status in statuses.values()):
                 self.skipTest(f"Buchi broker dependencies unavailable: {statuses}")
 
             for agent, (return_code, payload, stderr) in outputs.items():
+                log(
+                    f"{agent} feedback: witness_count={payload.get('witness_count')}, "
+                    f"feedback_file={payload.get('feedback_file')}"
+                )
                 self.assertEqual(return_code, 0, (agent, payload, stderr))
                 self.assertEqual(payload.get("status"), "ready", (agent, payload))
                 self.assertEqual(payload.get("agent"), agent, payload)
@@ -116,8 +136,19 @@ class CrossBrokerIntegrationTests(unittest.TestCase):
                 self.assertIsInstance(payload["witnesses"], list)
 
             comparison_file = runs_root / run_id / "round-0" / "comparison" / "comparison.json"
+            log(f"comparison_file={comparison_file}")
             self.assertTrue(comparison_file.is_file())
             comparison = json.loads(comparison_file.read_text(encoding="utf-8"))
+            log(
+                "comparison: "
+                f"status={comparison.get('status')}, "
+                f"mode={comparison.get('mode')}, "
+                f"witness_count={comparison.get('witness_count')}"
+            )
+            accepted_words = comparison.get("accepted_words", {})
+            for direction in ("left_minus_right", "right_minus_left"):
+                words = (accepted_words.get(direction) or {}).get("words") or []
+                log(f"{direction}: words={len(words)}")
             self.assertEqual(comparison.get("mode"), "buchi_disagreement_languages", comparison)
             self.assertEqual(comparison.get("status"), "success", comparison)
             self.assertIn("left_minus_right", comparison.get("accepted_words", {}))
