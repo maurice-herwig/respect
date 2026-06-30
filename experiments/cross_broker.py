@@ -164,6 +164,16 @@ def words_for_agent(
     return [], []
 
 
+def strip_raw_from_word(word: dict[str, Any]) -> dict[str, Any]:
+    """Return a skill-facing word payload without automaton-debug metadata."""
+    return {key: value for key, value in word.items() if key != "raw"}
+
+
+def skill_facing_words(words: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Remove internal debug fields from words written to agent feedback files."""
+    return [strip_raw_from_word(word) for word in words]
+
+
 def semantic_relation(left_words: dict[str, Any], right_words: dict[str, Any]) -> str:
     """Classify the comparison from the extracted directed witness words."""
     if left_words.get("status") == "empty" and right_words.get("status") == "empty":
@@ -194,8 +204,8 @@ def build_feedback(
         "feedback_file": str(paths["comparison_dir"] / f"feedback_for_{agent}.json"),
         "comparison_file": str(paths["comparison"]),
         "semantic_relation": comparison.get("semantic_relation", "unknown"),
-        "accepted_by_you_rejected_by_peer": accepted_by_you_rejected_by_peer,
-        "rejected_by_you_accepted_by_peer": rejected_by_you_accepted_by_peer,
+        "accepted_by_you_rejected_by_peer": skill_facing_words(accepted_by_you_rejected_by_peer),
+        "rejected_by_you_accepted_by_peer": skill_facing_words(rejected_by_you_accepted_by_peer),
         "witness_count": witness_count,
         "message": comparison.get("message") or comparison.get("error") or "Buchi disagreement comparison completed.",
     }

@@ -21,6 +21,13 @@ RIGHT_SPEC = REPO_ROOT / "assets" / "examples" / "A1_firstController" / "Traffic
 VERBOSE = os.environ.get("RESPECT_TEST_VERBOSE", "1") != "0"
 KEEP_ARTIFACTS = os.environ.get("RESPECT_TEST_KEEP_ARTIFACTS", "0") == "1"
 SHOW_FEEDBACK_JSON = os.environ.get("RESPECT_TEST_SHOW_FEEDBACK_JSON", "0") == "1"
+EXPORT_WINDOWS_ARTIFACTS = os.environ.get("RESPECT_TEST_EXPORT_WINDOWS", "1") != "0"
+WINDOWS_EXPORT_ROOT = Path(
+    os.environ.get(
+        "RESPECT_TEST_WINDOWS_EXPORT_DIR",
+        str(REPO_ROOT / "tmp" / "cross-broker-windows-export"),
+    )
+)
 
 
 def log(message: str) -> None:
@@ -55,6 +62,18 @@ def log_json_file(label: str, path: Path) -> None:
     payload = json.loads(path.read_text(encoding="utf-8"))
     print(f"[cross-broker-test] {label} {path}", flush=True)
     print(json.dumps(payload, indent=2, sort_keys=True), flush=True)
+
+
+def export_for_windows(source_run_dir: Path) -> Path | None:
+    """Copy broker comparison artifacts into a stable Windows-visible folder."""
+    if not EXPORT_WINDOWS_ARTIFACTS:
+        return None
+    destination = WINDOWS_EXPORT_ROOT
+    if destination.exists():
+        shutil.rmtree(destination)
+    shutil.copytree(source_run_dir, destination)
+    log(f"exported artifacts for Windows inspection to {destination}")
+    return destination
 
 
 class CrossBrokerIntegrationTests(unittest.TestCase):
@@ -174,6 +193,11 @@ class CrossBrokerIntegrationTests(unittest.TestCase):
                 self.assertIsInstance(payload["accepted_by_you_rejected_by_peer"], list)
                 self.assertIsInstance(payload["rejected_by_you_accepted_by_peer"], list)
                 self.assertNotIn("witnesses", payload)
+                for word in [
+                    *payload["accepted_by_you_rejected_by_peer"],
+                    *payload["rejected_by_you_accepted_by_peer"],
+                ]:
+                    self.assertNotIn("raw", word)
 
             comparison_file = runs_root / run_id / "round-0" / "comparison" / "comparison.json"
             log(f"comparison_file={comparison_file}")
@@ -202,6 +226,11 @@ class CrossBrokerIntegrationTests(unittest.TestCase):
             self.assertEqual(len(agent_a["rejected_by_you_accepted_by_peer"]), 0, agent_a)
             self.assertEqual(len(agent_b["accepted_by_you_rejected_by_peer"]), 0, agent_b)
             self.assertEqual(len(agent_b["rejected_by_you_accepted_by_peer"]), 1, agent_b)
+
+            export_dir = export_for_windows(runs_root / run_id)
+            if export_dir is not None:
+                self.assertTrue((export_dir / "round-0" / "comparison" / "feedback_for_agent_a.json").is_file())
+                self.assertTrue((export_dir / "round-0" / "comparison" / "feedback_for_agent_b.json").is_file())
 
 
 if __name__ == "__main__":
