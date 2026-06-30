@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build directed language-difference automata for two Spectra specifications.
+r"""Build directed language-difference automata for two Spectra specifications.
 
 The cross-broker experiment needs two omega-regular language sets:
 
