@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+import os
+import urllib.error
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,7 +18,7 @@ from evaluation.evaluate_controller_distances import (
     random_traces,
     signatures_compatible,
 )
-from evaluation.signature_mapping import apply_hoa_ap_mapping, get_or_create_llm_mapping, validate_mapping
+from evaluation.signature_mapping import apply_hoa_ap_mapping, call_academic_cloud, get_or_create_llm_mapping, validate_mapping
 
 
 def runner_output(traces):
@@ -250,6 +252,50 @@ class SpectraSignatureTests(unittest.TestCase):
 
 
 class SignatureMappingTests(unittest.TestCase):
+    def test_call_academic_cloud_retries_once_after_http_500(self):
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self):
+                return b'{"choices": [{"message": {"content": "{}"}}]}'
+
+        http_500 = urllib.error.HTTPError(
+            url="https://example.test/v1/chat/completions",
+            code=500,
+            msg="Internal Server Error",
+            hdrs={},
+            fp=None,
+        )
+        with patch("urllib.request.urlopen", side_effect=[http_500, FakeResponse()]) as urlopen:
+            with patch("time.sleep") as sleep:
+                response = call_academic_cloud(
+                    api_key="test-key",
+                    base_url="https://example.test/v1",
+                    model="test-model",
+                    system_prompt="system",
+                    user_prompt="user",
+                    temperature=0.0,
+                    max_tokens=100,
+                    timeout=1.0,
+                    retries=1,
+                    retry_delay_seconds=0.01,
+                )
+
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once()
+        self.assertEqual(response["_respect_api_metadata"]["attempts"], 2)
+        self.assertTrue(response["_respect_api_metadata"]["retried"])
+
+    def parse_source(self, source: str):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "fixture.spectra"
+            path.write_text(source, encoding="utf-8")
+            return parse_spectra_signature(path)
+
     def get_mapping_with_mocked_response(self, response_text: str, baseline: dict, generated: dict):
         with tempfile.TemporaryDirectory() as temp_dir:
             mapping_file = Path(temp_dir) / "signature_mappings.jsonl"
@@ -296,6 +342,46 @@ class SignatureMappingTests(unittest.TestCase):
         self.assertEqual(record["mapping"]["env"], {"HighW": "HighWater"})
         self.assertEqual(record["mapping"]["sys"], {"pump": "pump"})
 
+    def test_spectra_specs_with_different_variable_names_can_align_hoa_alphabets(self):
+        baseline = self.parse_source(
+            """
+            spec MinePumpBaseline
+            env boolean HighW;
+            sys boolean pump;
+            """
+        )
+        generated = self.parse_source(
+            """
+            spec MinePumpGenerated
+            env boolean HighWater;
+            sys boolean pump;
+            """
+        )
+        response_text = """
+        {
+          "env": {"HighW": "HighWater"},
+          "sys": {"pump": "pump"},
+          "unmapped_baseline_env": [],
+          "unmapped_generated_env": [],
+          "unmapped_baseline_sys": [],
+          "unmapped_generated_sys": [],
+          "confidence": "high",
+          "explanation": "HighW is an obvious abbreviation of HighWater; pump is identical."
+        }
+        """
+
+        record = self.get_mapping_with_mocked_response(response_text, baseline, generated)
+        reverse_mapping = {"HighWater": "HighW", "pump": "pump"}
+        generated_hoa = 'AP: 4 "HighWater=false" "HighWater=true" "pump=false" "pump=true"\n'
+
+        mapped_hoa = apply_hoa_ap_mapping(generated_hoa, reverse_mapping)
+
+        self.assertTrue(record["usable"])
+        self.assertIn('"HighW=false"', mapped_hoa)
+        self.assertIn('"HighW=true"', mapped_hoa)
+        self.assertNotIn('"HighWater=false"', mapped_hoa)
+        self.assertIn('"pump=false"', mapped_hoa)
+
     def test_get_or_create_llm_mapping_rejects_unmapped_ambiguous_variables(self):
         baseline = {
             "status": "success",
@@ -329,6 +415,34 @@ class SignatureMappingTests(unittest.TestCase):
         self.assertEqual(record["mapping"]["sys"], {})
         self.assertEqual(record["mapping"]["unmapped_baseline_env"], ["water"])
         self.assertEqual(record["mapping"]["unmapped_generated_sys"], ["pump"])
+
+    @unittest.skipUnless(
+        os.environ.get("RUN_ACADEMIC_CLOUD_MAPPING_TEST") == "1",
+        "Set RUN_ACADEMIC_CLOUD_MAPPING_TEST=1 to run the live Academic Cloud mapping test.",
+    )
+    def test_live_academic_cloud_mapping_request_accepts_obvious_variable_rename(self):
+        baseline = {
+            "status": "success",
+            "env": {"HighW": ["false", "true"]},
+            "sys": {"pump": ["false", "true"]},
+        }
+        generated = {
+            "status": "success",
+            "env": {"HighWater": ["false", "true"]},
+            "sys": {"pump": ["false", "true"]},
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            record = get_or_create_llm_mapping(
+                baseline_signature=baseline,
+                generated_signature=generated,
+                mapping_file=Path(temp_dir) / "signature_mappings.jsonl",
+                force=True,
+            )
+
+        self.assertEqual(record["api_status"], "success")
+        self.assertTrue(record["usable"], record)
+        self.assertEqual(record["mapping"]["env"], {"HighW": "HighWater"})
+        self.assertEqual(record["mapping"]["sys"], {"pump": "pump"})
 
     def test_validate_mapping_accepts_complete_one_to_one_domain_match(self):
         baseline = {

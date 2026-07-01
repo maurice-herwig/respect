@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import re
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -174,6 +175,8 @@ def call_academic_cloud(
     temperature: float | None,
     max_tokens: int | None,
     timeout: float,
+    retries: int = 1,
+    retry_delay_seconds: float = 2.0,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "model": model,
@@ -196,12 +199,30 @@ def call_academic_cloud(
         },
         method="POST",
     )
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        details = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Academic Cloud API request failed with HTTP {exc.code}: {details}") from exc
+    attempts = retries + 1
+    last_http_error: tuple[int, str] | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                result.setdefault("_respect_api_metadata", {})
+                result["_respect_api_metadata"].update(
+                    {"attempts": attempt, "max_attempts": attempts, "retried": attempt > 1}
+                )
+                return result
+        except urllib.error.HTTPError as exc:
+            try:
+                details = exc.read().decode("utf-8", errors="replace")
+            except Exception:
+                details = ""
+            last_http_error = (exc.code, details)
+            if exc.code < 500 or attempt >= attempts:
+                break
+            time.sleep(retry_delay_seconds)
+    if last_http_error is not None:
+        code, details = last_http_error
+        raise RuntimeError(f"Academic Cloud API request failed with HTTP {code}: {details}")
+    raise RuntimeError("Academic Cloud API request failed without an HTTP response.")
 
 
 def extract_response_text(response: dict[str, Any]) -> str:
@@ -335,6 +356,8 @@ def get_or_create_llm_mapping(
     timeout: float = 120.0,
     temperature: float | None = 0.0,
     max_tokens: int | None = 1000,
+    retries: int = 1,
+    retry_delay_seconds: float = 2.0,
     force: bool = False,
 ) -> dict[str, Any]:
     load_dotenv()
@@ -357,16 +380,54 @@ def get_or_create_llm_mapping(
         raise RuntimeError("Missing ACADEMIC_CLOUD_API_KEY for LLM signature mapping.")
 
     prompt = render_mapping_prompt(baseline_signature, generated_signature)
-    response = call_academic_cloud(
-        api_key=api_key,
-        base_url=base_url,
-        model=model,
-        system_prompt=SYSTEM_PROMPT,
-        user_prompt=prompt,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        timeout=timeout,
-    )
+    try:
+        response = call_academic_cloud(
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
+            system_prompt=SYSTEM_PROMPT,
+            user_prompt=prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout,
+            retries=retries,
+            retry_delay_seconds=retry_delay_seconds,
+        )
+    except RuntimeError as exc:
+        record = {
+            "mapping_key": key,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "api_status": "error",
+            "model": model,
+            "base_url": base_url,
+            "prompt_version": "signature_mapping_v1",
+            "baseline_signature": {
+                "env": baseline_signature.get("env"),
+                "sys": baseline_signature.get("sys"),
+            },
+            "generated_signature": {
+                "env": generated_signature.get("env"),
+                "sys": generated_signature.get("sys"),
+            },
+            "raw_mapping": None,
+            "mapping": {
+                "env": {},
+                "sys": {},
+                "unmapped_baseline_env": sorted((baseline_signature.get("env") or {}).keys()),
+                "unmapped_generated_env": sorted((generated_signature.get("env") or {}).keys()),
+                "unmapped_baseline_sys": sorted((baseline_signature.get("sys") or {}).keys()),
+                "unmapped_generated_sys": sorted((generated_signature.get("sys") or {}).keys()),
+                "complete": False,
+                "confidence": None,
+                "explanation": "Academic Cloud mapping request failed.",
+            },
+            "validation_errors": [str(exc)],
+            "usable": False,
+            "response_text": None,
+            "api_attempts": retries + 1,
+        }
+        append_jsonl(mapping_file, record)
+        return record
     response_text = extract_response_text(response)
     raw_mapping = extract_json_object(response_text)
     validated, errors = validate_mapping(raw_mapping, baseline_signature, generated_signature)
@@ -390,6 +451,8 @@ def get_or_create_llm_mapping(
         "validation_errors": errors,
         "usable": not errors and validated.get("complete") is True,
         "response_text": response_text,
+        "api_attempts": (response.get("_respect_api_metadata") or {}).get("attempts"),
+        "api_retried": (response.get("_respect_api_metadata") or {}).get("retried"),
     }
     append_jsonl(mapping_file, record)
     return record
