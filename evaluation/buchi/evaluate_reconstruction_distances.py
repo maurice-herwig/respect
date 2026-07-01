@@ -576,8 +576,13 @@ def parse_args() -> argparse.Namespace:
         default=True,
         help="Use Spot postprocessing to determinize nondeterministic automata before distance computation.",
     )
-    parser.add_argument("--force", action="store_true", help="Overwrite existing HOA artifacts.")
-    parser.add_argument("--resume", action="store_true", help="Skip run_ids already present in the output JSONL.")
+    parser.add_argument("--force", action="store_true", help="Overwrite existing HOA artifacts and recompute existing run_ids.")
+    parser.add_argument(
+        "--resume",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Skip run_ids already present in the output JSONL. Enabled by default; use --no-resume to revisit all selected runs.",
+    )
     parser.add_argument(
         "--reuse-existing",
         action=argparse.BooleanOptionalAction,
@@ -1251,7 +1256,7 @@ def main() -> int:
             print(json.dumps(summary, indent=2, sort_keys=True) if args.json else summary["message"])
             return 1
 
-    completed_run_ids = load_completed_run_ids(output_jsonl) if args.resume else set()
+    completed_run_ids = load_completed_run_ids(output_jsonl) if args.resume and not args.force else set()
     existing_run_ids = load_completed_run_ids(output_jsonl)
     pair_cache = load_pair_cache(output_jsonl) if args.reuse_existing and not args.force else {}
     evaluated_records: list[dict[str, Any]] = []
@@ -1261,6 +1266,7 @@ def main() -> int:
     for index, record in enumerate(matching, start=1):
         run_id = str(record.get("run_id") or "")
         if args.resume and run_id and run_id in completed_run_ids:
+            print(f"[{index}/{len(matching)}] skipping existing distance run_id={run_id}", file=sys.stderr)
             continue
         if args.reuse_existing and not args.force:
             try:

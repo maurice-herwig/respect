@@ -51,7 +51,12 @@ Outputs are written under:
 evaluation/buchi/distance_results/<skill>/<model>/
 ```
 
-Use `--resume` to skip run ids already present in the JSONL result file:
+By default the evaluator resumes previous runs: run ids already present in the
+JSONL result file are skipped, missing run ids are computed, and the final
+summary includes both existing and newly computed records. This lets a full
+dataset run be restarted after interruption with the same command.
+
+To make the resume behavior explicit:
 
 ```powershell
 python evaluation\buchi\evaluate_reconstruction_distances.py `
@@ -65,6 +70,8 @@ baseline/generated Spectra file hashes and evaluation settings. This avoids
 recomputing distances when the same file pair appears again. Use
 `--no-reuse-existing` to rebuild the JSONL, or `--force` to recreate
 intermediate HOA artifacts and distances.
+
+To recompute already recorded run ids, use `--force` or `--no-resume`.
 
 By default, the distance evaluator uses LLM-assisted one-to-one signature
 mapping when the pre-mapping HOA AP alphabets differ:
