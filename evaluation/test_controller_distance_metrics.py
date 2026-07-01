@@ -6,6 +6,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from evaluation.evaluate_controller_distances import (
     aggregate_distance_results,
@@ -15,7 +16,7 @@ from evaluation.evaluate_controller_distances import (
     random_traces,
     signatures_compatible,
 )
-from evaluation.signature_mapping import apply_hoa_ap_mapping, validate_mapping
+from evaluation.signature_mapping import apply_hoa_ap_mapping, get_or_create_llm_mapping, validate_mapping
 
 
 def runner_output(traces):
@@ -249,6 +250,86 @@ class SpectraSignatureTests(unittest.TestCase):
 
 
 class SignatureMappingTests(unittest.TestCase):
+    def get_mapping_with_mocked_response(self, response_text: str, baseline: dict, generated: dict):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mapping_file = Path(temp_dir) / "signature_mappings.jsonl"
+            response = {"choices": [{"message": {"content": response_text}}]}
+            with patch.dict("os.environ", {"ACADEMIC_CLOUD_API_KEY": "test-key"}, clear=False):
+                with patch("evaluation.signature_mapping.call_academic_cloud", return_value=response):
+                    return get_or_create_llm_mapping(
+                        baseline_signature=baseline,
+                        generated_signature=generated,
+                        mapping_file=mapping_file,
+                        model="test-model",
+                        base_url="https://example.test/v1",
+                    )
+
+    def test_get_or_create_llm_mapping_accepts_obvious_variable_rename(self):
+        baseline = {
+            "status": "success",
+            "env": {"HighW": ["false", "true"]},
+            "sys": {"pump": ["false", "true"]},
+        }
+        generated = {
+            "status": "success",
+            "env": {"HighWater": ["false", "true"]},
+            "sys": {"pump": ["false", "true"]},
+        }
+        response_text = """
+        {
+          "env": {"HighW": "HighWater"},
+          "sys": {"pump": "pump"},
+          "unmapped_baseline_env": [],
+          "unmapped_generated_env": [],
+          "unmapped_baseline_sys": [],
+          "unmapped_generated_sys": [],
+          "confidence": "high",
+          "explanation": "HighW is an obvious abbreviation of HighWater; pump is identical."
+        }
+        """
+
+        record = self.get_mapping_with_mocked_response(response_text, baseline, generated)
+
+        self.assertTrue(record["usable"])
+        self.assertEqual(record["validation_errors"], [])
+        self.assertTrue(record["mapping"]["complete"])
+        self.assertEqual(record["mapping"]["env"], {"HighW": "HighWater"})
+        self.assertEqual(record["mapping"]["sys"], {"pump": "pump"})
+
+    def test_get_or_create_llm_mapping_rejects_unmapped_ambiguous_variables(self):
+        baseline = {
+            "status": "success",
+            "env": {"water": ["false", "true"]},
+            "sys": {"motor": ["false", "true"]},
+        }
+        generated = {
+            "status": "success",
+            "env": {"highWater": ["false", "true"]},
+            "sys": {"pump": ["false", "true"]},
+        }
+        response_text = """
+        {
+          "env": {},
+          "sys": {},
+          "unmapped_baseline_env": ["water"],
+          "unmapped_generated_env": ["highWater"],
+          "unmapped_baseline_sys": ["motor"],
+          "unmapped_generated_sys": ["pump"],
+          "confidence": "high",
+          "explanation": "The names are related domain concepts but not obvious lexical variants."
+        }
+        """
+
+        record = self.get_mapping_with_mocked_response(response_text, baseline, generated)
+
+        self.assertFalse(record["usable"])
+        self.assertEqual(record["validation_errors"], [])
+        self.assertFalse(record["mapping"]["complete"])
+        self.assertEqual(record["mapping"]["env"], {})
+        self.assertEqual(record["mapping"]["sys"], {})
+        self.assertEqual(record["mapping"]["unmapped_baseline_env"], ["water"])
+        self.assertEqual(record["mapping"]["unmapped_generated_sys"], ["pump"])
+
     def test_validate_mapping_accepts_complete_one_to_one_domain_match(self):
         baseline = {
             "env": {"button": ["false", "true"]},

@@ -66,19 +66,30 @@ recomputing distances when the same file pair appears again. Use
 `--no-reuse-existing` to rebuild the JSONL, or `--force` to recreate
 intermediate HOA artifacts and distances.
 
-If the HOA AP alphabets differ only because generated variables use different
-names, enable LLM-assisted one-to-one signature mapping:
+By default, the distance evaluator uses LLM-assisted one-to-one signature
+mapping when the pre-mapping HOA AP alphabets differ:
 
 ```powershell
 python evaluation\buchi\evaluate_reconstruction_distances.py `
   --skill respect-method-2 `
-  --model llama-3 `
-  --signature-mapping llm
+  --model llama-3
 ```
 
 Mappings are requested from the Academic Cloud API, validated locally, and
 cached in `evaluation/signature_mappings.jsonl`. The generated HOA AP names are
 then renamed to the baseline variable names before Spot imports the automata.
+Each result row records whether a pre-mapping alphabet mismatch occurred,
+whether LLM mapping was attempted, whether the returned mapping was usable, and
+whether it was applied.
+
+To require identical HOA AP names without any LLM-assisted renaming:
+
+```powershell
+python evaluation\buchi\evaluate_reconstruction_distances.py `
+  --skill respect-method-2 `
+  --model llama-3 `
+  --signature-mapping strict
+```
 
 For a quick smoke test:
 

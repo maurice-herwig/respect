@@ -622,7 +622,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--signature-mapping",
         choices=("strict", "llm"),
-        default="strict",
+        default="llm",
         help="strict requires identical HOA AP names. llm may rename generated AP variable names to baseline names.",
     )
     parser.add_argument("--signature-mapping-file", default=str(DEFAULT_MAPPING_FILE))
@@ -818,6 +818,10 @@ def evaluate_one_run(
         "generated_normalization": None,
         "baseline_determinization": None,
         "generated_determinization": None,
+        "pre_mapping_alphabet_mismatch": None,
+        "pre_mapping_alphabet_diagnostics": None,
+        "signature_mapping_attempted": False,
+        "signature_mapping_usable": None,
         "signature_mapping_used": False,
         "signature_mapping": None,
         "signature_mapping_record": None,
@@ -906,16 +910,27 @@ def evaluate_one_run(
             baseline_distance_hoa = baseline_hoa
             generated_distance_hoa = generated_hoa
 
-        if args.signature_mapping == "llm":
+        spot = buchi_distance.require_spot()
+        baseline_automaton = spot.automaton(str(baseline_distance_hoa))
+        generated_automaton = spot.automaton(str(generated_distance_hoa))
+        baseline_pre_mapping_summary = automaton_summary(baseline_automaton)
+        generated_pre_mapping_summary = automaton_summary(generated_automaton)
+        pre_mapping_alphabet_mismatch = baseline_pre_mapping_summary["ap"] != generated_pre_mapping_summary["ap"]
+        result["pre_mapping_alphabet_mismatch"] = pre_mapping_alphabet_mismatch
+        if pre_mapping_alphabet_mismatch:
+            result["pre_mapping_alphabet_diagnostics"] = alphabet_diagnostics(
+                {
+                    "baseline_automaton": baseline_pre_mapping_summary,
+                    "generated_automaton": generated_pre_mapping_summary,
+                }
+            )
+
+        if args.signature_mapping == "llm" and pre_mapping_alphabet_mismatch:
+            result["signature_mapping_attempted"] = True
             baseline_signature = parse_spectra_signature(baseline_spectra)
             generated_signature = parse_spectra_signature(generated_spectra)
-            signatures_equal = (
-                baseline_signature.get("env") == generated_signature.get("env")
-                and baseline_signature.get("sys") == generated_signature.get("sys")
-            )
             if (
-                not signatures_equal
-                and baseline_signature.get("status") == "success"
+                baseline_signature.get("status") == "success"
                 and generated_signature.get("status") == "success"
             ):
                 mapping_record = get_or_create_llm_mapping(
@@ -935,6 +950,7 @@ def evaluate_one_run(
                     "validation_errors": mapping_record.get("validation_errors"),
                 }
                 result["signature_mapping"] = mapping_record.get("mapping")
+                result["signature_mapping_usable"] = bool(mapping_record.get("usable"))
                 if mapping_record.get("usable"):
                     reverse_mapping = generated_to_baseline(mapping_record["mapping"])
                     mapped_text = apply_hoa_ap_mapping(
@@ -944,8 +960,9 @@ def evaluate_one_run(
                     generated_mapped_hoa.write_text(mapped_text, encoding="utf-8")
                     generated_distance_hoa = generated_mapped_hoa
                     result["signature_mapping_used"] = True
+            else:
+                result["signature_mapping_usable"] = False
 
-        spot = buchi_distance.require_spot()
         baseline_automaton = spot.automaton(str(baseline_distance_hoa))
         generated_automaton = spot.automaton(str(generated_distance_hoa))
         result["baseline_automaton"] = automaton_summary(baseline_automaton)
@@ -1044,6 +1061,18 @@ def summarize_results(
         "false_positive_rate": stats(bounded_values("false_positive_rate")),
         "jaccard_distance": stats(bounded_values("jaccard_distance")),
     }
+    pre_mapping_alphabet_mismatch = sum(
+        1 for record in evaluated_records if record.get("pre_mapping_alphabet_mismatch") is True
+    )
+    signature_mapping_attempted = sum(
+        1 for record in evaluated_records if record.get("signature_mapping_attempted") is True
+    )
+    signature_mapping_usable = sum(
+        1 for record in evaluated_records if record.get("signature_mapping_usable") is True
+    )
+    signature_mapping_used = sum(
+        1 for record in evaluated_records if record.get("signature_mapping_used") is True
+    )
     summary: dict[str, Any] = {
         "skill": args.skill,
         "model": args.model,
@@ -1064,6 +1093,27 @@ def summarize_results(
             "max": max(distances) if distances else None,
         },
         "bounded_semantic_distance": bounded_summary,
+        "alphabet_mapping": {
+            "mode": args.signature_mapping,
+            "pre_mapping_alphabet_mismatch": {
+                "count": pre_mapping_alphabet_mismatch,
+                "percent": percent(pre_mapping_alphabet_mismatch, len(evaluated_records)),
+            },
+            "signature_mapping_attempted": {
+                "count": signature_mapping_attempted,
+                "percent": percent(signature_mapping_attempted, len(evaluated_records)),
+            },
+            "signature_mapping_usable": {
+                "count": signature_mapping_usable,
+                "percent": percent(signature_mapping_usable, len(evaluated_records)),
+                "percent_of_attempted": percent(signature_mapping_usable, signature_mapping_attempted),
+            },
+            "signature_mapping_used": {
+                "count": signature_mapping_used,
+                "percent": percent(signature_mapping_used, len(evaluated_records)),
+                "percent_of_pre_mapping_mismatches": percent(signature_mapping_used, pre_mapping_alphabet_mismatch),
+            },
+        },
     }
     return summary
 
@@ -1087,6 +1137,25 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         print(f"  median: {distance['median']:.6g}")
         print(f"  min: {distance['min']:.6g}")
         print(f"  max: {distance['max']:.6g}")
+    alphabet_mapping = summary["alphabet_mapping"]
+    print()
+    print(f"Alphabet mapping mode: {alphabet_mapping['mode']}")
+    mismatch = alphabet_mapping["pre_mapping_alphabet_mismatch"]
+    attempted = alphabet_mapping["signature_mapping_attempted"]
+    usable = alphabet_mapping["signature_mapping_usable"]
+    used = alphabet_mapping["signature_mapping_used"]
+    print(f"  pre-mapping alphabet mismatches: {mismatch['count']} ({mismatch['percent']:.2f}%)")
+    print(f"  LLM mapping attempted: {attempted['count']} ({attempted['percent']:.2f}%)")
+    print(
+        "  LLM mapping usable: "
+        f"{usable['count']} ({usable['percent']:.2f}% of evaluated, "
+        f"{usable['percent_of_attempted']:.2f}% of attempted)"
+    )
+    print(
+        "  LLM mapping applied: "
+        f"{used['count']} ({used['percent']:.2f}% of evaluated, "
+        f"{used['percent_of_pre_mapping_mismatches']:.2f}% of pre-mapping mismatches)"
+    )
     bounded = summary["bounded_semantic_distance"]
     if bounded["enabled"]:
         print()

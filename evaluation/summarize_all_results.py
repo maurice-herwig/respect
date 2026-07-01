@@ -110,6 +110,18 @@ def summarize_buchi_distance(path: Path, matching_synthesized_runs: int, skipped
 
     records = load_jsonl(path)
     distances = [float(record["distance"]) for record in records if record.get("status") == "success" and record.get("distance") is not None]
+    pre_mapping_alphabet_mismatch = sum(
+        1 for record in records if record.get("pre_mapping_alphabet_mismatch") is True
+    )
+    signature_mapping_attempted = sum(
+        1 for record in records if record.get("signature_mapping_attempted") is True
+    )
+    signature_mapping_usable = sum(
+        1 for record in records if record.get("signature_mapping_usable") is True
+    )
+    signature_mapping_used = sum(
+        1 for record in records if record.get("signature_mapping_used") is True
+    )
 
     def bounded_values(key: str) -> list[float]:
         values: list[float] = []
@@ -131,6 +143,26 @@ def summarize_buchi_distance(path: Path, matching_synthesized_runs: int, skipped
         "status_counts": status_counts(records),
         "skipped_counts": dict(sorted(skipped.items())),
         "distance": stats(distances),
+        "alphabet_mapping": {
+            "pre_mapping_alphabet_mismatch": {
+                "count": pre_mapping_alphabet_mismatch,
+                "percent": percent(pre_mapping_alphabet_mismatch, len(records)),
+            },
+            "signature_mapping_attempted": {
+                "count": signature_mapping_attempted,
+                "percent": percent(signature_mapping_attempted, len(records)),
+            },
+            "signature_mapping_usable": {
+                "count": signature_mapping_usable,
+                "percent": percent(signature_mapping_usable, len(records)),
+                "percent_of_attempted": percent(signature_mapping_usable, signature_mapping_attempted),
+            },
+            "signature_mapping_used": {
+                "count": signature_mapping_used,
+                "percent": percent(signature_mapping_used, len(records)),
+                "percent_of_pre_mapping_mismatches": percent(signature_mapping_used, pre_mapping_alphabet_mismatch),
+            },
+        },
         "bounded_mismatch_rate": stats(bounded_values("mismatch_rate")),
         "bounded_false_negative_rate": stats(bounded_values("false_negative_rate")),
         "bounded_false_positive_rate": stats(bounded_values("false_positive_rate")),
@@ -278,6 +310,30 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         print_distribution("  status_counts:", buchi["status_counts"])
         print_skipped_counts(buchi["skipped_counts"])
         print_stats("  distance:", buchi["distance"])
+        alphabet_mapping = buchi.get("alphabet_mapping") or {}
+        if alphabet_mapping:
+            mismatch = alphabet_mapping["pre_mapping_alphabet_mismatch"]
+            attempted = alphabet_mapping["signature_mapping_attempted"]
+            usable = alphabet_mapping["signature_mapping_usable"]
+            used = alphabet_mapping["signature_mapping_used"]
+            print(
+                "  pre_mapping_alphabet_mismatch: "
+                f"{mismatch['count']} ({mismatch['percent']:.2f}%)"
+            )
+            print(
+                "  signature_mapping_attempted: "
+                f"{attempted['count']} ({attempted['percent']:.2f}%)"
+            )
+            print(
+                "  signature_mapping_usable: "
+                f"{usable['count']} ({usable['percent']:.2f}% of evaluated, "
+                f"{usable['percent_of_attempted']:.2f}% of attempted)"
+            )
+            print(
+                "  signature_mapping_used: "
+                f"{used['count']} ({used['percent']:.2f}% of evaluated, "
+                f"{used['percent_of_pre_mapping_mismatches']:.2f}% of pre-mapping mismatches)"
+            )
         print_stats("  bounded_mismatch_rate:", buchi["bounded_mismatch_rate"])
         print_stats("  bounded_false_negative_rate:", buchi["bounded_false_negative_rate"])
         print_stats("  bounded_false_positive_rate:", buchi["bounded_false_positive_rate"])
