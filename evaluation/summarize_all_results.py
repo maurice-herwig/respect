@@ -122,6 +122,7 @@ def summarize_buchi_distance(path: Path, matching_synthesized_runs: int, skipped
     signature_mapping_used = sum(
         1 for record in records if record.get("signature_mapping_used") is True
     )
+    run_timeouts = sum(1 for record in records if record.get("status") == "run_timeout")
 
     def bounded_values(key: str) -> list[float]:
         values: list[float] = []
@@ -143,6 +144,10 @@ def summarize_buchi_distance(path: Path, matching_synthesized_runs: int, skipped
         "status_counts": status_counts(records),
         "skipped_counts": dict(sorted(skipped.items())),
         "distance": stats(distances),
+        "run_timeouts": {
+            "count": run_timeouts,
+            "percent": percent(run_timeouts, len(records)),
+        },
         "alphabet_mapping": {
             "pre_mapping_alphabet_mismatch": {
                 "count": pre_mapping_alphabet_mismatch,
@@ -310,6 +315,9 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         print_distribution("  status_counts:", buchi["status_counts"])
         print_skipped_counts(buchi["skipped_counts"])
         print_stats("  distance:", buchi["distance"])
+        if "run_timeouts" in buchi:
+            timeouts = buchi["run_timeouts"]
+            print(f"  run_timeouts: {timeouts['count']} ({timeouts['percent']:.2f}%)")
         alphabet_mapping = buchi.get("alphabet_mapping") or {}
         if alphabet_mapping:
             mismatch = alphabet_mapping["pre_mapping_alphabet_mismatch"]

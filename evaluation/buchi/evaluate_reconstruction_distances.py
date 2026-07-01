@@ -7,6 +7,7 @@ import argparse
 import copy
 import hashlib
 import json
+import multiprocessing
 import os
 import re
 import subprocess
@@ -551,6 +552,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--jar", default=str(DEFAULT_JAR), help="Path to the modified spectra-cli.jar.")
     parser.add_argument("--max-states", type=int, default=100_000)
     parser.add_argument("--timeout", type=float, default=120.0)
+    parser.add_argument(
+        "--run-timeout",
+        type=float,
+        default=180.0,
+        help="Maximum wall-clock seconds for one full distance run. Use 0 to disable.",
+    )
     parser.add_argument("--limit", type=int, default=None, help="Evaluate at most N matching runs.")
     parser.add_argument(
         "--jtlv",
@@ -719,6 +726,7 @@ def current_pair_key(record: dict[str, Any], args: argparse.Namespace, jar_path:
     settings = {
         "jar_sha256": sha256_file(jar_path),
         "max_states": args.max_states,
+        "run_timeout": args.run_timeout,
         "jtlv": args.jtlv,
         "normalize_hoa": args.normalize_hoa,
         "add_rejecting_sink": args.add_rejecting_sink,
@@ -759,6 +767,124 @@ def cached_record_for_run(cached: dict[str, Any], run_record: dict[str, Any], ar
     reused["cache_reused"] = True
     reused["cache_source_comparison_id"] = cached.get("comparison_id")
     return reused
+
+
+def timeout_result_for_run(
+    *,
+    record: dict[str, Any],
+    args: argparse.Namespace,
+    jar_path: Path,
+) -> dict[str, Any]:
+    comparison_id = safe_path_part(str(record.get("run_id") or record.get("run_key") or record.get("dataset_id") or "run"))
+    result: dict[str, Any] = {
+        "status": "run_timeout",
+        "comparison_id": comparison_id,
+        "run": summarize_run(record, args.include_run_record),
+        "baseline_export": None,
+        "generated_export": None,
+        "baseline_normalization": None,
+        "generated_normalization": None,
+        "baseline_determinization": None,
+        "generated_determinization": None,
+        "pre_mapping_alphabet_mismatch": None,
+        "pre_mapping_alphabet_diagnostics": None,
+        "signature_mapping_attempted": False,
+        "signature_mapping_usable": None,
+        "signature_mapping_used": False,
+        "signature_mapping": None,
+        "signature_mapping_record": None,
+        "alphabet_diagnostics": None,
+        "baseline_automaton": None,
+        "generated_automaton": None,
+        "baseline_automaton_after_determinization": None,
+        "generated_automaton_after_determinization": None,
+        "distance": None,
+        "bounded_semantic_distance": None,
+        "run_timeout_seconds": args.run_timeout,
+        "error": f"Distance run exceeded --run-timeout={args.run_timeout} seconds.",
+    }
+    try:
+        baseline_spectra = resolve_input_path(str(record["source_spectra_file"]))
+        generated_spectra = resolve_input_path(str(record["reconstructed_spectra_file"]))
+        result["cache_metadata"] = {
+            "baseline_sha256": sha256_file(baseline_spectra) if baseline_spectra.is_file() else None,
+            "generated_sha256": sha256_file(generated_spectra) if generated_spectra.is_file() else None,
+            "settings": {
+                "jar_sha256": sha256_file(jar_path) if jar_path.is_file() else None,
+                "max_states": args.max_states,
+                "run_timeout": args.run_timeout,
+                "jtlv": args.jtlv,
+                "normalize_hoa": args.normalize_hoa,
+                "add_rejecting_sink": args.add_rejecting_sink,
+                "determinize": args.determinize,
+                "distance_semantics": "relative_bscc_raw_valid_letter_mean_coverage_v1",
+                "bounded_semantic_distance": args.bounded_semantic_distance,
+                "bounded_depth": args.bounded_depth if args.bounded_semantic_distance else None,
+                "bounded_mode": args.bounded_mode if args.bounded_semantic_distance else None,
+                "bounded_samples": args.bounded_samples if args.bounded_semantic_distance and args.bounded_mode == "random" else None,
+                "bounded_seed": args.bounded_seed if args.bounded_semantic_distance and args.bounded_mode == "random" else None,
+                "bounded_max_prefixes": args.bounded_max_prefixes if args.bounded_semantic_distance and args.bounded_mode == "exhaustive" else None,
+                "signature_mapping": args.signature_mapping,
+                "mapping_model": args.mapping_model if args.signature_mapping == "llm" else None,
+            },
+        }
+    except Exception as exc:
+        result["cache_metadata_error"] = f"{type(exc).__name__}: {exc}"
+    return result
+
+
+def evaluate_one_run_worker(
+    queue: multiprocessing.Queue,
+    record: dict[str, Any],
+    args: argparse.Namespace,
+    jar_path: Path,
+    artifacts_root: Path,
+) -> None:
+    try:
+        queue.put(evaluate_one_run(record=record, args=args, jar_path=jar_path, artifacts_root=artifacts_root))
+    except BaseException as exc:  # noqa: BLE001 - child process should return structured failure.
+        queue.put(
+            {
+                "status": "failed",
+                "comparison_id": safe_path_part(str(record.get("run_id") or record.get("run_key") or record.get("dataset_id") or "run")),
+                "run": summarize_run(record, args.include_run_record),
+                "distance": None,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+        )
+
+
+def evaluate_one_run_with_timeout(
+    *,
+    record: dict[str, Any],
+    args: argparse.Namespace,
+    jar_path: Path,
+    artifacts_root: Path,
+) -> dict[str, Any]:
+    if args.run_timeout is None or args.run_timeout <= 0:
+        return evaluate_one_run(record=record, args=args, jar_path=jar_path, artifacts_root=artifacts_root)
+
+    queue: multiprocessing.Queue = multiprocessing.Queue()
+    process = multiprocessing.Process(
+        target=evaluate_one_run_worker,
+        args=(queue, record, args, jar_path, artifacts_root),
+    )
+    process.start()
+    process.join(args.run_timeout)
+    if process.is_alive():
+        process.terminate()
+        process.join(5)
+        if process.is_alive() and hasattr(process, "kill"):
+            process.kill()
+            process.join(5)
+        return timeout_result_for_run(record=record, args=args, jar_path=jar_path)
+
+    if not queue.empty():
+        return queue.get()
+    result = timeout_result_for_run(record=record, args=args, jar_path=jar_path)
+    result["status"] = "failed"
+    result["error"] = f"Distance child process exited without a result. exitcode={process.exitcode}"
+    return result
 
 
 def select_matching_runs(records: list[dict[str, Any]], skill: str, model: str) -> tuple[list[dict[str, Any]], Counter[str]]:
@@ -853,6 +979,7 @@ def evaluate_one_run(
             "settings": {
                 "jar_sha256": sha256_file(jar_path),
                 "max_states": args.max_states,
+                "run_timeout": args.run_timeout,
                 "jtlv": args.jtlv,
                 "normalize_hoa": args.normalize_hoa,
                 "add_rejecting_sink": args.add_rejecting_sink,
@@ -1078,6 +1205,7 @@ def summarize_results(
     signature_mapping_used = sum(
         1 for record in evaluated_records if record.get("signature_mapping_used") is True
     )
+    run_timeouts = sum(1 for record in evaluated_records if record.get("status") == "run_timeout")
     summary: dict[str, Any] = {
         "skill": args.skill,
         "model": args.model,
@@ -1096,6 +1224,11 @@ def summarize_results(
             "median": statistics.median(distances) if distances else None,
             "min": min(distances) if distances else None,
             "max": max(distances) if distances else None,
+        },
+        "run_timeouts": {
+            "count": run_timeouts,
+            "percent": percent(run_timeouts, len(evaluated_records)),
+            "timeout_seconds": args.run_timeout,
         },
         "bounded_semantic_distance": bounded_summary,
         "alphabet_mapping": {
@@ -1142,6 +1275,8 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         print(f"  median: {distance['median']:.6g}")
         print(f"  min: {distance['min']:.6g}")
         print(f"  max: {distance['max']:.6g}")
+    timeouts = summary["run_timeouts"]
+    print(f"Run timeouts: {timeouts['count']} ({timeouts['percent']:.2f}%) at {timeouts['timeout_seconds']}s")
     alphabet_mapping = summary["alphabet_mapping"]
     print()
     print(f"Alphabet mapping mode: {alphabet_mapping['mode']}")
@@ -1282,7 +1417,7 @@ def main() -> int:
                     evaluated_records.append(result)
                 continue
         print(f"[{index}/{len(matching)}] evaluating run_id={run_id or 'missing'}", file=sys.stderr)
-        result = evaluate_one_run(record=record, args=args, jar_path=jar_path, artifacts_root=artifacts_root)
+        result = evaluate_one_run_with_timeout(record=record, args=args, jar_path=jar_path, artifacts_root=artifacts_root)
         print_intermediate_result(index, len(matching), run_id, result)
         if result.get("status") == "alphabet_mismatch":
             diagnostics = result.get("alphabet_diagnostics") or {}

@@ -73,6 +73,22 @@ intermediate HOA artifacts and distances.
 
 To recompute already recorded run ids, use `--force` or `--no-resume`.
 
+Each full run has a wall-clock timeout of 180 seconds by default. A timed-out
+run is written to the JSONL with `status=run_timeout` and counted in the final
+summary. Adjust or disable it with:
+
+```powershell
+python evaluation\buchi\evaluate_reconstruction_distances.py `
+  --skill respect-method-2 `
+  --model llama-3 `
+  --run-timeout 300
+
+python evaluation\buchi\evaluate_reconstruction_distances.py `
+  --skill respect-method-2 `
+  --model llama-3 `
+  --run-timeout 0
+```
+
 By default, the distance evaluator uses LLM-assisted one-to-one signature
 mapping when the pre-mapping HOA AP alphabets differ:
 
