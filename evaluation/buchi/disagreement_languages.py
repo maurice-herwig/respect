@@ -40,6 +40,13 @@ from evaluation.buchi.evaluate_reconstruction_distances import (
     resolve_existing_path,
     resolve_repo_path,
 )
+from evaluation.signature_mapping import (
+    DEFAULT_MAPPING_FILE,
+    apply_hoa_ap_mapping,
+    generated_to_baseline,
+    get_or_create_llm_mapping,
+    parse_spectra_signature,
+)
 
 
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "evaluation" / "buchi" / "disagreement_languages"
@@ -494,12 +501,19 @@ def compute_spectra_language_differences(
     include_raw_output: bool = False,
     raw_output_tail_chars: int = 4000,
     write_difference_hoa: bool = True,
+    signature_mapping: str = "strict",
+    signature_mapping_file: Path = DEFAULT_MAPPING_FILE,
+    mapping_model: str | None = None,
+    mapping_base_url: str | None = None,
+    mapping_timeout: float = 120.0,
+    force_signature_mapping: bool = False,
 ) -> dict[str, Any]:
     """Export two Spectra files and compute directed language differences."""
     left_hoa = output_dir / "left.hoa"
     right_hoa = output_dir / "right.hoa"
     left_normalized = output_dir / "left.normalized.hoa"
     right_normalized = output_dir / "right.normalized.hoa"
+    right_mapped = output_dir / "right.mapped.normalized.hoa"
 
     result: dict[str, Any] = {
         "status": "started",
@@ -511,6 +525,14 @@ def compute_spectra_language_differences(
         "right_normalization": None,
         "difference": None,
         "error": None,
+        "pre_mapping_alphabet_mismatch": None,
+        "pre_mapping_alphabet_diagnostics": None,
+        "signature_mapping_attempted": False,
+        "signature_mapping_usable": None,
+        "signature_mapping_used": False,
+        "signature_mapping": None,
+        "signature_mapping_record": None,
+        "canonical_alphabet": "left",
     }
 
     left_export, left_ok = export_hoa(
@@ -562,11 +584,73 @@ def compute_spectra_language_differences(
         spot = buchi_distance.require_spot()
         left_automaton = spot.automaton(str(left_normalized))
         right_automaton = spot.automaton(str(right_normalized))
+        left_pre_mapping_summary = automaton_summary(left_automaton)
+        right_pre_mapping_summary = automaton_summary(right_automaton)
+        pre_mapping_alphabet_mismatch = left_pre_mapping_summary["ap"] != right_pre_mapping_summary["ap"]
+        result["pre_mapping_alphabet_mismatch"] = pre_mapping_alphabet_mismatch
+        if pre_mapping_alphabet_mismatch:
+            result["pre_mapping_alphabet_diagnostics"] = alphabet_diagnostics(
+                {
+                    "baseline_automaton": left_pre_mapping_summary,
+                    "generated_automaton": right_pre_mapping_summary,
+                }
+            )
+
+        if signature_mapping == "llm" and pre_mapping_alphabet_mismatch:
+            result["signature_mapping_attempted"] = True
+            left_signature = parse_spectra_signature(left_spectra)
+            right_signature = parse_spectra_signature(right_spectra)
+            if left_signature.get("status") == "success" and right_signature.get("status") == "success":
+                try:
+                    mapping_record = get_or_create_llm_mapping(
+                        baseline_signature=left_signature,
+                        generated_signature=right_signature,
+                        mapping_file=resolve_repo_path(signature_mapping_file),
+                        model=mapping_model,
+                        base_url=mapping_base_url,
+                        timeout=mapping_timeout,
+                        force=force_signature_mapping,
+                    )
+                except RuntimeError as exc:
+                    mapping_record = {
+                        "api_status": "error",
+                        "model": mapping_model,
+                        "usable": False,
+                        "validation_errors": [str(exc)],
+                        "mapping": None,
+                    }
+                result["signature_mapping_record"] = {
+                    "mapping_key": mapping_record.get("mapping_key"),
+                    "api_status": mapping_record.get("api_status"),
+                    "model": mapping_record.get("model"),
+                    "usable": mapping_record.get("usable"),
+                    "validation_errors": mapping_record.get("validation_errors"),
+                }
+                result["signature_mapping"] = mapping_record.get("mapping")
+                result["signature_mapping_usable"] = bool(mapping_record.get("usable"))
+                if mapping_record.get("usable"):
+                    right_to_left_mapping = generated_to_baseline(mapping_record["mapping"])
+                    mapped_text = apply_hoa_ap_mapping(
+                        right_normalized.read_text(encoding="utf-8", errors="replace"),
+                        right_to_left_mapping,
+                    )
+                    right_mapped.write_text(mapped_text, encoding="utf-8")
+                    right_automaton = spot.automaton(str(right_mapped))
+                    result["signature_mapping_used"] = True
+                    result["right_mapped_hoa"] = repo_relative_or_absolute(right_mapped)
+            else:
+                result["signature_mapping_usable"] = False
+
         differences, difference_result = compute_difference_automata(
             left_automaton,
             right_automaton,
             determinize=determinize,
         )
+        difference_result["pre_mapping_alphabet_mismatch"] = result["pre_mapping_alphabet_mismatch"]
+        difference_result["pre_mapping_alphabet_diagnostics"] = result["pre_mapping_alphabet_diagnostics"]
+        difference_result["signature_mapping_attempted"] = result["signature_mapping_attempted"]
+        difference_result["signature_mapping_usable"] = result["signature_mapping_usable"]
+        difference_result["signature_mapping_used"] = result["signature_mapping_used"]
         if differences is not None and write_difference_hoa:
             write_difference_hoa_files(differences, output_dir, difference_result)
         result["difference"] = difference_result
