@@ -164,6 +164,35 @@ def words_for_agent(
     return [], []
 
 
+def rename_letter_variables(letter: dict[str, Any], mapping: dict[str, str]) -> dict[str, Any]:
+    """Return one valuation with variable names translated through mapping."""
+    return {mapping.get(name, name): value for name, value in letter.items()}
+
+
+def translate_word_variables(word: dict[str, Any], mapping: dict[str, str]) -> dict[str, Any]:
+    """Translate prefix/loop valuation variable names while preserving metadata."""
+    translated = dict(word)
+    for segment in ("prefix", "loop"):
+        translated[segment] = [
+            rename_letter_variables(letter, mapping)
+            for letter in (word.get(segment) or [])
+        ]
+    return translated
+
+
+def translate_words_for_agent(
+    words: list[dict[str, Any]],
+    *,
+    agent: str,
+    right_agent: str,
+    left_to_right_mapping: dict[str, str],
+) -> list[dict[str, Any]]:
+    """Translate canonical-left witness words back to the receiver's alphabet."""
+    if agent != right_agent or not left_to_right_mapping:
+        return words
+    return [translate_word_variables(word, left_to_right_mapping) for word in words]
+
+
 def strip_raw_from_word(word: dict[str, Any]) -> dict[str, Any]:
     """Return a skill-facing word payload without automaton-debug metadata."""
     return {key: value for key, value in word.items() if key != "raw"}
@@ -209,6 +238,18 @@ def build_feedback(
         "witness_count": witness_count,
         "message": comparison.get("message") or comparison.get("error") or "Buchi disagreement comparison completed.",
     }
+
+
+def feedback_translation_mapping(comparison: dict[str, Any]) -> dict[str, str]:
+    """Return left-agent variable names to right-agent variable names."""
+    mapping = ((comparison.get("language_difference") or {}).get("signature_mapping") or {})
+    if not mapping:
+        return {}
+    left_to_right: dict[str, str] = {}
+    for owner in ("env", "sys"):
+        for left_name, right_name in (mapping.get(owner) or {}).items():
+            left_to_right[left_name] = right_name
+    return left_to_right
 
 
 def accepted_words_from_difference_hoa(path: Path, max_words: int) -> dict[str, Any]:
@@ -262,6 +303,7 @@ def compute_buchi_comparison(
         output_dir=comparison_output_dir,
         jar_path=disagreement_languages.DEFAULT_JAR,
         write_difference_hoa=True,
+        signature_mapping="llm",
     )
 
     left_words: dict[str, Any] = {"status": "not_computed", "words": []}
@@ -298,6 +340,7 @@ def compute_buchi_comparison(
         if result.get("status") == "success"
         else result.get("error", "Buchi disagreement comparison did not produce witness feedback."),
     }
+    left_to_right_mapping = feedback_translation_mapping(comparison)
     atomic_write_json(paths["comparison"], comparison)
     for agent in expected_agents:
         peers = [candidate for candidate in expected_agents if candidate != agent]
@@ -309,6 +352,18 @@ def compute_buchi_comparison(
             right_agent=right_agent,
             left_words=left_words,
             right_words=right_words,
+        )
+        accepted_by_you = translate_words_for_agent(
+            accepted_by_you,
+            agent=agent,
+            right_agent=right_agent,
+            left_to_right_mapping=left_to_right_mapping,
+        )
+        rejected_by_you = translate_words_for_agent(
+            rejected_by_you,
+            agent=agent,
+            right_agent=right_agent,
+            left_to_right_mapping=left_to_right_mapping,
         )
         atomic_write_json(
             feedback_paths["feedback"],

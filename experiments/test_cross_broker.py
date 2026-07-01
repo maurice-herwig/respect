@@ -30,6 +30,12 @@ WINDOWS_EXPORT_ROOT = Path(
 )
 
 
+from experiments.cross_broker import (  # noqa: E402
+    feedback_translation_mapping,
+    translate_words_for_agent,
+)
+
+
 def log(message: str) -> None:
     if VERBOSE:
         print(f"[cross-broker-test] {message}", flush=True)
@@ -53,6 +59,57 @@ def broker_runs_root():
 
     with tempfile.TemporaryDirectory(prefix="cross-broker-test-", dir=tmp_root) as tmp_dir:
         yield Path(tmp_dir)
+
+
+class CrossBrokerMappingTests(unittest.TestCase):
+    def test_feedback_translation_mapping_extracts_left_to_right_names(self):
+        comparison = {
+            "language_difference": {
+                "signature_mapping": {
+                    "env": {"highwater": "highWater"},
+                    "sys": {"pump": "pump"},
+                }
+            }
+        }
+
+        self.assertEqual(
+            feedback_translation_mapping(comparison),
+            {"highwater": "highWater", "pump": "pump"},
+        )
+
+    def test_translate_words_for_right_agent_uses_receiver_alphabet(self):
+        words = [
+            {
+                "kind": "ultimately_periodic",
+                "prefix": [{"highwater": "true", "pump": "false"}],
+                "loop": [{"highwater": "false", "pump": "true"}],
+                "raw": {"debug": True},
+            }
+        ]
+
+        translated = translate_words_for_agent(
+            words,
+            agent="agent_b",
+            right_agent="agent_b",
+            left_to_right_mapping={"highwater": "highWater"},
+        )
+
+        self.assertEqual(translated[0]["prefix"], [{"highWater": "true", "pump": "false"}])
+        self.assertEqual(translated[0]["loop"], [{"highWater": "false", "pump": "true"}])
+        self.assertEqual(translated[0]["raw"], {"debug": True})
+        self.assertEqual(words[0]["prefix"], [{"highwater": "true", "pump": "false"}])
+
+    def test_translate_words_for_left_agent_keeps_canonical_alphabet(self):
+        words = [{"prefix": [{"highwater": "true"}], "loop": []}]
+
+        translated = translate_words_for_agent(
+            words,
+            agent="agent_a",
+            right_agent="agent_b",
+            left_to_right_mapping={"highwater": "highWater"},
+        )
+
+        self.assertIs(translated, words)
 
 
 def log_json_file(label: str, path: Path) -> None:
