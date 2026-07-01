@@ -19,6 +19,7 @@ from evaluation.evaluate_controller_distances import (
     signatures_compatible,
 )
 from evaluation.signature_mapping import apply_hoa_ap_mapping, call_academic_cloud, get_or_create_llm_mapping, validate_mapping
+from evaluation.signature_mapping import append_jsonl, mapping_key
 
 
 def runner_output(traces):
@@ -221,6 +222,21 @@ class SpectraSignatureTests(unittest.TestCase):
         self.assertEqual(signature["status"], "unsupported_signature")
         self.assertIn("unsupported array type", signature["error"])
 
+    def test_parse_spectra_signature_accepts_module_header(self):
+        signature = self.parse_source(
+            """
+            module Minepump
+            env boolean highwater;
+            env boolean methane;
+            sys boolean pump;
+            """
+        )
+
+        self.assertEqual(signature["status"], "success")
+        self.assertEqual(signature["spec_name"], "Minepump")
+        self.assertEqual(signature["env"]["highwater"], ["false", "true"])
+        self.assertEqual(signature["sys"]["pump"], ["false", "true"])
+
     def test_signatures_compatible_detects_domain_and_name_changes(self):
         baseline = {
             "status": "success",
@@ -341,6 +357,62 @@ class SignatureMappingTests(unittest.TestCase):
         self.assertTrue(record["mapping"]["complete"])
         self.assertEqual(record["mapping"]["env"], {"HighW": "HighWater"})
         self.assertEqual(record["mapping"]["sys"], {"pump": "pump"})
+
+    def test_get_or_create_llm_mapping_ignores_cached_api_error_record(self):
+        baseline = {
+            "status": "success",
+            "env": {"HighW": ["false", "true"]},
+            "sys": {"pump": ["false", "true"]},
+        }
+        generated = {
+            "status": "success",
+            "env": {"HighWater": ["false", "true"]},
+            "sys": {"pump": ["false", "true"]},
+        }
+        response_text = """
+        {
+          "env": {"HighW": "HighWater"},
+          "sys": {"pump": "pump"},
+          "unmapped_baseline_env": [],
+          "unmapped_generated_env": [],
+          "unmapped_baseline_sys": [],
+          "unmapped_generated_sys": [],
+          "confidence": "high",
+          "explanation": "HighW is an obvious abbreviation of HighWater; pump is identical."
+        }
+        """
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mapping_file = Path(temp_dir) / "signature_mappings.jsonl"
+            append_jsonl(
+                mapping_file,
+                {
+                    "mapping_key": mapping_key(
+                        baseline_signature=baseline,
+                        generated_signature=generated,
+                        model="test-model",
+                        prompt_version="signature_mapping_v1",
+                    ),
+                    "api_status": "error",
+                    "usable": False,
+                    "validation_errors": ["Academic Cloud API request failed with HTTP 500:"],
+                },
+            )
+            response = {"choices": [{"message": {"content": response_text}}]}
+            with patch.dict("os.environ", {"ACADEMIC_CLOUD_API_KEY": "test-key"}, clear=False):
+                with patch("evaluation.signature_mapping.call_academic_cloud", return_value=response) as call:
+                    record = get_or_create_llm_mapping(
+                        baseline_signature=baseline,
+                        generated_signature=generated,
+                        mapping_file=mapping_file,
+                        model="test-model",
+                        base_url="https://example.test/v1",
+                    )
+
+        call.assert_called_once()
+        self.assertTrue(record["usable"])
+        self.assertEqual(record["api_status"], "success")
+        self.assertEqual(record["mapping"]["env"], {"HighW": "HighWater"})
 
     def test_spectra_specs_with_different_variable_names_can_align_hoa_alphabets(self):
         baseline = self.parse_source(

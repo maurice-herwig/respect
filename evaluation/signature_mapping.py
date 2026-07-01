@@ -26,7 +26,7 @@ SYSTEM_PROMPT = (
     "If you are not certain that two names are obvious variants of the same name, leave them unmapped."
 )
 DECLARATION_RE = re.compile(r"^\s*(env|sys)\s+(.+?)\s+([A-Za-z_][A-Za-z0-9_]*)\s*;", re.MULTILINE)
-SPEC_RE = re.compile(r"^\s*spec\s+([A-Za-z_][A-Za-z0-9_]*)\b", re.MULTILINE)
+SPEC_RE = re.compile(r"^\s*(?:spec|module)\s+([A-Za-z_][A-Za-z0-9_]*)\b", re.MULTILINE)
 TYPE_RE = re.compile(r"^\s*type\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)\s*;", re.MULTILINE)
 INLINE_ENUM_RE = re.compile(r"^\{\s*([^{}]+?)\s*\}$")
 INT_RE = re.compile(r"^Int\s*\(\s*(-?\d+)\s*\.\.\s*(-?\d+)\s*\)$")
@@ -156,7 +156,7 @@ def append_jsonl(path: Path, record: dict[str, Any]) -> None:
 
 def load_cached_mapping(path: Path, key: str) -> dict[str, Any] | None:
     for record in reversed(load_jsonl(path)):
-        if record.get("mapping_key") == key:
+        if record.get("mapping_key") == key and record.get("api_status") == "success":
             return record
     return None
 

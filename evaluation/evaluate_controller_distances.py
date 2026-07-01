@@ -48,7 +48,7 @@ DEFAULT_EXECUTOR_JAR = REPO_ROOT / "assets" / "examples" / "E2_execution" / "exe
 CONTROLLER_TEST_SRC = REPO_ROOT / "controller_tests" / "src" / "main" / "java"
 CONTROLLER_TEST_CLASSES = REPO_ROOT / "controller_tests" / "build" / "classes"
 DECLARATION_RE = re.compile(r"^\s*(env|sys)\s+(.+?)\s+([A-Za-z_][A-Za-z0-9_]*)\s*;", re.MULTILINE)
-SPEC_RE = re.compile(r"^\s*spec\s+([A-Za-z_][A-Za-z0-9_]*)\b", re.MULTILINE)
+SPEC_RE = re.compile(r"^\s*(?:spec|module)\s+([A-Za-z_][A-Za-z0-9_]*)\b", re.MULTILINE)
 TYPE_RE = re.compile(r"^\s*type\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)\s*;", re.MULTILINE)
 INLINE_ENUM_RE = re.compile(r"^\{\s*([^{}]+?)\s*\}$")
 INT_RE = re.compile(r"^Int\s*\(\s*(-?\d+)\s*\.\.\s*(-?\d+)\s*\)$")
