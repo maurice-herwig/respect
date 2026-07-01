@@ -1,0 +1,28 @@
+### **Minepump System Requirements**
+
+The **Minepump** is a reactive system that manages water levels in a mine while accounting for the presence of methane gas. The system interacts with its environment through two inputs and one output:
+
+- **Environment-controlled inputs:**
+  - `highwater`: Indicates whether the water level in the mine is dangerously high (true) or safe (false).
+  - `methane`: Indicates whether methane gas is detected in the mine (true) or not (false).
+
+- **System-controlled output:**
+  - `pump`: Controls whether the water pump is active (true) or inactive (false).
+
+#### **Assumptions on the Environment**
+The environment must adhere to the following constraint:
+- If the pump is turned off (`pump=false`) and then turned on (`pump=true`) in the next step, the environment must ensure that the water level does not remain high (`highwater=false`) in the following state. Alternatively, in the immediately preceding state, the pump must have already been off (`PREV(pump=false)`).
+
+#### **System Guarantees**
+The system must satisfy the following behavioral requirements:
+
+1. **Safety Guarantee (Methane or Pump Control):**
+   At all times, at least one of the following must hold:
+   - Methane is detected (`methane=true`).
+   - The pump will be activated in the next state (`next(pump=true)`).
+   - The water level is not high (`highwater=false`).
+
+2. **Safety Guarantee (Pump Deactivation in Safe Conditions):**
+   If methane is not detected (`methane=false`), the pump must be deactivated (`pump=false`) in the next state.
+
+The system has no explicitly stated initial conditions or liveness requirements beyond these guarantees. Its behavior is strictly defined by the given constraints on transitions and environmental inputs.

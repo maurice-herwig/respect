@@ -1,0 +1,20 @@
+### **Minepump System Requirements**
+
+This system controls a pump in response to environmental conditions, specifically the presence of high water and methane gas.
+
+**Inputs (controlled by the environment):**
+- `highwater`: A signal indicating whether the water level is dangerously high.
+- `methane`: A signal indicating whether methane gas is detected.
+
+**Output (controlled by the system):**
+- `pump`: A signal determining whether the pump is active.
+
+**Assumptions on the environment:**
+- Whenever the water level is high (`highwater = true`), the environment ensures that either the pump will be turned off in the next state (`next(pump = false)`) or the water level will drop (`next(highwater = false)`).
+
+**System guarantees:**
+1. **Safety guarantee (water and methane handling):**
+   - At all times, if methane is detected (`methane = true`), then in the next state, either the pump must be on (`next(pump = true)`) or the water level must no longer be high (`highwater = false`).
+
+2. **Safety guarantee (methane response):**
+   - At all times, if methane is not detected (`methane = false`), then in the next state, the pump must be off (`next(pump = false)`).

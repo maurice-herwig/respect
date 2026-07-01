@@ -1,0 +1,24 @@
+The **TrafficL1** system manages two traffic lights, one for direction A (`greenA`) and one for direction B (`greenB`). The system controls these lights, while the environment represents vehicle presence, with `carA` indicating a car waiting at direction A and `carB` at direction B.
+
+### Environment Inputs
+The environment provides two signals:
+- `carA`: Indicates whether a car is present at direction A.
+- `carB`: Indicates whether a car is present at direction B.
+
+### Assumptions on the Environment
+The environment must adhere to the following behaviors:
+- **Initially**, there is a car at direction A and none at direction B.
+- **Over time**, cars will arrive at both directions A and B **infinitely often**. This means that each direction will never be permanently without traffic—cars will keep arriving at both directions without end.
+
+### System Outputs
+The system controls two signals:
+- `greenA`: When `true`, the light for direction A is green.
+- `greenB`: When `true`, the light for direction B is green.
+
+### Guarantees Provided by the System
+The system must ensure the following behaviors:
+- **Initial Condition**: Both lights start in a non-green state (`!greenA` and `!greenB`).
+- **Safety Requirement**: The lights must **never** both be green at the same time (`!(greenA & greenB)`).
+- **Liveness Requirement**: The light for direction A (`greenA`) must turn green **infinitely often**. This ensures that direction A will continue to receive a green light repeatedly over time, preventing indefinite blocking.
+
+The exact conditions under which the system switches lights (e.g., based on car presence) and the behavior of the light for direction B (`greenB`) beyond the stated guarantees are not further specified. The system must only ensure that it meets the given initial condition, safety rule, and liveness requirement while respecting the environment’s assumptions.

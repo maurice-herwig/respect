@@ -1,0 +1,29 @@
+### **Minepump System Requirements**
+
+This specification describes a **minepump system** that regulates water levels in a mine in response to environmental conditions. The system interacts with its environment as follows:
+
+#### **Environment-Controlled Inputs (Uncontrollable by the System)**
+1. **High water level (`highwater`)** – Indicates whether the water level in the mine is dangerously high.
+2. **Methane presence (`methane`)** – Indicates whether methane gas is detected in the mine.
+
+#### **System-Controlled Output (Controllable by the System)**
+1. **Pump operation (`pump`)** – Determines whether the pump is active (`true`) or inactive (`false`).
+
+#### **Assumptions on the Environment**
+The system assumes the following about the environment’s behavior:
+- Once the pump is turned **off** (`pump = false`), it remains **off** in the next step unless the system explicitly turns it back on.
+
+#### **System Guarantees**
+The system must ensure the following under all circumstances where the environment behaves as assumed:
+
+1. **Pump Control Decision**
+   - At every step, the system must decide whether to **turn the pump on** (`pump = true`) or **keep it off** (`pump = false`) in the next state.
+
+2. **Safety Condition**
+   - The pump must **never activate in the next step** (`next(pump) = false`) if **both** of the following conditions hold simultaneously:
+     - The water level is high (`highwater = true`).
+     - Methane is detected (`methane = true`).
+
+This requirement prevents the pump from operating in hazardous conditions where methane and high water could pose an explosion risk.
+
+The specification does not impose additional constraints on initial conditions or long-term liveness properties. The system’s behavior is solely defined by the above guarantees as long as the environment adheres to its assumption.

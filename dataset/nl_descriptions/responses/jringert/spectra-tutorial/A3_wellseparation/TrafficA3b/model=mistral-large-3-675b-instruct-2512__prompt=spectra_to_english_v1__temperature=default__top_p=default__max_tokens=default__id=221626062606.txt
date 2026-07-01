@@ -1,0 +1,21 @@
+### **Traffic Light Control System (A3b) – Requirements Description**
+
+This system controls the traffic lights for two intersecting roads, labeled **A** and **B**, while also handling an **emergency** mode. The environment represents the external conditions, including the presence of cars and the emergence of an emergency. The system controls the traffic light states and an emergency flag.
+
+#### **Environment Inputs (Observed by the System)**
+- **`carA`**: Indicates whether a car is waiting at road A.
+- **`carB`**: Indicates whether a car is waiting at road B.
+
+The environment may only modify these inputs under the following constraints:
+1. A car waiting at road A (`carA` is true) may only disappear (become false) if road A’s light is green (`greenA` is true). Otherwise, the car must remain present in the next state.
+2. Similarly, a car waiting at road B (`carB` is true) may only disappear if road B’s light is green (`greenB` is true), otherwise it must remain present.
+3. If an emergency is active (`emergency` is true), neither `carA` nor `carB` may change; their values in the next state must match their current values.
+4. Over time, there must be infinitely many states where cars are waiting at both roads simultaneously (`carA` and `carB` are both true). This ensures that the system does not face an unrealistic scenario where one road is perpetually ignored.
+
+#### **System Outputs (Controlled by the System)**
+- **`greenA`**: True if the traffic light for road A is green, false otherwise.
+- **`greenB`**: True if the traffic light for road B is green, false otherwise.
+- **`emergency`**: True if an emergency is occurring (e.g., an emergency vehicle is present), false otherwise.
+
+#### **System Guarantees**
+1. **Safety Requirement**: The system must ensure that roads A and B are never simultaneously green (`greenA` and `greenB` cannot both be true at the same time). This prevents collisions at the intersection.

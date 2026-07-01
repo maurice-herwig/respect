@@ -1,0 +1,27 @@
+### **Minepump System Requirements**
+
+This reactive system controls a pump in response to environmental conditions detected by sensors.
+
+**Environment-Controlled Inputs:**
+- `highwater`: A signal indicating whether the water level is dangerously high.
+- `methane`: A signal indicating the presence of explosive methane gas.
+
+**System-Controlled Output:**
+- `pump`: A signal determining whether the pump is active (`true`) or inactive (`false`).
+
+**Assumptions on the Environment:**
+- The pump cannot turn itself on without the system issuing a command. Specifically, if the pump is off in the current state *and* was off in the immediately preceding state, it must have been off in the state before that (i.e., the environment cannot spontaneously activate the pump without the system's intervention).
+
+**Guarantees Required from the System:**
+
+1. **Safety Requirement:**
+   - The pump must never be activated in the presence of methane. Specifically:
+     - If methane is detected, either:
+       - The pump will be turned *off* in the next state, *or*
+       - The water level will *not* be high in the current state (making pump activation unnecessary), *or*
+       - The pump is already off.
+   - This ensures the pump does not operate while methane is present, preventing explosion risks.
+
+2. **Pump Deactivation in Safe Conditions:**
+   - If methane is *not* detected, the pump must be turned off in the next state.
+   - This ensures the pump only runs when explicitly permitted by the system's safety logic.

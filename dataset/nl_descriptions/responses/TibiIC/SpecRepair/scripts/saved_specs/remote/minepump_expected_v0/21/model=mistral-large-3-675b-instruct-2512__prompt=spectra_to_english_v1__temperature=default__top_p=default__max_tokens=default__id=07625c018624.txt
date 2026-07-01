@@ -1,0 +1,35 @@
+The **Minepump** system manages a pump in response to water levels and methane gas detection, ensuring safe operation under defined conditions. Here’s how it behaves:
+
+### Environment and System Variables
+The environment controls two inputs:
+- **High water level (`highwater`):** Indicates whether the water level is dangerously high.
+- **Methane presence (`methane`):** Indicates whether methane gas is detected.
+
+The system controls one output:
+- **Pump (`pump`):** Determines whether the pump is active (`true`) or inactive (`false`).
+
+### Initial Conditions
+At startup:
+- The environment begins with both `highwater` and `methane` **false** (no high water or methane).
+- The system starts with the pump **off** (`pump=false`).
+
+### Assumptions on the Environment
+The environment’s behavior is restricted as follows:
+1. If the pump has been **continuously running** (*pump was true in the previous state and remains true in the current state*), the water level **must eventually drop** (`highwater` becomes `false` in the next state).
+2. If there is **no high water** (`highwater=false`), then either:
+   - The water level remains safe (`highwater` stays `false`), or
+   - No methane is detected (`methane=false`).
+
+### System Guarantees
+The system must satisfy these requirements at all times:
+1. **Pump activation for high water:**
+   If `highwater` becomes `true`, then either:
+   - Methane is detected (`methane=true`)—preventing the pump from turning on, or
+   - The pump **must turn on** (`next(pump=true)`) in the next state.
+
+2. **Pump deactivation for methane:**
+   If `methane` becomes `true`, then either:
+   - The pump is already off (`pump=false`), or
+   - The pump **must turn off** (`next(pump=false)`) in the next state.
+
+The system enforces these rules indefinitely to ensure safe operation.

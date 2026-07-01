@@ -1,0 +1,24 @@
+### **Minepump System Requirements**
+
+This system controls a pump in a mining environment, interacting with sensor inputs from its surroundings.
+
+#### **Inputs and Outputs**
+- The **environment** provides two inputs:
+  - `highwater`: Indicates whether water levels have risen to a critical level.
+  - `methane`: Indicates whether dangerous methane gas has been detected.
+- The **system** controls a single output:
+  - `pump`: Determines whether the pump is active (`true`) or inactive (`false`).
+
+#### **Assumptions on the Environment**
+The environment is assumed to never activate the pump directly—meaning `pump` remains `false` at all times from the environment's perspective.
+
+#### **System Guarantees**
+Under the given assumptions, the system must ensure the following:
+
+1. **Safety Guarantee (Guarantee 1.1):**
+   The pump must never run if either:
+   - Methane is present (`methane = true`), **or**
+   - Water levels never reach a critical level (`highwater = false`).
+
+2. **Safety Guarantee (Guarantee 2.1):**
+   If methane is ever detected (`methane = true`), the pump must **immediately** turn off in the next state (`!next(pump)`)—meaning it cannot remain active in the subsequent step. If no methane is present, the pump may either stay on or turn off, with no restrictions beyond the first guarantee.

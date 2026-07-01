@@ -1,0 +1,22 @@
+The **Minepump system** manages a pump in response to water level and methane gas detection in its environment. Below is a natural-language description of its behavior:
+
+### **Inputs and Outputs**
+- The **environment controls**:
+  - `highwater`: A signal indicating whether the water level is critically high.
+  - `methane`: A signal indicating whether dangerous levels of methane gas are detected.
+- The **system controls**:
+  - `pump`: A signal determining whether the pump is active (`true`) or inactive (`false`).
+
+### **Assumptions (Environment Behavior)**
+The system relies on the environment behaving as follows:
+1. **Pump Effectiveness**: If the pump is active for two consecutive time steps, the water level will decrease (`highwater` will become `false`).
+2. **Methane Safety**: When no methane is detected (`methane = false`), either the water level is not high (`highwater = false`) or methane remains undetected in the next step.
+3. **Pump Safety**: If the pump is active (`pump = true`), either the water level is not high (`highwater = false`) or no methane is detected (`methane = false`).
+4. **Stable Conditions**: If the water level was not high in the previous step (`highwater = false`), either it remains not high or methane is detected (`methane = true`) in the next step.
+
+### **System Guarantees**
+The system ensures the following:
+1. **High Water Response**: If the water level is high (`highwater = true`), the system will activate the pump (`pump = true`) in the next time step.
+2. **Methane Safety**: If methane is detected (`methane = true`), the system will immediately deactivate the pump (`pump = false`) in the next time step.
+
+The system continuously monitors the environment and adjusts the pump state accordingly to prevent flooding while avoiding operation in hazardous methane conditions.

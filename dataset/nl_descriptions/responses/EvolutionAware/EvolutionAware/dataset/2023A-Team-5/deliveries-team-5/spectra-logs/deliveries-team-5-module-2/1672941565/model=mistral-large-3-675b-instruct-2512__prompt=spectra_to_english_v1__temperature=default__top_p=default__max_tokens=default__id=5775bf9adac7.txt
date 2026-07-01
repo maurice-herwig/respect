@@ -1,0 +1,18 @@
+**Requirements Description for Module2**
+
+This specification describes a reactive system consisting of two robots and an elevator operating within a bounded grid. The grid has a fixed width (`DX = 5`) and height (`DY = 5`), with coordinates ranging from `0` to `DY` for vertical positioning.
+
+### **Controlled Variables**
+- **Environment-controlled input:** The `elevator` position (a vertical coordinate between `0` and `DY`).
+- **System-controlled outputs:** The positions of two robots, each defined by their horizontal (`robotX0`, `robotX1`) and vertical (`robotY0`, `robotY1`) coordinates. Both robots’ coordinates are constrained to `DimX` (0 to `DX`) for horizontal movement and `DimY` (0 to `DY`) for vertical movement.
+
+### **Assumptions on the Environment**
+1. **Movement Constraint:** The elevator moves smoothly, changing its position by at most `1` between any two consecutive steps (either staying in place, moving up by `1`, or moving down by `1`).
+2. **Boundaries Reached Infinitely Often:** The elevator reaches the bottom (`elevator = 0`) and the top (`elevator = DY`) of its track infinitely often over time.
+
+### **System Guarantees**
+1. **Alignment at Left Edge:**
+   - If `robot0` is at the leftmost column (`robotX0 = 0`), its vertical position must match the elevator’s current position (`robotY0 = elevator`).
+   - Similarly, if `robot1` is at the leftmost column (`robotX1 = 0`), its vertical position must match the elevator’s current position (`robotY1 = elevator`).
+
+The system must always enforce these alignment rules whenever the robots are at the left edge of the grid. No initial conditions, safety properties beyond alignment, or next-state update rules for the robots are specified.

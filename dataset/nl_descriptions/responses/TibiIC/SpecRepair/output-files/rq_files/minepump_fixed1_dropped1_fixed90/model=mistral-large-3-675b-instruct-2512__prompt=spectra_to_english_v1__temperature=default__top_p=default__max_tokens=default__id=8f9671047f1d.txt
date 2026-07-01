@@ -1,0 +1,20 @@
+**Minepump System Requirements**
+
+This specification describes a reactive minepump system that interacts with its environment to manage water levels while preventing methane-related hazards.
+
+The environment provides two inputs:
+- **Highwater**, a signal indicating whether the water level has reached a dangerous threshold.
+- **Methane**, a signal indicating whether hazardous methane gas is detected.
+
+The system controls a single output:
+- **Pump**, a signal that activates or deactivates the water pump.
+
+**Assumptions on the Environment:**
+The environment must behave such that when the pump is running (pump = true), the highwater signal either immediately transitions to false or was already false in the previous state. This assumes the pump effectively reduces water levels when active.
+
+**System Guarantees:**
+1. **Safety Guarantee (Methane Hazard Protection):**
+   - If methane is detected (methane = true), the system must ensure the pump is turned on in the next state.
+   - If methane is not detected (methane = false), the system must ensure the pump is turned off in the next state.
+
+The system does not specify initial conditions or additional liveness requirements beyond these guarantees.

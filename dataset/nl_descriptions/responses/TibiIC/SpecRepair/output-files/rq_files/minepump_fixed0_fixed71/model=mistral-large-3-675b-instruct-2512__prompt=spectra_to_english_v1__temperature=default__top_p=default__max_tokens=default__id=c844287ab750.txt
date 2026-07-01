@@ -1,0 +1,34 @@
+**Minepump System Requirements**
+
+The *minepump* is a reactive system designed to manage a pump in response to environmental conditions—specifically, the presence of high water and methane gas.
+
+### **Environment-Controlled Inputs and System-Controlled Outputs**
+- The **environment** controls two boolean signals:
+  - `highwater`: Indicates whether water levels in the mine are dangerously high (`true`) or safe (`false`).
+  - `methane`: Indicates whether methane gas is detected (`true`) or not (`false`).
+- The **system** controls one boolean output:
+  - `pump`: Determines whether the pump is active (`true`) or inactive (`false`).
+
+### **Assumptions on the Environment**
+The system relies on the following constraints on the environment’s behavior:
+1. If the pump remains **continuously active** (`pump = true` for two consecutive steps), the environment must **eventually lower the water level** (`highwater` will become `false` in the next step).
+2. If **methane is not detected** (`methane = false`), then either:
+   - The water level is **not high** (`highwater = false`), **or**
+   - Methane remains **undetected** (`methane = false`) indefinitely.
+
+These assumptions ensure that the environment does not impose impossible conditions (e.g., forcing the pump to run indefinitely in high water without any eventual drainage or making contradictory methane/water state demands).
+
+### **System Guarantees**
+The system must enforce the following behaviors in response to the environment:
+
+1. **Pump Control Under High Water**
+   - If **high water is detected** (`highwater = true`), the system must **either**:
+     - Immediately **turn off the pump** (`pump = false`), **or**
+     - Ensure the pump is **turned on in the next step** (`next(pump) = true`).
+
+2. **Pump Control Under Methane Detection**
+   - If **methane is detected** (`methane = true`), the system must **either**:
+     - Immediately **turn on the pump** (`pump = true`), **or**
+     - Ensure the pump is **turned off in the next step** (`next(pump) = false`).
+
+These guarantees ensure the pump reacts safely to hazardous conditions, either immediately or in the next step. There are no explicit initial conditions or liveness requirements beyond these constraints.

@@ -1,0 +1,28 @@
+The **Minepump** system is designed to interact with its environment to manage water pumping in a hazardous setting, such as a mine. The system operates in the following way:
+
+### **Inputs and Outputs**
+- The **environment** controls two inputs:
+  - `highwater`: Signals whether the water level is dangerously high.
+  - `methane`: Indicates the presence of explosive methane gas.
+- The **system** controls one output:
+  - `pump`: Determines whether the pump is active (turned on or off).
+
+### **Assumptions on the Environment**
+The environment must ensure that **once the pump is turned off, it remains off** until the system explicitly turns it back on in a future step. This prevents the environment from arbitrarily toggling the pump state, which could lead to unsafe conditions.
+
+### **System Guarantees**
+The system must satisfy the following requirements under all circumstances where the environment adheres to its assumptions:
+
+1. **Safety Condition (Guarantee 1):**
+   The system must prevent dangerous situations where methane is present while the pump is about to turn on and water is at a high level. Specifically, the following must **always** hold:
+   - If methane is detected (`methane = true`), then either:
+     - The pump will **not** turn on in the next step (`next(pump) = false`), or
+     - The water level is no longer high (`highwater = false`).
+   This ensures that the pump does not activate in the presence of methane when water levels are dangerous.
+
+2. **Shutdown Condition (Guarantee 2):**
+   The system must **immediately shut off the pump** in the next step if methane is detected (`methane = false` is *not* allowed to be false, meaning the pump must turn off when methane is present). However, based on the given specification, the guarantee actually states:
+   - If methane is **not** present (`methane = false`), then the pump **must not activate** in the next step (`next(pump) = false`).
+   This ensures that the pump remains off when methane is absent, preventing unnecessary operation or potential ignition risks if methane readings fluctuate.
+
+The specification does not define an explicit initial condition, so the system’s initial state is unconstrained beyond these ongoing requirements. There are also no stated liveness requirements (e.g., the pump must eventually turn on if no methane is present). The system’s behavior is purely reactive, responding to environment inputs based on the given guarantees.

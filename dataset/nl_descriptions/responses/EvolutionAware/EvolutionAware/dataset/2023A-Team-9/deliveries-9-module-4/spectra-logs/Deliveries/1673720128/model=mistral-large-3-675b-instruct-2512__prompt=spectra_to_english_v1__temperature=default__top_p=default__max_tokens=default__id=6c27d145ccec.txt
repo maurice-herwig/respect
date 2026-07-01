@@ -1,0 +1,23 @@
+### **Requirements Description for the Deliveries System**
+
+This system models a reactive delivery environment where two robotic agents operate within a bounded grid. The system controls the initial positions and subsequent movements of these robots, as well as the activation of associated elevator mechanisms.
+
+#### **Environment and System Variables**
+- The environment does not directly influence this specification (no `env` variables are declared).
+- The system controls the following variables:
+  - `robotX0` and `robotY0`: The horizontal and vertical coordinates (respectively) of the first robot, each ranging from `0` to `5`.
+  - `robotX1` and `robotY1`: The horizontal and vertical coordinates (respectively) of the second robot, each ranging from `0` to `5`.
+  - `elevatorAndGround0` and `elevatorAndGround1`: Boolean flags indicating whether the elevator corresponding to the first or second robot is active (i.e., in use between ground level and the upper position).
+
+#### **Initial Conditions**
+At startup:
+- Both `elevatorAndGround0` and `elevatorAndGround1` must be `false` (the elevators are initially inactive).
+
+#### **System Guarantees**
+The system ensures the following behavior over time:
+1. **Safety (Always):**
+   - Whenever either robot’s vertical position transitions to `5` from a lower position (`< 5`), its corresponding elevator flag must be set to `true` in the next state.
+     - For the first robot (`robotY0`): If it moves to `5` from a position below `5`, then `elevatorAndGround0` must become `true` in the next step.
+     - For the second robot (`robotY1`): If it moves to `5` from a position below `5`, then `elevatorAndGround1` must become `true` in the next step.
+
+   The system does not specify further constraints on the elevators’ deactivation or on other movements of the robots.

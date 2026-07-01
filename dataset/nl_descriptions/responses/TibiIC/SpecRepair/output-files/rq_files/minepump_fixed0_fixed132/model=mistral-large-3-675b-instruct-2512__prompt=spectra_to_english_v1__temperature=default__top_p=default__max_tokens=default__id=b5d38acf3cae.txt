@@ -1,0 +1,23 @@
+### **Minepump System Requirements**
+
+#### **Inputs and Outputs**
+- The **environment** controls two inputs:
+  - `highwater`: A signal indicating whether water levels in the mine are dangerously high.
+  - `methane`: A signal indicating whether methane levels in the mine are dangerously high.
+- The **system** controls one output:
+  - `pump`: A boolean signal that determines whether the pump is active (`true`) or inactive (`false`).
+
+#### **Assumptions About the Environment**
+1. **Pump Operation Lowers Water Level**: Whenever the pump is active for two consecutive time steps, the environment guarantees that the water level will no longer be high in the next step.
+2. **Safe Conditions Persist**: If the water level is not high (`highwater=false`), then at any future state, the environment ensures that either the water level remains safe or methane levels are not high.
+
+#### **System Guarantees**
+1. **Pump Control Based on Water Level**:
+   - If the water level is high (`highwater=true`), the system must either:
+     - Turn the pump off in the next step, **or**
+     - Keep the pump running in the next step.
+   *(The system has flexibility in choosing whether to activate or deactivate the pump when water is high, but it must not leave the pump in an undefined state.)*
+
+2. **Pump Shutdown on High Methane**:
+   - If methane levels are high (`methane=true`), the system must ensure the pump is turned off in the next step.
+   *(Running the pump in the presence of high methane is strictly forbidden.)*

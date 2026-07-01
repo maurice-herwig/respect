@@ -1,0 +1,17 @@
+### Requirements for the Minepump System
+
+The **minepump system** controls a pump in response to sensor inputs from its environment. The environment provides two binary inputs:
+- **`highwater`**: Indicates whether the water level is high (true) or not (false).
+- ****`methane`**: Indicates whether methane is detected (true) or not (false).
+
+The system controls a single binary output:
+- **`pump`**: Determines whether the pump is active (true) or inactive (false).
+
+#### Assumptions on the Environment
+The environment must ensure the following behavior:
+- If the water level was high in the previous step (*`highwater=true`*), then the pump must have been inactive (*`pump=false`*) in that same previous step, **or** the pump must currently remain inactive. This rule prevents the environment from suddenly reporting high water while the pump was active without transitioning through an intermediate safe state.
+
+#### Guarantees Provided by the System
+The system must satisfy the following requirements at all times:
+1. **Pump Control Flexibility**: At every step, the system must decide whether the pump will be active or inactive in the next state. This ensures that the pump’s state is explicitly determined in each step rather than left ambiguous.
+2. **Methane Safety Constraint**: If methane is absent (*`methane=false`*), the system may either keep the pump in its current state or deactivate it in the next step. However, if methane is present (*`methane=true`*), the system **must** ensure the pump is deactivated in the next step to avoid ignition risks. This is an absolute safety requirement.

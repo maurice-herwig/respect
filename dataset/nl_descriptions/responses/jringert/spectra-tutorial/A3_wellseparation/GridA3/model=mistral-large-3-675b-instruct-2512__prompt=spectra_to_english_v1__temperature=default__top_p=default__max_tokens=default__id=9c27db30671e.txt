@@ -1,0 +1,16 @@
+The system models a robot moving on a 6×6 grid (with coordinates ranging from 0 to 5 in both dimensions). The environment controls the robot's position, represented as a pair of coordinates, while the system controls a `move` command that determines the robot's next position based on the following five possible actions: *UP*, *DOWN*, *LEFT*, *RIGHT*, or *STAY*.
+
+**Assumptions on the environment:**
+The environment must ensure that whenever the system issues a move command, the robot’s position updates accordingly in the next step:
+- If the command is *UP*, the robot’s vertical coordinate (`rob[1]`) decreases by 1 while the horizontal coordinate (`rob[0]`) remains unchanged.
+- If the command is *DOWN*, the vertical coordinate increases by 1 while the horizontal coordinate stays the same.
+- If the command is *LEFT*, the horizontal coordinate decreases by 1 while the vertical coordinate remains fixed.
+- If the command is *RIGHT*, the horizontal coordinate increases by 1 while the vertical coordinate stays unchanged.
+- If the command is *STAY*, both coordinates remain the same (though this case is not explicitly constrained beyond the other rules).
+
+**Guarantees provided by the system:**
+The system ensures two key behaviors:
+1. **Safety requirement:** Whenever the robot is at the bottom-left corner of the grid (position `(0, 0)`), the system will issue commands to move it to the top-right corner (`(5, 5)`) in the very next step.
+2. **Liveness requirement:** The robot will visit the bottom-left corner (`(0, 0)`) infinitely often over time.
+
+These guarantees apply only when the environment adheres to the assumptions about how the robot’s position updates in response to commands.

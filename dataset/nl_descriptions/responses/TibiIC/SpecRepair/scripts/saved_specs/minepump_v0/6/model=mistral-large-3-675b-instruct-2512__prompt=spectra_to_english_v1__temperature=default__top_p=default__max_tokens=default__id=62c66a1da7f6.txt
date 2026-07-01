@@ -1,0 +1,24 @@
+The Minepump system manages a pump in response to water level and methane gas presence in its environment. The environment provides two inputs:
+
+- **Highwater**, indicating whether water has reached a critical level.
+- **Methane**, indicating whether hazardous methane gas is detected.
+
+The system controls a single output:
+
+- **Pump**, which determines whether the pump is active.
+
+### Assumptions on the Environment
+The environment is assumed to start in a safe state, with both **highwater** and **methane** initially false. Additionally, the environment must adhere to the following constraints:
+
+1. If the pump runs continuously for consecutive time steps (i.e., remains on), the water level must eventually decrease (**highwater** becomes false).
+2. Whenever the pump is on, at least one of the following must hold:
+   - The water level is not critically high (**highwater** is false).
+   - No methane is present (**methane** is false).
+
+### System Guarantees
+The system must ensure the following behavior:
+
+- At startup, the pump is initially off.
+- **Safety:**
+  1. If high water is detected (**highwater** is true), then either methane must also be present, or the pump must turn on in the next time step.
+  2. If methane is detected (**methane** is true), the pump must turn off in the next time step—regardless of the water level. This prevents the pump from operating in hazardous conditions.

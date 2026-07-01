@@ -1,0 +1,19 @@
+### **Minepump System Requirements**
+
+This system models a mine pump that responds to water and gas levels in an underground environment.
+
+**Inputs (controlled by the environment):**
+- `highwater`: Indicates whether the water level in the mine has reached a critical high point.
+- `methane`: Indicates whether dangerous methane gas is detected in the mine.
+
+**Output (controlled by the system):**
+- `pump`: Determines whether the pump is active (`true`) or inactive (`false`).
+
+**Assumptions on the environment:**
+- The environment guarantees that whenever methane is detected (`methane = true`), the pump must already be off (`pump = false`). In other words, the system will never be in a state where both methane is present and the pump is running.
+
+**System guarantees:**
+1. If methane is detected (`methane = true`) at any time, the system must ensure that the pump will be on (`pump = true`) in the very next step. This implies that the pump must activate immediately after methane is detected, regardless of the water level.
+2. If no methane is detected (`methane = false`) at any time, the system must ensure that the pump will be off (`pump = false`) in the very next step, meaning the pump must deactivate immediately once methane is no longer present.
+
+The system's behavior is strictly defined in terms of its next-state response to methane detection, without additional constraints on initial conditions or long-term liveness. The pump's operation is tied solely to the presence or absence of methane in each step.

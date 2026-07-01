@@ -1,0 +1,25 @@
+**Minepump System Requirements**
+
+The Minepump system monitors water and gas levels in a mine to control a pump safely.
+
+**Inputs (environment-controlled):**
+- *Highwater*: A signal indicating whether the water level has risen to a dangerous level.
+- *Methane*: A signal indicating whether the methane level in the mine is hazardous.
+
+**Output (system-controlled):**
+- *Pump*: A signal that activates or deactivates the pump.
+
+**Assumptions on the environment:**
+The system assumes that the pump will not be turned on abruptly—in other words, the environment ensures that if the pump is currently on, it was also on in the previous state. This prevents sudden, unprovoked activation of the pump by the environment.
+
+**Guarantees provided by the system:**
+1. **Safety guarantee (ongoing):** The system ensures that at least one of the following is always true:
+   - The methane level is hazardous (*methane* is true),
+   - The pump will be off in the next state (*next(!pump)*), or
+   - The water level is not high (*!highwater*).
+
+   This prevents the pump from operating when it could cause a hazard unless the environment violates its assumption.
+
+2. **Methane-based shutdown (immediate effect):** If the methane level becomes hazardous, the system guarantees that the pump will be off in the next state (i.e., it will shut down promptly if activated).
+
+The specification does not define initial conditions or separate liveness requirements beyond these guarantees. The system’s behavior is reactive to the environment’s inputs while strictly enforcing the above safety constraints.

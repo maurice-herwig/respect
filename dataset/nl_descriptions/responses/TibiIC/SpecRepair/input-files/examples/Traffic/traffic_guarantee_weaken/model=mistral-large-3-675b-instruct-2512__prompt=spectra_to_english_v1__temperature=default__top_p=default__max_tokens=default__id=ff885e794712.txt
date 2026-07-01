@@ -1,0 +1,24 @@
+**Requirements for Traffic Signal System (Direction A)**
+
+This system controls a traffic signal for direction A, interacting with its environment as follows.
+
+**Inputs (Environment-Controlled):**
+- `carA`: Indicates whether a vehicle is present at the signal in direction A (true if present, false otherwise).
+- `emergency`: Signals an ongoing emergency situation (true if active, false otherwise).
+- `police`: Indicates police activity affecting traffic (true if present, false otherwise).
+
+**Output (System-Controlled):**
+- `greenA`: Determines whether the traffic signal for direction A is green (true if green, false otherwise).
+
+**Environment Assumptions:**
+1. **Initial Conditions:** At startup, no vehicles are present at direction A (`carA` is false), and no emergency is active (`emergency` is false).
+2. **Frequent Vehicle Detection:** Vehicles will repeatedly approach direction A over time (i.e., `carA` becomes true infinitely often).
+3. **Vehicle Behavior When Signal is Red:** Whenever a vehicle is waiting at a red signal (`carA` is true and `greenA` is false), the vehicle will remain in place until the signal changes (i.e., `carA` remains true in the next step).
+4. **Vehicle Clearance When Signal is Green:** When a vehicle is present and the signal is green (`carA` is true and `greenA` is true), the vehicle will proceed and no longer be detected in the next state (`carA` becomes false).
+
+**System Guarantees:**
+1. **Initial Condition:** At startup, the signal for direction A is not green (`greenA` is false).
+2. **Frequent Green Signal:** The signal for direction A will turn green infinitely often over time.
+3. **Frequent No-Vehicle State:** The system ensures that the absence of vehicles (`carA` false) occurs infinitely often, meaning vehicles are not perpetually present without clearance.
+
+The system must ensure these guarantees hold as long as the environment adheres to its assumptions.

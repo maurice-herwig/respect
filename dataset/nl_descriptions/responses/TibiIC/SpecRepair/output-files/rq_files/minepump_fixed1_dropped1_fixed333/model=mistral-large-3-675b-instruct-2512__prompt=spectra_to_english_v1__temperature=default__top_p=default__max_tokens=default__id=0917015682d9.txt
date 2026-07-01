@@ -1,0 +1,15 @@
+**Minepump System Requirements**
+
+The Minepump system monitors and controls water levels in a mine while accounting for hazardous gas conditions. The environment provides two inputs: a `highwater` signal indicating whether water levels are dangerously high, and a `methane` signal detecting the presence of flammable gas. The system controls a single output, the `pump`, which drains water when activated.
+
+**Environment Assumptions:**
+The environment ensures that if the water level was *not* high in the previous moment, it will either remain at a safe level or the pump was inactive in the current moment. This prevents abrupt, unrealistic rises in water level unless the pump fails to operate.
+
+**System Guarantees:**
+1. **Safety Condition:** At all times, either:
+   - Methane is detected, *or*
+   - The pump will activate in the next moment, *or*
+   - The water level is not high.
+   This ensures the pump does not run in the presence of methane unless water levels remain dangerously high.
+
+2. **Pump Shutdown:** If methane is *not* present, the pump must deactivate in the next moment. This prevents unnecessary pump operation when gas conditions are safe.

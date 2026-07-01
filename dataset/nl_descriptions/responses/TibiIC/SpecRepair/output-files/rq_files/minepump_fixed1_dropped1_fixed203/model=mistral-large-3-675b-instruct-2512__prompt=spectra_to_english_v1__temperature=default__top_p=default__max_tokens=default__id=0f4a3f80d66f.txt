@@ -1,0 +1,27 @@
+### **Minepump System Requirements**
+
+#### **Environment and System Variables**
+The environment monitors two inputs:
+- **Highwater**: A signal indicating whether the water level is dangerously high (*true* when high).
+- **Methane**: A signal indicating whether methane gas is present (*true* when detected).
+
+The system controls one output:
+- **Pump**: A command to turn the pump on (*true*) or off (*false*).
+
+#### **Assumptions on the Environment**
+The environment must satisfy the following restriction:
+- Whenever methane is detected (*methane = true*), the environment ensures that either:
+  - The highwater signal will become *false* in the next state, **or**
+  - The pump is already off (*pump = false*).
+
+#### **System Guarantees**
+The system must ensure the following behaviors at all times:
+
+1. **Pump Control During Methane or Low Water**:
+   The system ensures that either:
+   - Methane is detected (*methane = true*), **or**
+   - The pump will turn on in the next state (*pump = true*), **or**
+   - The highwater signal is *false*.
+
+2. **Pump Shutdown When Methane is Safe**:
+   Whenever methane is **not** detected (*methane = false*), the system will turn the pump off in the next state.

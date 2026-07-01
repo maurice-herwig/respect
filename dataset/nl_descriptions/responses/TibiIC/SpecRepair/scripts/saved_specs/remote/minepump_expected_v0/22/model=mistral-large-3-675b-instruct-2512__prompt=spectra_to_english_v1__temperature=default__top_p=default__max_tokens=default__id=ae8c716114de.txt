@@ -1,0 +1,22 @@
+### **Minepump System Requirements**
+
+This system models a mine pump that controls water drainage based on environmental conditions. The environment provides two inputs:
+
+- **`highwater`**: Indicates whether water levels in the mine have risen to a dangerous level.
+- **`methane`**: Indicates whether hazardous methane gas is present in the mine.
+
+The system controls one output:
+
+- **`pump`**: Determines whether the pump is active (`true`) or inactive (`false`).
+
+#### **Initial Conditions**
+- At startup, the environment ensures that water levels are safe (`highwater = false`) and no methane is present (`methane = false`).
+- The system ensures the pump is initially inactive (`pump = false`).
+
+#### **Environment Assumptions**
+1. If the pump runs continuously in two consecutive steps, the environment must eventually lower the water level (`highwater = false` in the next state).
+2. If the water level is safe (`highwater = false`), it will remain safe so long as no methane (`methane = false`) appears.
+
+#### **System Guarantees**
+1. **Pump Activation for High Water**: Whenever the water level becomes dangerous (`highwater = true`), the system must either immediately activate the pump (`pump = true`) or do so in the next step.
+2. **Pump Shutdown for Methane**: If methane is detected (`methane = true`), the system must either immediately shut off the pump (`pump = false`) or do so in the next step.

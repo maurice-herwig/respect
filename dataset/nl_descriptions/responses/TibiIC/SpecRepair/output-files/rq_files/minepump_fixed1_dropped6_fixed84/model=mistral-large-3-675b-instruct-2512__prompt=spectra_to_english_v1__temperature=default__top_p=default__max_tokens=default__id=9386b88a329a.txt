@@ -1,0 +1,29 @@
+### **Minepump System Requirements**
+
+The **Minepump** system monitors water levels and methane gas in a mining environment and controls a pump to prevent flooding while ensuring safety.
+
+#### **Environment Inputs**
+The environment provides two inputs:
+- **High water level (`highwater`):** A signal indicating whether the water level has risen too high.
+- **Methane presence (`methane`):** A signal indicating whether dangerous methane gas is detected.
+
+#### **System Output**
+The system controls a single output:
+- **Pump activation (`pump`):** A signal determining whether the pump is on (`true`) or off (`false`).
+
+#### **Assumptions on the Environment**
+The environment must ensure that:
+- Whenever methane is present (`methane = true`), the pump must have been off (`pump = false`) in the previous state. This prevents the system from being forced into an unsafe condition where it must activate the pump in the presence of methane.
+
+#### **System Guarantees**
+The system must satisfy the following requirements **at all times** (`G` means "globally," or "in every state"):
+
+1. **Safety Constraint on Pump Activation**
+   At every step, the system ensures that **either**:
+   - Methane is detected (`methane = true`), **or**
+   - The pump will be turned on in the **next state** (`next(pump = true)`), **or**
+   - The water level is **not** high (`highwater = false`).
+   This ensures the pump is only active when it is safe and necessary.
+
+2. **Methane-Driven Pump Shutdown**
+   At every step, if methane is not detected (`methane = false`), then the pump will be **turned off in the next state** (`next(pump = false)`). This prevents the pump from running unnecessarily when methane levels are safe, reducing wear and energy consumption.

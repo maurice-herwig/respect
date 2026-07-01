@@ -1,0 +1,26 @@
+### **Requirements Description for the Door System**
+
+#### **Inputs and Outputs**
+- **Environment-controlled inputs (the system cannot control these):**
+  - `bellpressed`: Indicates whether someone is pressing the doorbell.
+  - `bellrings`: Indicates whether the doorbell is actually ringing.
+  - `doorhit`: Indicates whether someone has struck or banged the door.
+  - `knocksound`: Indicates whether a knock is heard at the door.
+
+- **System-controlled output (the system determines this):**
+  - `dooranswered`: Indicates whether the door has been answered (e.g., opened or acknowledged).
+
+#### **Initial Conditions**
+- At startup, the door must not be in an "answered" state (`dooranswered = false`).
+- Initially, none of the environment inputs are active: the bell is not ringing, the door has not been hit, the bell has not been pressed, and no knock is heard.
+
+#### **Assumptions on the Environment**
+- Whenever the door is hit (`doorhit = true`), the doorbell must be ringing (`bellrings = true`). This implies that physical impacts on the door are only considered valid if the bell is also active.
+- Whenever the bell is pressed (`bellpressed = true`), it must result in the bell ringing (`bellrings = true`). This ensures that pressing the bell does not fail silently.
+
+#### **System Guarantees**
+- **Safety Requirements:**
+  - If the doorbell rings (`bellrings = true`), the system must eventually set `dooranswered` to `true`, indicating a response (e.g., opening the door or acknowledging the bell).
+  - Similarly, if a knock is heard (`knocksound = true`), the system must also set `dooranswered` to `true`.
+
+The system does not impose any additional liveness or next-state constraints beyond these guarantees. Its sole obligation is to respond to ringing doorbells and knocks as described.

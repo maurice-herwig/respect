@@ -1,0 +1,18 @@
+The mine pump system interacts with its environment in the following way:
+
+**Inputs and Outputs**
+- The environment provides two signals:
+  - `highwater`: A boolean indicating whether the water level is high.
+  - `methane`: A boolean indicating whether methane gas is present.
+- The system controls one output:
+  - `pump`: A boolean indicating whether the pump is on.
+
+**Environment Assumptions**
+The environment ensures that whenever the water level was previously high (i.e., `highwater` was `true` in the immediately preceding state), the system has turned the pump off (`pump = false`). This prevents unsafe operation where the pump might run unnecessarily or dangerously.
+
+**System Guarantees**
+The system must satisfy the following requirements at all times:
+1. **Methane Safety Response**: If methane is detected (`methane = true`), the system must ensure the pump is turned on (`pump = true`) in the next state. This ensures the pump is active when needed for safety.
+2. **Methane Clear Response**: If no methane is detected (`methane = false`), the system must ensure the pump is turned off (`pump = false`) in the next state. This prevents unnecessary or unsafe pump operation.
+
+The system does not impose any initial conditions beyond these ongoing guarantees.

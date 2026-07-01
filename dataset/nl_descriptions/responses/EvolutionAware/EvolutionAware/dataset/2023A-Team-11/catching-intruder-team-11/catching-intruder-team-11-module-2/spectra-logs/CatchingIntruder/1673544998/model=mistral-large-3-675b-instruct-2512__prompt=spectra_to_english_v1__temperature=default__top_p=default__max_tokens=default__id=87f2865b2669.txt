@@ -1,0 +1,24 @@
+### **Requirements Description for the "Catching Intruder" Reactive System**
+
+This system models the interaction between an environment and two robotic agents, **Robot 0** and **Robot 1**, operating on a grid of size **8×8** (with coordinates ranging from `0` to `7` in both dimensions). The system outputs the positions of the robots and a boolean flag indicating whether **Robot 0** has reached a designated endpoint.
+
+#### **Environment and System-Controlled Variables**
+- **System-controlled outputs:**
+  - The **x**- and **y**-coordinates of **Robot 0** (`robotX0`, `robotY0`).
+  - The **x**- and **y**-coordinates of **Robot 1** (`robotX1`, `robotY1`).
+  - A boolean flag (`r1ReachedGround`), which starts as `false` and is set to `true` once **Robot 0** reaches the position **(0, 7)**.
+
+#### **Initial Conditions**
+- At startup, the flag `r1ReachedGround` must be `false`.
+
+#### **Safety Requirements (Always True)**
+1. **Detection of Target Reached:**
+   - Whenever **Robot 0** moves to position **(0, 7)** in the next step, the system must set `r1ReachedGround` to `true` in that step.
+
+2. **Persistence of Detection Flag:**
+   - If **Robot 0** does *not* move to **(0, 7)** in the next step, the `r1ReachedGround` flag must retain its current value.
+
+3. **Robot 1’s Forced Position While Undetected:**
+   - As long as `r1ReachedGround` remains `false`, **Robot 1** must be positioned at **(0, 0)** in every subsequent state.
+
+The system does not impose any further restrictions on **Robot 0**’s movements; its behavior is fully determined by the environment, and the system only tracks and responds to whether it reaches the target. **Robot 1** remains fixed at the origin until the flag is triggered. No liveness guarantees (e.g., requirements that must eventually hold) are specified beyond the safety constraints.

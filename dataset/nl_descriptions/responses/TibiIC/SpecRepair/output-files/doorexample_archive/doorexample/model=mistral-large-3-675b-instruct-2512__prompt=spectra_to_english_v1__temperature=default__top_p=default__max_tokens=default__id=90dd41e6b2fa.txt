@@ -1,0 +1,30 @@
+### **Requirements for the Door System**
+
+This system describes the behavior of a door answering mechanism in response to signals from its environment. The environment provides inputs indicating whether certain events have occurred, while the system controls whether the door is answered.
+
+#### **Environment-Controlled Inputs**
+The environment controls the following signals:
+- **`bellpressed`**: Indicates whether a doorbell button has been pressed.
+- **`bellrings`**: Indicates whether the doorbell is actually ringing.
+- **`doorhit`**: Indicates whether someone has physically hit (e.g., knocked on) the door.
+- **`knocksound`**: Indicates whether a knock sound has been detected (e.g., via a microphone).
+
+#### **System-Controlled Output**
+The system controls the following signal:
+- **`dooranswered`**: Indicates whether the door has been answered (e.g., by opening it or acknowledging the visitor).
+
+#### **Initial Conditions**
+- At the start of operation, the system ensures that the door has **not** been answered (`dooranswered = false`).
+- The environment ensures that initially, the doorbell is **not** ringing (`bellrings = false`), the door has **not** been hit (`doorhit = false`), the doorbell button has **not** been pressed (`bellpressed = false`), and no knock sound has been detected (`knocksound = false`).
+
+#### **Assumptions on the Environment**
+The environment must adhere to the following rules:
+1. Whenever the door is hit (`doorhit = true`), the doorbell must be ringing (`bellrings = true`).
+2. Whenever the doorbell button is pressed (`bellpressed = true`), the doorbell must be ringing (`bellrings = true`).
+
+#### **Guarantees Provided by the System**
+The system must ensure the following behavior at all times:
+1. If the doorbell rings (`bellrings = true`), the door must eventually be answered (`dooranswered = true`).
+2. If a knock sound is detected (`knocksound = true`), the door must eventually be answered (`dooranswered = true`).
+
+The system does not explicitly define how the `dooranswered` state evolves over time, only that it must respond appropriately to the given triggers.

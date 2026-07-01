@@ -1,0 +1,15 @@
+**Requirements Description for Patrolling System**
+
+This specification describes a reactive system for a robot patrolling a grid. The robot operates in a bounded area defined by a 5×5 grid (coordinates ranging from 0 to 4 in both dimensions).
+
+**Inputs and Outputs:**
+- The **environment** controls the positions of three goal locations, provided as coordinates `goalsX` and `goalsY` (each ranging from 0 to 5).
+- The **system** controls:
+  - The robot’s position on the grid, given by `robotX` (0–4) and `robotY` (0–4).
+  - A status indicator for each goal, `isGoalBlocked`, which is a 3-element boolean array reporting whether each goal is currently obstructed.
+
+**System Guarantees:**
+1. **Static Guarantee:** The system ensures that the first goal (`isGoalBlocked[0]`) is never blocked—this status must always be `false`.
+2. **Dynamic Guarantees:** For the second and third goals (`isGoalBlocked[1]` and `isGoalBlocked[2]`), the system guarantees that each will toggle between being blocked (`true`) and unblocked (`false`) infinitely often over time. Neither state will persist indefinitely.
+
+The specification imposes no assumptions on the environment’s behavior—meaning the goal positions can change arbitrarily within their defined ranges. The system must uphold its guarantees regardless of how the environment updates the goals. No initial conditions or next-state rules are specified for the robot’s movement.

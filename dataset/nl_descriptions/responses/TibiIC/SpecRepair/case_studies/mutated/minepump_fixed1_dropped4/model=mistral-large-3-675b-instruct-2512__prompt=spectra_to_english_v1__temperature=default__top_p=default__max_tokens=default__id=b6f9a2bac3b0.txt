@@ -1,0 +1,36 @@
+### **Minepump System Requirements**
+
+The *Minepump* system monitors and manages a pump in a mining environment where water levels and methane gas concentrations are critical factors. The system's behavior is defined by its interaction with the environment, which provides inputs about these conditions.
+
+#### **Environment-Controlled Inputs**
+The environment provides two boolean inputs:
+- **`highwater`**: Indicates whether the water level has reached a critical high threshold.
+- **`methane`**: Indicates whether methane gas is detected in the environment.
+
+#### **System-Controlled Output**
+The system controls a single boolean output:
+- **`pump`**: Determines whether the pump is active (`true`) or inactive (`false`).
+
+#### **Assumptions on the Environment**
+The system assumes that the environment never activates the pump directly. Specifically:
+- The pump is always off in the environment's control (i.e., `pump` is never set to `true` by the environment).
+
+#### **Guarantees Provided by the System**
+The system ensures the following behavior under the given assumptions:
+
+1. **Safety Guarantee:**
+   The system must ensure that, at every moment, at least one of the following holds:
+   - Methane is not present (`!methane`).
+   - If methane is present, then either:
+     - The pump will be turned off in the next state (`next(pump)` is `false`), **or**
+     - The water level is not critically high (`!highwater`).
+
+   This prevents the pump from running when both methane is present and water is high, reducing the risk of explosions.
+
+2. **Methane Guarantee:**
+   The system must guarantee that methane is never present at any point in time (`!methane`). This appears to be an absolute constraint, though it may imply that the system has control over methane detection (or that the specification enforces an idealized behavior).
+
+#### **Temporal Behavior**
+- The guarantees apply **globally** (at all times) and are not limited to initial conditions.
+- The safety guarantee (`guarantee1_1`) includes a **next-state condition**, requiring the system to ensure that if methane is present, the pump does not run in the very next state (unless `highwater` is false).
+- There are no explicit liveness (eventuality) requirements or state-update rules in this specification beyond the immediate constraints.

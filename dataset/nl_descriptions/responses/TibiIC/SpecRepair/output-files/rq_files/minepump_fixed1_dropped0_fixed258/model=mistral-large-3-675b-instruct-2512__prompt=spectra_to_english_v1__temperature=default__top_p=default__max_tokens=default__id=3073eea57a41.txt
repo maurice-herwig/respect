@@ -1,0 +1,22 @@
+### **Minepump System Requirements**
+
+This system controls a mine pump based on environmental conditions.
+
+#### **Inputs and Outputs**
+- The **environment** provides two boolean inputs:
+  - `highwater` (true when water levels are dangerously high)
+  - `methane` (true when methane gas is detected)
+- The **system** controls one boolean output:
+  - `pump` (true when the pump should be activated)
+
+#### **Assumptions on the Environment**
+The environment must ensure that **if methane is detected, either the high water level will not persist into the next state, or the pump was off in the previous state**. This prevents scenarios where methane and a running pump overlap indefinitely without the water being cleared.
+
+#### **System Guarantees**
+1. **Pump Shutdown Under Risk**: The system ensures that **if methane is present, then either (a) the pump will turn on in the next state, or (b) there is no high water (and thus no immediate need for the pump)**. This prevents the pump from remaining active when methane is detected.
+2. **Pump Activation Only When Safe**: The system guarantees that **if methane is absent, the pump will remain off in the next state** unless explicitly allowed otherwise.
+
+#### **Behavior Summary**
+- The system prevents the pump from running while methane is present, either by ensuring the pump turns off or that water levels drop immediately.
+- When methane is absent, the system permits pump operation only if water levels require it, though additional rules (not specified here) may govern when the pump should turn on.
+- The environment must cooperate by not allowing persistent high water while methane is present unless the pump was previously off.

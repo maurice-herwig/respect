@@ -1,0 +1,19 @@
+### **Minepump System Requirements**
+
+This system controls a pump used in a mining environment, where two environmental conditions influence its operation: **highwater** (a boolean indicating whether water levels are dangerously high) and **methane** (a boolean indicating whether dangerous gas levels are present). The pump, represented by the boolean **pump**, is controlled by the system and determines whether water should be pumped out.
+
+#### **Environment Inputs & Assumptions**
+The environment controls two inputs:
+1. **highwater** – Signals whether the water level is too high.
+2. **methane** – Signals whether dangerous methane levels are detected.
+
+The environment adheres to the following constraints:
+- **Initial Condition:** At startup, neither high water nor methane is present (`highwater = false` and `methane = false`).
+- **Pump Effect on Water Level:** If the pump runs continuously in two consecutive time steps, the water level must decrease in the next step (`highwater = false`).
+- **Pump Operation Constraints:** The pump may only run (`pump = true`) when either there is no high water (`highwater = false`) or no methane (`methane = false`).
+
+#### **System Guarantees**
+The system ensures the following behavior:
+- **Initial Condition:** The pump starts in the off state (`pump = false`).
+- **Pump Activation on High Water:** If the water level becomes high (`highwater = true`), the pump must turn on (`pump = true`) in the next time step.
+- **Methane Response:** If methane is detected (`methane = true`), the system must ensure that either the water level is already high (`highwater = true`) or the pump turns off (`pump = false`) in the next step.

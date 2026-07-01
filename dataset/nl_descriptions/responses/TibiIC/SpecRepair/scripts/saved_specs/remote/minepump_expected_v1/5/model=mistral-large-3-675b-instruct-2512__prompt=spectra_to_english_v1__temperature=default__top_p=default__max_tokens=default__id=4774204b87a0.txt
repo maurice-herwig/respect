@@ -1,0 +1,29 @@
+### **Minepump System Requirements**
+
+This specification describes a mine pump system that regulates water levels in response to environmental conditions. The system interacts with its environment through the following variables:
+
+- **Environment-controlled inputs:**
+  - `highwater`: A signal indicating whether water levels are dangerously high.
+  - `methane`: A signal indicating whether hazardous methane gas is present.
+
+- **System-controlled output:**
+  - `pump`: A command that controls whether the pump is active (`true`) or inactive (`false`).
+
+#### **Initial Conditions**
+- At startup, the environment must ensure that water levels are not high (`highwater = false`) and no methane is detected (`methane = false`).
+- The system must begin with the pump turned off (`pump = false`).
+
+#### **Assumptions on the Environment**
+1. If the pump has been running continuously (`pump = true` in the previous and current state), the environment will eventually lower the water level (`next(highwater) = false`).
+2. If water levels are not high (`highwater = false`), then either the water remains at a safe level (`highwater` remains `false`) or no methane is detected (`methane = false`).
+
+#### **System Guarantees**
+1. **Pump Control for High Water:**
+   - If water levels become high (`highwater = true`), the system must either:
+     - Immediately turn off the pump (`pump = false`), **or**
+     - Allow the pump to run in the next state (`next(pump) = true`).
+   - This ensures that high water levels do not persist without a pump response.
+
+2. **Pump Shutdown for Methane Detection:**
+   - If methane is detected (`methane = true`), the environment must keep this signal high (`methane = true`), and the system must ensure that in the next state, the pump is turned off (`next(pump) = false`).
+   - This prevents the pump from running while methane is present, reducing explosion risk.

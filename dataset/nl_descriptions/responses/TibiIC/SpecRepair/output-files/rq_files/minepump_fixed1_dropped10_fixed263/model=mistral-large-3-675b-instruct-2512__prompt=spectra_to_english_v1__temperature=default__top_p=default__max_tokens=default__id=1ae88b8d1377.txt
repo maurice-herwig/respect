@@ -1,0 +1,24 @@
+### **Minepump System Requirements**
+
+This system controls a pump in response to water and methane levels. The environment provides two inputs:
+
+- **High water indicator**: A signal indicating whether the water level is dangerously high.
+- **Methane presence indicator**: A signal indicating whether methane is detected in the environment.
+
+The system produces a single output:
+
+- **Pump activation**: A signal that determines whether the pump is turned on or off.
+
+#### **Environment Assumptions**
+The environment is assumed to behave as follows: Whenever the water level was *not* high in the previous state, the pump must currently be off. This ensures that the pump does not run unnecessarily when water levels are safe.
+
+#### **System Guarantees**
+The system ensures the following behavior at all times:
+
+1. **Methane Safety**:
+   If methane is detected, the pump **must not** be active in the next state. In other words, the pump will be turned off (or remain off) whenever methane is present to prevent ignition risks.
+
+2. **Methane Absence**:
+   If methane is *not* detected, the pump **must not** be shut off in the next state unless explicitly required by other constraints (though none are specified here). This implies that the pump can remain operational when methane is absent, provided no conflicting conditions arise.
+
+There are no explicit initial conditions, liveness requirements, or next-state update rules specified beyond these guarantees. The system reacts solely based on the current and previous state of the environment variables as described.

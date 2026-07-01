@@ -1,0 +1,16 @@
+Here is the natural-language description of the **Minepump** system:
+
+The system models a mine pump that interacts with its environment based on two input signals: **high water level** (`highwater`) and **methane presence** (`methane`). Both inputs are controlled by the environment, while the system controls the **pump** (`pump`), an output indicating whether the pump is active (`true`) or inactive (`false`).
+
+**Assumptions on the environment:**
+The environment must ensure that whenever methane is detected at a given time step, the pump must have been off *either* at that same time step *or* in the immediately preceding step. This prevents unsafe conditions where methane and a running pump coexist.
+
+**Guarantees provided by the system:**
+1. At every time step, the system must enforce one of the following:
+   - Methane is detected,
+   - The pump will activate in the next time step, *or*
+   - The water level is not high.
+   This ensures the pump does not run unnecessarily while avoiding unsafe combinations of conditions.
+2. Additionally, if methane is *not* detected at any time step, the pump must deactivate in the next time step. This ensures the pump responds quickly to changes in methane levels.
+
+No initial conditions or additional liveness requirements (e.g., eventual activation) are specified for this system. The guarantees strictly govern the system's safety and immediate responses.

@@ -1,0 +1,18 @@
+### **Requirements Description for the Reactive Robot Control System**
+
+This specification describes a simple reactive robot control system. The system controls the motion of two motors (left and right), while the environment provides a measured distance to an obstacle.
+
+- **Environment-controlled inputs:**
+  - `distance` (integer, 0–100): The distance to an obstacle, as detected by sensors.
+
+- **System-controlled outputs:**
+  - `leftM` (motor command): Controls the left motor, which can be set to move forward (`FWD`), backward (`BWD`), or stop (`STP`).
+  - `rightM` (motor command): Controls the right motor, with the same possible commands as the left motor.
+
+**Assumptions on the environment:**
+- No explicit assumptions are made about the environment, meaning the system must handle any distance value within the allowed range (0–100).
+
+**Guarantees required from the system:**
+- **Safety requirement:** At all times, if the distance to an obstacle is 20 or less, the robot must not move forward in the next state. Moving forward is defined as both the left and right motors being set to `FWD`. The robot can still move backward or stop, but it must not proceed forward when too close to an obstacle.
+
+This ensures the robot does not collide with objects when they are within a critical distance. No initial conditions or liveness requirements are specified.

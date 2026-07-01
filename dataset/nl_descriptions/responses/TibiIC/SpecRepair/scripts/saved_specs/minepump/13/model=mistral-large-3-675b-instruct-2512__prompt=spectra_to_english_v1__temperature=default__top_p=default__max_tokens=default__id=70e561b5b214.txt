@@ -1,0 +1,26 @@
+### **Minepump System Requirements**
+
+This specification describes a **minepump system** that regulates water levels in an environment where methane may be present.
+
+#### **Inputs (Environment-Controlled)**
+- **High water (boolean):** Indicates whether the water level in the mine has reached a dangerous height.
+- **Methane (boolean):** Indicates whether hazardous methane gas is detected in the mine.
+
+#### **Outputs (System-Controlled)**
+- **Pump (boolean):** Controls whether the pump is active (`true`) or inactive (`false`).
+
+#### **Initial Conditions**
+- At startup, the water level is **not high** (`highwater = false`), and **no methane** is detected (`methane = false`).
+- The pump must be **off** (`pump = false`) at initialization.
+
+#### **Assumptions on the Environment**
+1. **Pump Effect on Water Level:**
+   - If the pump remains **on** (`pump = true`) in two consecutive steps, the water level will eventually **decrease** (`next(highwater = false)`).
+2. **Safe Pumping Conditions:**
+   - The pump is **only active** when either **no methane is present** (`methane = false`) or **the water level is not high** (`highwater = false`).
+
+#### **System Guarantees (Required Behavior)**
+1. **Pump Activation in High Water:**
+   - Whenever the water level becomes **high** (`highwater = true`), the pump **must eventually turn on** (`next(pump = true)`) **unless methane is present** (`methane = true`).
+2. **Pump Deactivation in Methane Presence:**
+   - If **methane is detected** (`methane = true`), the pump **must turn off in the next step** (`next(pump = false)`).

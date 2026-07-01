@@ -1,0 +1,20 @@
+### **Minepump System Requirements**
+
+This system regulates a mine pump based on water and methane levels in its environment.
+
+**Inputs (Environment-Controlled):**
+- `highwater`: A signal indicating whether the water level in the mine has risen to a dangerous level (true) or not (false).
+- `methane`: A signal indicating whether methane gas is detected in the mine (true) or not (false).
+
+**Output (System-Controlled):**
+- `pump`: A command to turn the pump on (true) or off (false).
+
+**Assumptions on the Environment:**
+- If `highwater` is true while the pump is off, the pump must remain off in the next step unless it was already off in the previous step.
+- If `methane` is detected (true), the pump must not turn on in the next step unless it was previously off.
+- If `highwater` remains true in consecutive steps, the pump must not turn on unless it was previously off.
+- If `highwater` is currently true and `methane` is expected in the next step, the pump must not turn on unless it was previously off.
+
+**System Guarantees:**
+- The pump must always eventually turn on (`pump = true`) in the next step. *(Liveness requirement: The pump cannot stay off indefinitely.)*
+- If methane is not detected (`methane = false`), the pump is allowed to operate normally. However, if methane is present (`methane = true`), the pump must turn off (`pump = false`) in the next step. *(Safety requirement: The pump must shut down in the presence of methane.)*

@@ -1,0 +1,37 @@
+The **Minepump** system manages a pump in response to environmental inputs from water and methane sensors. Here’s how it operates:
+
+### **Inputs and Outputs**
+- **Environment-controlled inputs**:
+  - `highwater` (boolean): Indicates whether the water level is critically high.
+  - `methane` (boolean): Indicates whether dangerous methane levels are detected.
+
+- **System-controlled output**:
+  - `pump` (boolean): Controls whether the pump is active (`true`) or inactive (`false`).
+
+---
+
+### **Assumptions on the Environment**
+The environment behaves under the following constraints:
+1. **Pump drainage effect**: If the pump runs continuously for two consecutive steps, the water level will no longer be critically high in the next step.
+2. **Mutual exclusivity of hazards (immediate)**: If the pump is active, the environment cannot simultaneously have high water **and** methane. At least one of these conditions must be false.
+3. **Mutual exclusivity of hazards (persistent methane)**: If methane was detected in the previous step, the environment will not allow both high water **and** methane in the current step (again, at least one must be false).
+
+---
+
+### **System Requirements (Guarantees)**
+The system must respond as follows:
+
+1. **Pump activation for high water**:
+   - Whenever the `highwater` sensor detects a critical level, the system must activate the pump (`pump = true`) in the next step.
+
+2. **Pump deactivation for methane**:
+   - Whenever methane is detected (`methane = true`), the system must immediately turn off the pump (`pump = false`) in the next step to avoid ignition risks.
+
+---
+
+### **Summary of Behavior**
+The pump operates under two conflicting priorities:
+- **Water control**: It must drain water when levels rise (activating when `highwater` is detected).
+- **Safety override**: It must shut down when methane is present (deactivating when `methane` is detected).
+
+The environment ensures that these hazards (`highwater` and `methane`) cannot persist indefinitely together, nor can the pump run indefinitely without reducing water levels. The system’s decisions depend entirely on the latest sensor inputs, reacting in the next step.

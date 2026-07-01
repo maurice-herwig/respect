@@ -1,0 +1,26 @@
+**Minepump System Requirements**
+
+This reactive system controls a mine pump in response to two environment-controlled inputs: the detection of **high water** and the presence of **methane gas**.
+
+**Inputs from the Environment:**
+- **High water (`highwater`)** – A boolean signal indicating whether the water level in the mine has risen to a critical level.
+- **Methane (`methane`)** – A boolean signal indicating whether dangerous methane gas has been detected.
+
+**Output from the System:**
+- **Pump (`pump`)** – A boolean signal that determines whether the pump is active (`true`) or inactive (`false`).
+
+**Initial Conditions:**
+- At startup, the environment ensures that there is no high water (`highwater = false`) and no methane (`methane = false`).
+- The system starts with the pump turned off (`pump = false`).
+
+**Assumptions About the Environment:**
+1. If the pump runs continuously for two consecutive time steps, the environment guarantees that high water will clear (`highwater = false`) in the next state.
+2. The environment ensures that if there is no high water (`highwater = false`), then either high water will remain absent **or** methane will be absent in the next state (though the two need not occur simultaneously).
+
+**System Guarantees:**
+1. **Safety in High Water:**
+   - If high water is detected (`highwater = true`), the system must either keep the pump off **or** turn it on in the next state. However, the pump cannot remain on immediately while high water is present.
+2. **Methane Detection:**
+   - If methane is detected (`methane = true`), the system must turn the pump off in the next state to prevent potential ignition risks.
+
+The system must uphold these guarantees at all times, provided the environment adheres to its assumptions.

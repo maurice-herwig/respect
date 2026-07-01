@@ -1,0 +1,29 @@
+### **System Requirements for the Door Module**
+
+This specification describes a reactive door system that interacts with its environment. The environment can trigger events such as pressing a doorbell, ringing the bell, hitting the door, or producing a knocking sound. The system controls whether the door is answered in response to these events.
+
+#### **Environment-Controlled Inputs:**
+The following inputs are determined by the environment:
+- **`bellpressed`**: Indicates whether the doorbell button is being pressed.
+- **`bellrings`**: Indicates whether the doorbell is ringing.
+- **`doorhit`**: Indicates whether the door is being physically struck (e.g., knocked on).
+- **`knocksound`**: Indicates whether a knocking sound is detected.
+
+#### **System-Controlled Output:**
+The system controls the following output:
+- **`dooranswered`**: Indicates whether the door is answered (e.g., opened or acknowledged).
+
+#### **Initial Conditions:**
+- The system starts with the door **not answered** (`dooranswered = false`).
+- Initially, the environment ensures that **no inputs are active** (`bellrings`, `doorhit`, `bellpressed`, and `knocksound` are all `false`).
+
+#### **Assumptions on the Environment:**
+The environment must satisfy the following constraints at all times:
+1. If the **doorbell is pressed** (`bellpressed = true`), then the **doorbell must ring** (`bellrings = true`).
+2. If the **door is hit** (`doorhit = true`), then a **knocking sound must be produced** (`knocksound = true`).
+
+#### **System Guarantees:**
+The system must ensure the following behavior:
+1. **Safety Requirement**: Whenever the **doorbell rings** (`bellrings = true`), the system must **answer the door** (`dooranswered = true`).
+2. **Safety Requirement**: Whenever a **knocking sound is detected** (`knocksound = true`), the system must **answer the door** (`dooranswered = true`).
+3. **No additional liveness or next-state constraints are imposed**—the system only guarantees responses to detected events at the same time they occur. Beyond these stated requirements, no further behavior is guaranteed or restricted.

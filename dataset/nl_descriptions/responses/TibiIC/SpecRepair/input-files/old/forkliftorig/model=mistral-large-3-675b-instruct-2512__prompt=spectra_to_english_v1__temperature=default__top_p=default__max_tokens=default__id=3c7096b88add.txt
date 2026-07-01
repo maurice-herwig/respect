@@ -1,0 +1,21 @@
+### **Requirements for the Forklift Control System**
+
+The forklift control system interacts with its environment based on two inputs:
+- **Environment-controlled input:**
+  `distance` – indicates whether the forklift is *far* from or *close* to an object.
+- **System-controlled output:**
+  `command` – determines the forklift's action, which can be *lift*, *drop*, *go*, or *idle*.
+
+#### **Assumptions on the Environment**
+The environment must adhere to the following behavioral constraints:
+1. If the forklift is *idle* and the distance is *far*, the distance will remain *far* in the next state.
+2. If the forklift is *idle* and the distance is *close*, the distance will remain *close* in the next state.
+3. If the forklift issues the *go* command, the distance will become *close* in the next state.
+4. If the distance is *close* and the forklift does **not** issue the *lift* command, the distance will remain *close* in the next state.
+5. If the distance is *close* and the forklift issues the *lift* command, the distance will **not** be *close* in the next state (i.e., it will transition away from being close).
+
+#### **Guarantees from the System**
+The forklift controller must fulfill the following requirements:
+1. Initially, the command must be set to *lift*.
+2. If the distance is *far*, the system must **not** issue the *drop* command in the next state.
+3. If the distance is *close*, the system must **not** issue the *go* command in the next state.

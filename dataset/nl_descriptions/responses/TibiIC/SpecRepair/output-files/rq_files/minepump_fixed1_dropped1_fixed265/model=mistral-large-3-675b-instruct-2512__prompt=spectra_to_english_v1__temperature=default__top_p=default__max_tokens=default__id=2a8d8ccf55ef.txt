@@ -1,0 +1,29 @@
+### **Minepump System Requirements**
+
+#### **Inputs and Outputs**
+The system interacts with its environment through the following variables:
+- **Environment-controlled inputs:**
+  - `highwater`: Indicates whether the water level is high (`true`) or not (`false`).
+  - `methane`: Indicates whether methane gas is present (`true`) or absent (`false`).
+- **System-controlled output:**
+  - `pump`: Controls whether the pump is on (`true`) or off (`false`).
+
+#### **Assumptions on the Environment**
+The environment must satisfy the following condition:
+- If the water level is not high (`highwater=false`), then in the next state, the water level must either remain not high, **or** the pump must be off. This implies that the pump cannot be the only reason for preventing the water level from rising—natural drainage or other factors must also contribute.
+
+#### **System Guarantees**
+The system must ensure the following behaviors under the given assumptions:
+
+1. **Safety Guarantee (Guarantee 1):**
+   - At every state, at least one of the following must hold:
+     - Methane is present (`methane=true`),
+     - The pump will be on in the next state (`next(pump=true)`), or
+     - The water level is not high (`highwater=false`).
+   - This ensures that the pump is never falsely assumed to be the only safeguard when methane is absent and the water level is high.
+
+2. **Pump Shutdown Guarantee (Guarantee 2):**
+   - If methane is absent (`methane=false`), then the pump must be off in the next state.
+   - This ensures that the pump does not operate when methane is detected, preventing potential explosions.
+
+The system does not specify initial conditions, so no requirements apply at startup beyond those stated above. Additionally, there are no explicit liveness requirements, meaning the system does not guarantee any specific long-term behavior beyond the immediate safety constraints.

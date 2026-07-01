@@ -1,0 +1,23 @@
+The **Minepump** system regulates a pump based on water levels and methane presence, interacting with its environment as follows:
+
+### **Inputs (Environment-Controlled)**
+- `highwater`: Indicates whether the water level is dangerously high.
+- `methane`: Indicates whether dangerous levels of methane gas are present.
+
+### **Output (System-Controlled)**
+- `pump`: Controls whether the pump is active (`true`) or inactive (`false`).
+
+### **Environment Assumptions**
+1. If the water level is *not* high (`highwater=false`), the environment assumes the pump is (or will soon be) off (`pump=false`). This prevents scenarios where the pump remains active unnecessarily when water levels are safe.
+
+### **System Guarantees**
+1. **Safety Constraint 1**: At all times, *either*
+   - Methane is detected (`methane=true`), *or*
+   - The pump will turn on in the next state (`next(pump=true)`), *or*
+   - The water level is not high (`highwater=false`).
+   This ensures the pump is never required to run under unsafe conditions (methane presence) unless the water level is critically high.
+
+2. **Safety Constraint 2**: At all times, the pump will activate in the next state (`next(pump=true)`) *only if* methane is *not* present (`methane=false`).
+   This guarantees the pump will never turn on (immediately or in the next state) if methane is detected, preventing explosions.
+
+The system begins operation in an unspecified initial state, and no liveness properties (e.g., "eventually the pump will turn on") are enforced beyond the above guarantees. Behavior beyond these constraints is not defined.

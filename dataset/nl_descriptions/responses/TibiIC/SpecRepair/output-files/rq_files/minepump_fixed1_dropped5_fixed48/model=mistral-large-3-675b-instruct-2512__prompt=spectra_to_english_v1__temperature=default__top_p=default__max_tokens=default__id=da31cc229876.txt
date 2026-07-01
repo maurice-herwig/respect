@@ -1,0 +1,25 @@
+The **mine pump system** monitors and responds to two environmental conditions—water level and methane presence—while controlling a pump to manage water accumulation. The behavior is defined as follows:
+
+**Environment-controlled inputs:**
+- `highwater`: A signal indicating whether the water level has reached a critical high point.
+- `methane`: A signal indicating whether dangerous levels of methane are detected.
+
+**System-controlled output:**
+- `pump`: A signal that activates or deactivates the pump to remove water.
+
+**Assumptions on the environment:**
+- Whenever the `highwater` signal is active (indicating critical water levels), the environment ensures that either:
+  - The `highwater` signal will deactivate in the next step, or
+  - The system keeps the `pump` off (`pump = false`).
+
+  This implies that the environment does not allow both `highwater` to remain active *and* the pump to run indefinitely without resolution.
+
+**Guarantees provided by the system:**
+- **Safety guarantee (methane-based pump control):**
+  - If methane is detected (`methane = true`), the system ensures the `pump` will turn *on* in the next step.
+  - If methane is *not* detected (`methane = false`), the system ensures the `pump` will turn *off* in the next step.
+
+  Together, these ensure the pump responds immediately to methane presence, reducing explosion risks.
+
+**Initial conditions:**
+The specification does not define explicit initial constraints, so the system’s initial behavior is unconstrained beyond the guarantees and assumptions described.

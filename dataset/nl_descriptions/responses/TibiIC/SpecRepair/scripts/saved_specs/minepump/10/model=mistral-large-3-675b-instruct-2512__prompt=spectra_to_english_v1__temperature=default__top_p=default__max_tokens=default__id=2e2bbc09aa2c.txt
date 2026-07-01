@@ -1,0 +1,32 @@
+### **Minepump System Requirements**
+
+This specification describes a **minepump system** that operates in an environment where water levels and methane gas levels pose hazards.
+
+#### **Environment-Controlled Inputs**
+- **High water (`highwater`)** – A signal indicating whether the water level is dangerously high (controlled by the environment).
+- **Methane (`methane`)** – A signal indicating whether dangerous levels of methane gas are present (controlled by the environment).
+
+#### **System-Controlled Output**
+- **Pump (`pump`)** – A control signal determining whether the pump is active (`true`) or inactive (`false`).
+
+#### **Initial Conditions**
+- The system **starts in a safe state**, where the water level is not high (`highwater = false`), no methane is detected (`methane = false`), and the pump is off (`pump = false`).
+
+#### **Assumptions on the Environment**
+1. If the pump runs continuously (`pump` remains `true` in consecutive steps), the environment ensures that the water level will eventually lower (`highwater` becomes `false` in the next step).
+2. If the water level is low (`highwater = false`), then either it remains low **or** no methane is present (`methane = false`).
+
+#### **Guarantees Enforced by the System**
+1. **Water Handling**:
+   - Whenever the water level becomes high (`highwater = true`), the system **must** either:
+     - Keep the water level high in the next step, **or**
+     - Activate the pump (`pump = true`) in the next step.
+   - *(Note: This is a simplified safety condition; a more practical version would likely always require pump activation when water is high.)*
+
+2. **Methane Safety**:
+   - If methane is detected (`methane = true`), the system **must** either:
+     - Keep methane levels dangerous in the next step, **or**
+     - Shut off the pump (`pump = false`) in the next step.
+   - *(Similarly, a stricter version would likely always require immediate pump deactivation on methane detection.)*
+
+The system ensures that its responses to water and methane conditions are consistent with safety constraints, though the given guarantees allow some flexibility in how strictly the pump reacts.

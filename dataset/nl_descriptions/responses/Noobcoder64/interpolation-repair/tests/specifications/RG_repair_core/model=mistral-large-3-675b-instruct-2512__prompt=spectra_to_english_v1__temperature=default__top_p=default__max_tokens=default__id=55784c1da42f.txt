@@ -1,0 +1,13 @@
+### **Requirements for Reactive System RG**
+
+This system interacts with its environment through two boolean inputs: `req` (a request signal) and `cl` (a clear signal). The system produces two boolean outputs: `gr` (a grant signal) and `val` (a validity signal).
+
+#### **Environment Assumptions**
+1. The environment must ensure that the `req` signal is **released infinitely often**; that is, the request must eventually be deasserted (set to `false`) no matter how long it remains active.
+2. The `cl` signal must **never** be asserted (set to `true`) at any time, including from the very first moment of operation and from every point thereafter.
+
+#### **System Guarantees**
+1. **Safety Requirement:**
+   - Whenever the `cl` signal is asserted (though the environment guarantees it never is), the system must ensure the `val` signal is immediately deasserted (set to `false`).
+2. **Liveness Requirement:**
+   - The system must **infinitely often** reach a state where both the `gr` (grant) and `val` (validity) signals are simultaneously asserted (`true`). This ensures that the system continues to produce valid grants repeatedly over time.

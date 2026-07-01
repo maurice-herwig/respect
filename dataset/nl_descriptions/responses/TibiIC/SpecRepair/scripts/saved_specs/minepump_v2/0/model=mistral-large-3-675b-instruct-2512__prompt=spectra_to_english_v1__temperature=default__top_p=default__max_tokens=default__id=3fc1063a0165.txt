@@ -1,0 +1,30 @@
+### **Minepump System Requirements**
+
+This system controls a pump in an environment where water levels and methane gas pose safety risks.
+
+#### **Inputs and Outputs**
+- The **environment** provides two boolean inputs:
+  - `highwater`: Indicates whether the water level is dangerously high.
+  - `methane`: Indicates whether dangerous levels of methane gas are present.
+- The **system** controls one boolean output:
+  - `pump`: Determines whether the pump is active (`true`) or inactive (`false`).
+
+#### **Initial Conditions**
+At system startup:
+- The water level is not high (`highwater = false`).
+- No methane is detected (`methane = false`).
+- The pump is initially off (`pump = false`).
+
+#### **Environment Assumptions**
+The environment must behave as follows:
+1. If the pump runs continuously for two consecutive time steps, the water level will no longer be high in the next step.
+2. If the water level is not high, then either it remains not high, or methane is not present (i.e., both cannot become `true` simultaneously).
+
+#### **System Guarantees**
+The system must enforce the following rules at all times:
+1. **Pump Activation Rule**: If the water level becomes high, the system must either:
+   - Immediately detect methane (making pumping unsafe), **or**
+   - Activate the pump in the next time step (if methane is not present).
+2. **Pump Shutdown Rule**: If methane is detected, the pump must be turned off in the next time step.
+
+The system must ensure these guarantees hold whenever the environment respects the stated assumptions.

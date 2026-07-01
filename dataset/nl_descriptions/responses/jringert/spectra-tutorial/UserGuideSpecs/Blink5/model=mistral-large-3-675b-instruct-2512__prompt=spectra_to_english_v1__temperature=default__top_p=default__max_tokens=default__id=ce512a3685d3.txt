@@ -1,0 +1,23 @@
+### Requirements Description for *Blink5* System
+
+The *Blink5* system is a reactive controller that interacts with its environment through a single input and produces a single output. The environment controls the input `atStation`, a boolean signal indicating whether the system is currently at a station. The system controls the output `light`, a boolean signal representing the state of a light (on or off).
+
+**Assumptions on the Environment:**
+The specification does not impose any explicit restrictions on the environment's behavior regarding `atStation`. The environment may change `atStation` freely, including staying at a station or leaving it at any time.
+
+**System Guarantees:**
+The system must ensure the following behavior:
+
+1. **Initial Condition:**
+   The system begins with the light count (`blinks`) set to zero, meaning no blinks have occurred yet.
+
+2. **Safety Requirement (Always):**
+   Whenever the system is at a station (`atStation` is true) and the light count (`blinks`) is less than 5, the system must toggle the `light` state in the next step (`blink` must occur). Toggling means changing the light from on to off or from off to on.
+
+3. **Counter Behavior:**
+   The system maintains an internal counter (`blinks`) that tracks the number of light toggles (blinks) while at a station.
+   - The counter increments by 1 each time the light toggles while the system is at a station.
+   - The counter resets to 0 when the system is *not* at a station (`atStation` is false).
+   - The counter is constrained to values between 0 and 5, ensuring that only 5 blinks are counted. Any attempt to exceed 5 blinks is blocked (overflow is forbidden).
+
+No additional liveness or next-state requirements beyond the above are specified. The system's behavior when `atStation` is true and `blinks` equals 5 is not constrained—it may stop blinking or continue toggling the light without incrementing the counter. When `atStation` is false, the system must not increment the counter, regardless of whether the light toggles.

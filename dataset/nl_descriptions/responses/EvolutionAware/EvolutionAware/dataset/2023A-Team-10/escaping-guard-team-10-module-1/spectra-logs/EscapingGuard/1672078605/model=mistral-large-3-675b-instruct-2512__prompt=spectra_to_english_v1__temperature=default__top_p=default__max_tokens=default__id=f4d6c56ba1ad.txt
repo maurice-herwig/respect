@@ -1,0 +1,21 @@
+**Requirements for the EscapingGuard System**
+
+This specification describes a reactive system that controls a robot's movement within a discrete 7×7 grid (where positions are indexed from 0 to 7). The environment provides obstacles and targets, while the system manages the robot's location.
+
+**Environment-Controlled Inputs**
+- **Obstacles**: A set of four two-dimensional grid positions (each with coordinates in the range 0–7), supplied by the environment.
+- **Targets**: A set of three two-dimensional grid positions (each in the range 0–7), also provided by the environment.
+
+**System-Controlled Output**
+- **Robot**: The system controls the robot’s position, specified as a two-dimensional grid coordinate (`robot[0]` for the x-axis, `robot[1]` for the y-axis).
+
+**Initial Condition**
+- At the start, the robot must be positioned at coordinate (7, 0).
+
+**System Guarantees**
+1. **Movement Constraints (Safety Requirement)**
+   At every step, the system must ensure that the robot’s position can change by *at most one grid unit* in each axis. Specifically, for each coordinate (x and y), the next position must either:
+   - Remain the same,
+   - Increase by 1, or
+   - Decrease by 1.
+   This applies independently to both the x and y dimensions. For example, the robot may move diagonally if both coordinates change by ±1, but it cannot move two or more units in a single step. The presence of obstacles and targets does not affect this movement constraint.

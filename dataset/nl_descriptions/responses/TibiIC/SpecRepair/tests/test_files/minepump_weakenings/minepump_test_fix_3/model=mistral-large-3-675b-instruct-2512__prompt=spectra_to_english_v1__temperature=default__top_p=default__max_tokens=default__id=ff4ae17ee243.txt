@@ -1,0 +1,28 @@
+### **Minepump System Requirements**
+
+The **minepump system** regulates water drainage in an underground environment by controlling a pump based on water and methane sensor readings.
+
+#### **Inputs and Outputs**
+- **Environment-controlled inputs:**
+  - `highwater`: Indicates whether the water level has reached a critical high point.
+  - `methane`: Indicates whether dangerous methane levels have been detected.
+- **System-controlled output:**
+  - `pump`: Determines whether the pump is active (`true`) or inactive (`false`).
+
+#### **Initial Conditions**
+- At startup, the water level must **not** be critically high (`highwater = false`), and methane must **not** be detected (`methane = false`).
+- The pump must start in the **off** position (`pump = false`).
+
+#### **Environment Assumptions**
+1. If the pump runs **continuously** (remaining on from one step to the next), the water level will **eventually drop** (i.e., `highwater` will become `false`).
+2. If no methane is detected (`methane = false`), then the environment must ensure either:
+   - The water level is **not** critically high (`highwater = false`), **or**
+   - Methane remains absent (`methane = false`).
+
+#### **System Guarantees**
+1. **Pump Activation Safety:**
+   - If the water level becomes critically high (`highwater = true`), the system must ensure that either:
+     - Methane is **also** detected (`methane = true`), **or**
+     - The pump will **activate in the next step** (`pump = true`).
+2. **Methane Safety Shutdown:**
+   - If methane is detected (`methane = true`), the pump must **turn off in the next step** (`pump = false`).

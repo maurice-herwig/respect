@@ -1,0 +1,25 @@
+### Requirements for the Minepump System
+
+This system controls a pump in a mine to manage water levels while ensuring safety in the presence of methane gas.
+
+**Inputs (Environment-Controlled):**
+- `highwater`: A signal indicating whether the water level in the mine is dangerously high (true) or not (false).
+- `methane`: A signal indicating whether methane gas is detected (true) or not (false).
+
+**Outputs (System-Controlled):**
+- `pump`: A signal that determines whether the pump is active (true) or inactive (false).
+
+**Assumptions on the Environment:**
+- The environment guarantees that if the water level is *not* high at the next time step, it will either remain not high in the following step or the pump was inactive in the previous step. In other words, the water level cannot transition back to high unless the pump was recently turned off.
+
+**Guarantees from the System:**
+1. **Safety Requirement (Guarantee 1):**
+   At all times, at least one of the following must hold:
+   - Methane is present (and thus it is unsafe to run the pump),
+   - The pump will be turned on in the next time step (to manage rising water), or
+   - The water level is currently not high (so pumping is not urgently needed).
+
+2. **Safety Requirement (Guarantee 2):**
+   At all times, if **no methane is detected**, the pump must be turned off in the next time step. This ensures the pump only runs when it is safe to do so.
+
+No initial conditions or liveness requirements are specified. The system must adhere to these guarantees at every step based on the environment's inputs.

@@ -1,0 +1,12 @@
+**Requirements Description for the Minepump System**
+
+The minepump system interacts with its environment through two inputs and one output. The environment controls two signals: *highwater*, indicating whether water levels are elevated, and *methane*, indicating the presence of hazardous gas. The system controls a single output: *pump*, which determines whether the pump is active.
+
+**Assumptions on the Environment:**
+The environment must ensure that once the pump is turned off, it remains off unless the system explicitly turns it back on. In other words, the pump cannot spontaneously turn on without the system’s intervention.
+
+**System Guarantees:**
+1. The system must ensure that at every step, either the *highwater* signal is resolved (i.e., set to false) in the next state, or the pump is turned on in the next state. This prevents unsafe water accumulation if the pump is not activated.
+2. At all times, either the *methane* signal is currently detected, no *methane* is detected, or the pump is turned off in the next state. This ensures that if methane is not explicitly checked or absent, the pump is immediately deactivated to prevent ignition risks.
+
+The system must satisfy these guarantees whenever the environment adheres to the stated assumption. No additional behavior, such as initial conditions or liveness requirements, is imposed.
