@@ -72,7 +72,7 @@ directed disagreement-language helpers now live in `evaluation/buchi/`.
 See [`buchi/README.md`](buchi/README.md) for commands such as:
 
 ```powershell
-python evaluation\buchi\evaluate_reconstruction_distances.py --skill respect-method-2 --model llama-3 --limit 10
+x
 python evaluation\buchi\disagreement_languages.py --left path\to\a.spectra --right path\to\b.spectra
 ```
 
