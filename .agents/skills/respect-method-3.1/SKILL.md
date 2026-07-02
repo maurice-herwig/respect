@@ -1,16 +1,17 @@
 ---
-name: respect-method-3
-description: Method 3 agent for the ReSpect study. Generate Spectra specifications from natural-language requirements, validate and synthesize with spectra-cli.jar like method 2, repair unrealizability with CLI counter-strategy diagnostics, and after successful synthesis create and run NL-guided controller tests with controller_tests. Repair generated Spectra only when CLI/test feedback indicates a problem and the repair is consistent with the natural-language description. Do not compare against source Spectra files or benchmark oracles.
+name: respect-method-3.1
+description: Method 3.1 agent for the ReSpect study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate and synthesize with spectra-cli.jar like method 2, repair unrealizability with CLI counter-strategy diagnostics, and after successful synthesis create and run NL-guided controller tests with controller_tests. Repair generated Spectra only when CLI/test feedback indicates a problem and the repair is consistent with the natural-language description. Do not compare against source Spectra files or benchmark oracles.
 ---
 
-# ReSpect Method 3: CLI-Diagnosed Repair With NL-Guided Controller Tests
+# ReSpect Method 3.1: Grammar-Guided CLI-Diagnosed Repair With NL-Guided Controller Tests
 
 ## Research Role
 
-This skill implements the third ReSpect reconstruction condition in its first version:
+This skill implements the method 3.1 ReSpect reconstruction condition:
 
 - Input: natural-language requirements for a reactive system.
 - Output: a generated Spectra specification plus CLI validation, diagnosis, synthesis, test, and repair results.
+- Initial syntax reference: `assets/grammar/Spectra.xtext`.
 - Feedback sources: `spectra-cli.jar` realizability/synthesis output, CLI counter-strategy diagnostics for unrealizable specifications, and NL-guided controller tests from `controller_tests`.
 - Allowed repair signal: parser output, realizability status, counter-strategy output, controller-test failures, failing traces, generated Spectra, and the natural-language description.
 - Not allowed: reading or comparing against the original/reference Spectra file, semantic equivalence checks against the benchmark, mutation checks, or oracle-based tests.
@@ -20,30 +21,31 @@ The goal is to measure whether CLI diagnostics plus NL-guided bounded controller
 ## Workflow
 
 1. Read `references/spectra-workflow.md` before drafting a new specification.
-2. Translate the user's natural-language description into a complete Spectra specification.
-3. Save the draft to a temporary `.spectra` file before validation.
-4. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, and `test_repair_loops = 0`.
-5. Run `scripts/run_spectra_cli.py` on the saved file with an explicit timeout.
-6. If the result is `syntax_error`, inspect the parser message, increment both `repair_loops` and `syntax_repair_loops`, repair only the syntax, and rerun validation.
-7. Limit syntax-repair loops to at most 3 attempts and report the last parser error if repair still fails.
-8. If the result is `timeout`, report the timeout and do not continue.
-9. If the result is `realizable`, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
-10. If the result is `unrealizable`, request CLI diagnostics with `--counter-strategy` and save the diagnostic JSON.
-11. Analyze the counter-strategy and the natural-language description before changing the specification.
-12. Repair unrealizability only if the proposed change is consistent with the natural-language description.
-13. Prefer minimal repairs that preserve stated requirements: fix overly strong initialization, add environment assumptions only when implied by the description, or relax/reshape a guarantee only when the description supports the weaker form.
-14. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
-15. After each unrealizability repair, increment `unrealizable_repair_loops`, save the file, rerun validation, and continue from the appropriate branch.
-16. Limit unrealizability-repair loops to at most 3 attempts.
-17. If a repaired specification becomes realizable, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
-18. After every successful synthesis, create a controller test plan from the natural-language description, generated Spectra, and synthesized controller metadata.
-19. Run the test plan with `controller_tests`.
-20. If all tests pass, report the passing test counts and test result file.
-21. If tests fail, inspect each failing test name, reason, and trace. Decide whether the test is actually justified by the natural-language description.
-22. If a failing test is too strong, underspecified, or not supported by the natural-language description, revise or remove that test and rerun the test plan without changing Spectra.
-23. If a failing test is justified by the natural-language description, minimally repair the generated Spectra, increment `test_repair_loops`, rerun CLI validation, rerun synthesis, create a fresh test plan, and rerun tests.
-24. Limit test-repair loops to at most 3 attempts.
-25. Always include the final method-3 result fields in the response.
+2. Read `assets/grammar/Spectra.xtext` before drafting, and use it only as syntax guidance for valid Spectra constructs.
+3. Translate the user's natural-language description into a complete Spectra specification.
+4. Save the draft to a temporary `.spectra` file before validation.
+5. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, and `test_repair_loops = 0`.
+6. Run `scripts/run_spectra_cli.py` on the saved file with an explicit timeout.
+7. If the result is `syntax_error`, inspect the parser message, increment both `repair_loops` and `syntax_repair_loops`, repair only the syntax, and rerun validation.
+8. Limit syntax-repair loops to at most 3 attempts and report the last parser error if repair still fails.
+9. If the result is `timeout`, report the timeout and do not continue.
+10. If the result is `realizable`, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
+11. If the result is `unrealizable`, request CLI diagnostics with `--counter-strategy` and save the diagnostic JSON.
+12. Analyze the counter-strategy and the natural-language description before changing the specification.
+13. Repair unrealizability only if the proposed change is consistent with the natural-language description.
+14. Prefer minimal repairs that preserve stated requirements: fix overly strong initialization, add environment assumptions only when implied by the description, or relax/reshape a guarantee only when the description supports the weaker form.
+15. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
+16. After each unrealizability repair, increment `unrealizable_repair_loops`, save the file, rerun validation, and continue from the appropriate branch.
+17. Limit unrealizability-repair loops to at most 3 attempts.
+18. If a repaired specification becomes realizable, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
+19. After every successful synthesis, create a controller test plan from the natural-language description, generated Spectra, and synthesized controller metadata.
+20. Run the test plan with `controller_tests`.
+21. If all tests pass, report the passing test counts and test result file.
+22. If tests fail, inspect each failing test name, reason, and trace. Decide whether the test is actually justified by the natural-language description.
+23. If a failing test is too strong, underspecified, or not supported by the natural-language description, revise or remove that test and rerun the test plan without changing Spectra.
+24. If a failing test is justified by the natural-language description, minimally repair the generated Spectra, increment `test_repair_loops`, rerun CLI validation, rerun synthesis, create a fresh test plan, and rerun tests.
+25. Limit test-repair loops to at most 3 attempts.
+26. Always include the final method-3.1 result fields in the response.
 
 ## Temporary File Handling
 
@@ -60,25 +62,25 @@ The goal is to measure whether CLI diagnostics plus NL-guided bounded controller
 Use the bundled wrapper instead of calling the jar directly:
 
 ```bash
-python .agents/skills/respect-method-3/scripts/run_spectra_cli.py --input <path-to-file> --timeout 120
+python .agents/skills/respect-method-3.1/scripts/run_spectra_cli.py --input <path-to-file> --timeout 120
 ```
 
 For counter-strategy diagnostics after an `unrealizable` result:
 
 ```bash
-python .agents/skills/respect-method-3/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy --timeout 120
+python .agents/skills/respect-method-3.1/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy --timeout 120
 ```
 
 Use JTLV text format only if the default counter-strategy output is not useful:
 
 ```bash
-python .agents/skills/respect-method-3/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy-jtlv-format --timeout 120
+python .agents/skills/respect-method-3.1/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy-jtlv-format --timeout 120
 ```
 
 For synthesis after a `realizable` result:
 
 ```bash
-python .agents/skills/respect-method-3/scripts/run_spectra_cli.py --input <path-to-file> --synthesize --output-dir <path-to-output-dir> --timeout 120
+python .agents/skills/respect-method-3.1/scripts/run_spectra_cli.py --input <path-to-file> --synthesize --output-dir <path-to-output-dir> --timeout 120
 ```
 
 ## Controller Test Commands
@@ -102,6 +104,7 @@ The test plan's `controller_dir` must point at the synthesized JIT folder, usual
 ## Method 3 Boundaries
 
 - Use only the natural-language description, generated Spectra, CLI outputs, synthesized controller metadata, and controller-test outputs as repair evidence.
+- Use `assets/grammar/Spectra.xtext` as a syntax reference, not as semantic feedback or a repair oracle.
 - Do not open `source_spectra_file`, accepted dataset files, HOA exports, distance results, or benchmark fixtures for the current instance.
 - Do not make a specification realizable by deleting stated requirements without a natural-language justification.
 - Do not weaken a guarantee merely because it appears in the counter-strategy; first decide whether the weaker behavior is allowed by the description.
@@ -192,4 +195,5 @@ controller_output_dir: <path or none>
 
 - `scripts/run_spectra_cli.py`: Run `spectra-cli.jar`, normalize the outcome, optionally request counter-strategy diagnostics, and preserve raw output.
 - `references/spectra-workflow.md`: Spectra examples, CLI result patterns, and drafting/repair guidance.
+- `assets/grammar/Spectra.xtext`: Repository-level Xtext grammar for Spectra syntax. Read this before drafting generated specifications.
 - `controller_tests/`: Java test library used after synthesis for NL-guided bounded controller tests.

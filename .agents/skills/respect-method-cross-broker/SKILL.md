@@ -1,9 +1,9 @@
 ---
 name: respect-method-cross-broker
-description: Method cross-broker agent for the ReSpect study. Generate Spectra specifications from natural-language requirements, validate and synthesize with spectra-cli.jar like method 2, repair syntax errors, repair unrealizability with CLI counter-strategy diagnostics like method 3 when consistent with the natural-language description, and after successful synthesis submit the generated specification to experiments/cross_broker.py for peer disagreement feedback. Do not run controller_tests, generated semantic tests, equivalence checks, mutation checks, or benchmark oracles.
+description: Method cross-broker agent for the ReSpect study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate and synthesize with spectra-cli.jar like method 2, repair syntax errors, repair unrealizability with CLI counter-strategy diagnostics like method 3 when consistent with the natural-language description, and after successful synthesis submit the generated specification to experiments/cross_broker.py for peer disagreement feedback. Do not run controller_tests, generated semantic tests, equivalence checks, mutation checks, or benchmark oracles.
 ---
 
-# ReSpect Method Cross-Broker: CLI-Diagnosed Repair With Peer Disagreement Feedback
+# ReSpect Method Cross-Broker: Grammar-Guided CLI-Diagnosed Repair With Peer Disagreement Feedback
 
 ## Research Role
 
@@ -11,6 +11,7 @@ This skill implements a cross-agent ReSpect reconstruction condition:
 
 - Input: natural-language requirements for a reactive system.
 - Output: a generated Spectra specification plus CLI validation, diagnosis, synthesis, broker feedback, and repair results.
+- Initial syntax reference: `assets/grammar/Spectra.xtext`.
 - Feedback sources before broker submission: `spectra-cli.jar` parser/realizability/synthesis output and CLI counter-strategy diagnostics for unrealizable specifications.
 - Feedback source after successful synthesis: disagreement feedback returned by `experiments/cross_broker.py`.
 - Allowed repair signal: parser output, realizability status, counter-strategy output, generated Spectra, the natural-language description, and broker disagreement feedback.
@@ -21,30 +22,31 @@ The goal is to measure whether peer disagreement feedback can improve reconstruc
 ## Workflow
 
 1. Read `references/spectra-workflow.md` before drafting a new specification.
-2. Translate the user's natural-language description into a complete Spectra specification.
-3. Save the draft to a temporary `.spectra` file before validation.
-4. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, `broker_repair_loops = 0`, `broker_witnesses_received = 0`, `accepted_by_self_rejected_by_peer_repaired = 0`, `accepted_by_self_rejected_by_peer_ignored = 0`, `rejected_by_self_accepted_by_peer_repaired = 0`, and `rejected_by_self_accepted_by_peer_ignored = 0`.
-5. Run `scripts/run_spectra_cli.py` on the saved file with an explicit timeout.
-6. If the result is `syntax_error`, inspect the parser message, increment both `repair_loops` and `syntax_repair_loops`, repair only the syntax, and rerun validation.
-7. Limit syntax-repair loops to at most 3 attempts and report the last parser error if repair still fails.
-8. If the result is `timeout`, report the timeout and do not continue.
-9. If the result is `unrealizable`, request CLI diagnostics with `--counter-strategy` and save the diagnostic JSON.
-10. Analyze the counter-strategy and the natural-language description before changing the specification.
-11. Repair unrealizability only if the proposed change is consistent with the natural-language description.
-12. Prefer minimal repairs that preserve stated requirements: fix overly strong initialization, add environment assumptions only when implied by the description, or relax/reshape a guarantee only when the description supports the weaker form.
-13. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
-14. After each unrealizability repair, increment both `repair_loops` and `unrealizable_repair_loops`, save the file, rerun validation, and continue from the appropriate branch.
-15. Limit unrealizability-repair loops to at most 3 attempts.
-16. If the result is `realizable`, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to broker submission.
-17. Submit the current synthesized Spectra file to the broker by running `experiments/cross_broker.py submit-and-wait` with the run id, current round id, agent id, spec path, expected agents, and timeout provided by the task prompt.
-18. Save the broker JSON response as `broker/feedback-<round>.json`. If the response contains a `feedback_file`, read that file and use it as the authoritative broker feedback for the round.
-19. If broker feedback is unavailable, has a non-ready status, or reports `semantic_relation = equivalent`, record the status and stop the broker loop.
-20. If broker feedback reports disagreement words, inspect both `accepted_by_you_rejected_by_peer` and `rejected_by_you_accepted_by_peer`. Treat them as peer disagreement evidence only, not as ground truth.
-21. Decide for each word whether the natural-language description supports a specification change. Count every word as either leading to repair or ignored, separately for each direction.
-22. If no word justifies a change, stop the broker loop and report that broker feedback was not applied.
-23. If at least one word justifies a change, make the minimal Spectra repair consistent with the natural-language description, increment both `repair_loops` and `broker_repair_loops`, save the file, rerun CLI validation, rerun synthesis, increment the broker round id, and submit the repaired Spectra to the broker again.
-24. Limit broker-repair loops to at most 3 attempts.
-25. Always include the final method cross-broker result fields in the response.
+2. Read `assets/grammar/Spectra.xtext` before drafting, and use it only as syntax guidance for valid Spectra constructs.
+3. Translate the user's natural-language description into a complete Spectra specification.
+4. Save the draft to a temporary `.spectra` file before validation.
+5. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, `broker_repair_loops = 0`, `broker_witnesses_received = 0`, `accepted_by_self_rejected_by_peer_repaired = 0`, `accepted_by_self_rejected_by_peer_ignored = 0`, `rejected_by_self_accepted_by_peer_repaired = 0`, and `rejected_by_self_accepted_by_peer_ignored = 0`.
+6. Run `scripts/run_spectra_cli.py` on the saved file with an explicit timeout.
+7. If the result is `syntax_error`, inspect the parser message, increment both `repair_loops` and `syntax_repair_loops`, repair only the syntax, and rerun validation.
+8. Limit syntax-repair loops to at most 3 attempts and report the last parser error if repair still fails.
+9. If the result is `timeout`, report the timeout and do not continue.
+10. If the result is `unrealizable`, request CLI diagnostics with `--counter-strategy` and save the diagnostic JSON.
+11. Analyze the counter-strategy and the natural-language description before changing the specification.
+12. Repair unrealizability only if the proposed change is consistent with the natural-language description.
+13. Prefer minimal repairs that preserve stated requirements: fix overly strong initialization, add environment assumptions only when implied by the description, or relax/reshape a guarantee only when the description supports the weaker form.
+14. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
+15. After each unrealizability repair, increment both `repair_loops` and `unrealizable_repair_loops`, save the file, rerun validation, and continue from the appropriate branch.
+16. Limit unrealizability-repair loops to at most 3 attempts.
+17. If the result is `realizable`, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to broker submission.
+18. Submit the current synthesized Spectra file to the broker by running `experiments/cross_broker.py submit-and-wait` with the run id, current round id, agent id, spec path, expected agents, and timeout provided by the task prompt.
+19. Save the broker JSON response as `broker/feedback-<round>.json`. If the response contains a `feedback_file`, read that file and use it as the authoritative broker feedback for the round.
+20. If broker feedback is unavailable, has a non-ready status, or reports `semantic_relation = equivalent`, record the status and stop the broker loop.
+21. If broker feedback reports disagreement words, inspect both `accepted_by_you_rejected_by_peer` and `rejected_by_you_accepted_by_peer`. Treat them as peer disagreement evidence only, not as ground truth.
+22. Decide for each word whether the natural-language description supports a specification change. Count every word as either leading to repair or ignored, separately for each direction.
+23. If no word justifies a change, stop the broker loop and report that broker feedback was not applied.
+24. If at least one word justifies a change, make the minimal Spectra repair consistent with the natural-language description, increment both `repair_loops` and `broker_repair_loops`, save the file, rerun CLI validation, rerun synthesis, increment the broker round id, and submit the repaired Spectra to the broker again.
+25. Limit broker-repair loops to at most 3 attempts.
+26. Always include the final method cross-broker result fields in the response.
 
 ## Temporary File Handling
 
@@ -123,6 +125,7 @@ Broker words are disagreement evidence, not oracle counterexamples. The peer spe
 ## Method Cross-Broker Boundaries
 
 - Use the same syntax-repair and unrealizability-repair discipline as method 3.
+- Use `assets/grammar/Spectra.xtext` as a syntax reference, not as semantic feedback or a repair oracle.
 - Do not run `controller_tests`.
 - Do not create or run NL-guided controller tests.
 - Do not run generated semantic tests, trace tests, benchmark-specific oracle checks, mutation checks, or equivalence checks.
@@ -194,4 +197,5 @@ controller_output_dir: <path or none>
 
 - `scripts/run_spectra_cli.py`: Run `spectra-cli.jar`, normalize the outcome, optionally request counter-strategy diagnostics, and preserve raw output.
 - `references/spectra-workflow.md`: Spectra examples, CLI result patterns, and drafting/repair guidance.
+- `assets/grammar/Spectra.xtext`: Repository-level Xtext grammar for Spectra syntax. Read this before drafting generated specifications.
 - `experiments/cross_broker.py`: Repository-level broker used after successful synthesis to synchronize peer disagreement feedback.
