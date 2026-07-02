@@ -23,34 +23,79 @@ The goal is to measure whether CLI diagnostics plus NL-guided bounded controller
 1. Read `references/spectra-workflow.md` before drafting a new specification.
 2. Read `assets/grammar/Spectra.xtext` before drafting, and use it only as syntax guidance for valid Spectra constructs.
 3. Translate the user's natural-language description into a complete Spectra specification.
-4. Save the draft to a temporary `.spectra` file before validation.
+4. Save the initial draft as `specs/00_initial.spectra` before validation.
 5. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, and `test_repair_loops = 0`.
 6. Run `scripts/run_spectra_cli.py` on the saved file with an explicit timeout.
 7. If the result is `syntax_error`, inspect the parser message, increment both `repair_loops` and `syntax_repair_loops`, repair only the syntax, and rerun validation.
-8. Limit syntax-repair loops to at most 3 attempts and report the last parser error if repair still fails.
-9. If the result is `timeout`, report the timeout and do not continue.
-10. If the result is `realizable`, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
-11. If the result is `unrealizable`, request CLI diagnostics with `--counter-strategy` and save the diagnostic JSON.
-12. Analyze the counter-strategy and the natural-language description before changing the specification.
-13. Repair unrealizability only if the proposed change is consistent with the natural-language description.
-14. Prefer minimal repairs that preserve stated requirements: fix overly strong initialization, add environment assumptions only when implied by the description, or relax/reshape a guarantee only when the description supports the weaker form.
-15. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
-16. After each unrealizability repair, increment `unrealizable_repair_loops`, save the file, rerun validation, and continue from the appropriate branch.
-17. Limit unrealizability-repair loops to at most 3 attempts.
-18. If a repaired specification becomes realizable, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
-19. After every successful synthesis, create a controller test plan from the natural-language description, generated Spectra, and synthesized controller metadata.
-20. Run the test plan with `controller_tests`.
-21. If all tests pass, report the passing test counts and test result file.
-22. If tests fail, inspect each failing test name, reason, and trace. Decide whether the test is actually justified by the natural-language description.
-23. If a failing test is too strong, underspecified, or not supported by the natural-language description, revise or remove that test and rerun the test plan without changing Spectra.
-24. If a failing test is justified by the natural-language description, minimally repair the generated Spectra, increment `test_repair_loops`, rerun CLI validation, rerun synthesis, create a fresh test plan, and rerun tests.
-25. Limit test-repair loops to at most 3 attempts.
-26. Always include the final method-3.1 result fields in the response.
+8. After the syntax-repair phase ends and the run moves to the next phase, save the stable repaired specification as `specs/01_after_syntax_repair.spectra` and append one transition record to `repair_log.jsonl`.
+9. Limit syntax-repair loops to at most 3 attempts and report the last parser error if repair still fails.
+10. If the result is `timeout`, report the timeout and do not continue.
+11. If the result is `realizable`, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
+12. If the result is `unrealizable`, request CLI diagnostics with `--counter-strategy` and save the diagnostic JSON.
+13. Analyze the counter-strategy and the natural-language description before changing the specification.
+14. Repair unrealizability only if the proposed change is consistent with the natural-language description.
+15. Prefer minimal repairs that preserve stated requirements: fix overly strong initialization, add environment assumptions only when implied by the description, or relax/reshape a guarantee only when the description supports the weaker form.
+16. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
+17. After the unrealizability-repair phase ends and the run moves to synthesis, save the stable repaired specification as `specs/02_after_unrealizable_repair.spectra` and append one transition record to `repair_log.jsonl`.
+18. After each unrealizability repair, increment `unrealizable_repair_loops`, save the current working file, rerun validation, and continue from the appropriate branch.
+19. Limit unrealizability-repair loops to at most 3 attempts.
+20. If a repaired specification becomes realizable, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
+21. After every successful synthesis, create a controller test plan from the natural-language description, generated Spectra, and synthesized controller metadata.
+22. Run the test plan with `controller_tests`.
+23. If all tests pass, report the passing test counts and test result file.
+24. If tests fail, inspect each failing test name, reason, and trace. Decide whether the test is actually justified by the natural-language description.
+25. If a failing test is too strong, underspecified, or not supported by the natural-language description, revise or remove that test and rerun the test plan without changing Spectra.
+26. If a failing test is justified by the natural-language description, minimally repair the generated Spectra, increment `test_repair_loops`, rerun CLI validation, rerun synthesis, create a fresh test plan, and rerun tests.
+27. After the test-repair phase ends and the tests are rerun or the run stops, save the stable repaired specification as `specs/03_after_test_repair.spectra` and append one transition record to `repair_log.jsonl`.
+28. Limit test-repair loops to at most 3 attempts.
+29. Save the final Spectra version as `final.spectra`. Always include the final method-3.1 result fields in the response.
 
 ## Temporary File Handling
 
 - Create a temporary working directory under the repository root, for example `tmp/spectra-runs/<timestamp>-<slug>/`.
-- Save the generated specification as `<name>.spectra`.
+- Use this stable artifact layout:
+
+```text
+tmp/spectra-runs/<timestamp>-<slug>/
+  specs/
+    00_initial.spectra
+    01_after_syntax_repair.spectra
+    02_after_unrealizable_repair.spectra
+    03_after_test_repair.spectra
+  diagnostics/
+    unrealizable-<n>.json
+  tests/
+    test-plan-<n>.json
+    test-results-<n>.json
+  final.spectra
+  repair_log.jsonl
+```
+
+- Save only stable Spectra versions at phase boundaries: the initial draft, the specification that leaves each repair phase, and the final specification. Do not save every intermediate failed repair attempt inside a loop unless it is also the final state.
+- Omit phase-specific spec files and repair-log entries for phases that did not run. For example, if no test repair was attempted, do not create `specs/03_after_test_repair.spectra`.
+- Keep `final.spectra` as a copy of the last stable Spectra version and report `spectra_file` as that path.
+- Append one JSON object per phase transition to `repair_log.jsonl`.
+- Use this `repair_log.jsonl` schema consistently across method 2.1, method 3.1, and cross-broker:
+
+```json
+{
+  "version": "02_after_unrealizable_repair",
+  "phase": "unrealizable_repair",
+  "input_spec": "specs/01_after_syntax_repair.spectra",
+  "output_spec": "specs/02_after_unrealizable_repair.spectra",
+  "trigger": "unrealizable",
+  "result_before": "unrealizable",
+  "result_after": "synthesized",
+  "repair_loops_total": 2,
+  "syntax_repair_loops": 1,
+  "unrealizable_repair_loops": 1,
+  "test_repair_loops": 0,
+  "broker_repair_loops": 0,
+  "diagnostic_files": ["diagnostics/unrealizable-1.json"],
+  "notes": "Minimal NL-consistent repair summary."
+}
+```
+
 - Save the JSON output of each counter-strategy wrapper call as `diagnostics/unrealizable-<n>.json`. The actual counter-strategy text is preserved inside that JSON object's `raw_output` field.
 - Save controller test plans as `tests/test-plan-<n>.json`.
 - Save controller test results as `tests/test-results-<n>.json`.
@@ -189,6 +234,8 @@ tests_passed: <number>
 tests_failed: <number>
 spectra_file: <path>
 controller_output_dir: <path or none>
+artifact_dir: <path>
+repair_log_file: <path>
 ```
 
 ## Bundled Resources

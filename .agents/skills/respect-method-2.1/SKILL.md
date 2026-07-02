@@ -23,20 +23,57 @@ The goal is to measure the benefit of CLI-based executability feedback over a si
 1. Read `references/spectra-workflow.md` before drafting a new specification.
 2. Read `assets/grammar/Spectra.xtext` before drafting, and use it only as syntax guidance for valid Spectra constructs.
 3. Translate the user's free-form description into a complete Spectra specification.
-4. Save the draft to a temporary `.spectra` file before validation.
+4. Save the initial draft as `specs/00_initial.spectra` before validation.
 5. Initialize `repair_loops` to `0`.
 6. Run `scripts/run_spectra_cli.py` on the saved file with an explicit timeout.
 7. If the result is `syntax_error`, inspect the parser message, increment `repair_loops`, repair the file with the LLM, and run the check again.
-8. Limit syntax-repair loops to at most 3 attempts and report the last parser error if repair still fails.
-9. If the result is `timeout`, report the timeout and do not continue to synthesis.
-10. If the result is `unrealizable`, report that no controller can be synthesized for the current specification. Give only a concise LLM-inferred explanation grounded in the specification and CLI result.
-11. If the result is `realizable`, run synthesis and return the controller output path.
-12. Always include the final method-2.1 result fields in the response: `cli_status`, `repair_loops`, `timeout_seconds`, `spectra_file`, and `controller_output_dir` if synthesis succeeded.
+8. After the syntax-repair phase ends and the run moves to the next phase, save the stable repaired specification as `specs/01_after_syntax_repair.spectra` and append one transition record to `repair_log.jsonl`.
+9. Limit syntax-repair loops to at most 3 attempts and report the last parser error if repair still fails.
+10. If the result is `timeout`, report the timeout and do not continue to synthesis.
+11. If the result is `unrealizable`, report that no controller can be synthesized for the current specification. Give only a concise LLM-inferred explanation grounded in the specification and CLI result.
+12. If the result is `realizable`, run synthesis and return the controller output path.
+13. Save the final Spectra version as `final.spectra`. Always include the final method-2.1 result fields in the response: `cli_status`, `repair_loops`, `timeout_seconds`, `spectra_file`, `controller_output_dir` if synthesis succeeded, `artifact_dir`, and `repair_log_file`.
 
 ## Temporary File Handling
 
 - Create a temporary working directory under the repository root, for example `tmp/spectra-runs/<timestamp>-<slug>/`.
-- Save the generated specification as `<name>.spectra`.
+- Use this stable artifact layout:
+
+```text
+tmp/spectra-runs/<timestamp>-<slug>/
+  specs/
+    00_initial.spectra
+    01_after_syntax_repair.spectra
+  diagnostics/
+  final.spectra
+  repair_log.jsonl
+```
+
+- Save only stable Spectra versions at phase boundaries: the initial draft, the specification that leaves the syntax-repair phase, and the final specification. Do not save every intermediate failed repair attempt inside a loop unless it is also the final state.
+- Omit phase-specific spec files and repair-log entries for phases that did not run. For example, if no syntax repair was attempted, do not create `specs/01_after_syntax_repair.spectra`.
+- Keep `final.spectra` as a copy of the last stable Spectra version and report `spectra_file` as that path.
+- Append one JSON object per phase transition to `repair_log.jsonl`.
+- Use this `repair_log.jsonl` schema consistently:
+
+```json
+{
+  "version": "01_after_syntax_repair",
+  "phase": "syntax_repair",
+  "input_spec": "specs/00_initial.spectra",
+  "output_spec": "specs/01_after_syntax_repair.spectra",
+  "trigger": "syntax_error",
+  "result_before": "syntax_error",
+  "result_after": "realizable",
+  "repair_loops_total": 1,
+  "syntax_repair_loops": 1,
+  "unrealizable_repair_loops": 0,
+  "test_repair_loops": 0,
+  "broker_repair_loops": 0,
+  "diagnostic_files": [],
+  "notes": "Minimal syntax repair summary."
+}
+```
+
 - Keep the final `.spectra` file and synthesis output long enough for the user to inspect the artifacts.
 - Do not overwrite unrelated files.
 
@@ -104,6 +141,8 @@ repair_loops: <number>
 timeout_seconds: <number>
 spectra_file: <path>
 controller_output_dir: <path or none>
+artifact_dir: <path>
+repair_log_file: <path>
 ```
 
 ## Bundled Resources
