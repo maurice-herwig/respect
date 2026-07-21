@@ -100,6 +100,7 @@ tmp/spectra-runs/<timestamp>-<slug>/
 - Save the JSON output of each counter-strategy wrapper call as `diagnostics/unrealizable-<n>.json`. The actual counter-strategy text is preserved inside that JSON object's `raw_output` field.
 - Save controller test DSL files as `tests/test-plan-<n>.rtest`.
 - Compile each DSL file to `tests/test-plan-<n>.json` before running the Java test runner.
+- Save DSL compiler diagnostics as `tests/dsl-diagnostics-<n>-<attempt>.json` when compilation fails or when a repair loop is used.
 - Save controller test results as `tests/test-results-<n>.json`.
 - Keep the final `.spectra` file and synthesis output long enough for inspection.
 - Do not overwrite unrelated files.
@@ -154,6 +155,12 @@ Compile a controller-test DSL file before running it:
 python controller_tests\compile_test_plan.py <test-plan.rtest> -o <test-plan.json>
 ```
 
+For DSL repair feedback:
+
+```powershell
+python controller_tests\compile_test_plan.py <test-plan.rtest> --check --diagnostics-json <dsl-diagnostics.json>
+```
+
 ## Method 3 Boundaries
 
 - Use only the natural-language description, generated Spectra, CLI outputs, synthesized controller metadata, and controller-test outputs as repair evidence.
@@ -181,6 +188,16 @@ python controller_tests\compile_test_plan.py <test-plan.rtest> -o <test-plan.jso
 After successful synthesis, generate a controller-test DSL file for `controller_tests` and compile it to JSON. Use only the natural-language description, the generated Spectra file, and the synthesized controller location.
 
 Prefer the `.rtest` DSL over writing JSON directly. The JSON file is an execution artifact produced by `controller_tests/compile_test_plan.py`.
+
+If the DSL compiler reports `dsl_syntax_error`, repair only the `.rtest` file:
+
+1. Read the diagnostics JSON, especially `errors[0].code`, `message`, `hint`, and `context`.
+2. Compare the intended tests against the natural-language description.
+3. Fix only DSL syntax or test-plan structure. Do not change the generated Spectra file.
+4. Do not add tests that are not justified by the natural-language description.
+5. Save the repaired `.rtest` as the next attempt and rerun the compiler.
+6. Limit DSL repair to at most 3 attempts.
+7. If the DSL still does not compile, report the final diagnostics and do not run Java controller tests.
 
 Required top-level `.rtest` fields:
 

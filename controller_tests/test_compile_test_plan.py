@@ -249,6 +249,30 @@ class RTestCompilerTests(unittest.TestCase):
         with self.assertRaisesRegex(DslError, "requires a trace"):
             compile_rtest(source)
 
+    def test_unknown_key_error_carries_code_line_and_hint(self):
+        """Misspelled keys should produce repair-oriented structured metadata."""
+
+        source = textwrap.dedent("""
+        controller_dir out/jit
+        spec_name Fixture
+        spectra_file fixture.spectra
+        environment request
+        system grant
+
+        test bad_key:
+          kind exclusion
+          trace:
+            request=true
+          forbid grant=true
+        """)
+
+        with self.assertRaises(DslError) as raised:
+            compile_rtest(source)
+
+        self.assertEqual(raised.exception.code, "unknown_key")
+        self.assertEqual(raised.exception.line, 12)
+        self.assertIn("forbidden", raised.exception.hint)
+
     def test_cli_writes_json_output(self):
         """The command-line compiler should create a JSON file for the Java runner."""
 
@@ -280,6 +304,90 @@ class RTestCompilerTests(unittest.TestCase):
             self.assertEqual(plan["tests"][0]["name"], "declared")
             self.assertEqual(plan["tests"][0]["env"], ["request"])
             self.assertEqual(plan["tests"][0]["sys"], ["grant"])
+
+    def test_cli_writes_success_diagnostics_json(self):
+        """Successful compiles should write diagnostics that report success."""
+
+        source = textwrap.dedent("""
+        controller_dir out/jit
+        spec_name Fixture
+        spectra_file fixture.spectra
+        environment request
+        system grant
+
+        test declared:
+          kind variable_ownership
+        """)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "plan.rtest"
+            diagnostics_path = Path(temp_dir) / "diagnostics.json"
+            input_path.write_text(source, encoding="utf-8")
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "controller_tests" / "compile_test_plan.py"),
+                    str(input_path),
+                    "--check",
+                    "--diagnostics-json",
+                    str(diagnostics_path),
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(diagnostics_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["status"], "success")
+            self.assertEqual(payload["compiled_tests"], 1)
+            self.assertEqual(payload["errors"], [])
+
+    def test_cli_writes_failure_diagnostics_json_with_context(self):
+        """Failed compiles should write structured diagnostics for LLM repair."""
+
+        source = textwrap.dedent("""
+        controller_dir out/jit
+        spec_name Fixture
+        spectra_file fixture.spectra
+        environment request
+        system grant
+
+        test missing_forbidden:
+          kind exclusion
+          trace:
+            request=true
+        """)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "plan.rtest"
+            diagnostics_path = Path(temp_dir) / "diagnostics.json"
+            input_path.write_text(source, encoding="utf-8")
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "controller_tests" / "compile_test_plan.py"),
+                    str(input_path),
+                    "--check",
+                    "--diagnostics-json",
+                    str(diagnostics_path),
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 2)
+            payload = json.loads(diagnostics_path.read_text(encoding="utf-8"))
+            error = payload["errors"][0]
+            self.assertEqual(payload["status"], "dsl_syntax_error")
+            self.assertEqual(error["code"], "missing_required_field")
+            self.assertEqual(error["line"], 8)
+            self.assertIn("forbidden", error["hint"])
+            self.assertTrue(any(item["is_error_line"] for item in error["context"]))
+            self.assertIn("Repair only the .rtest", payload["repair_instruction"])
 
 
 if __name__ == "__main__":

@@ -109,6 +109,12 @@ Validate a DSL file without writing JSON:
 python controller_tests\compile_test_plan.py path\to\plan.rtest --check
 ```
 
+Write machine-readable diagnostics for a repair loop:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest --check --diagnostics-json path\to\dsl-diagnostics.json
+```
+
 The existing JSON format remains the runner input and is still supported.
 
 ## JSON Test Plan Format

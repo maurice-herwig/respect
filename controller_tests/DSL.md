@@ -16,6 +16,12 @@ Validate without writing JSON:
 python controller_tests\compile_test_plan.py path\to\plan.rtest --check
 ```
 
+Write machine-readable diagnostics for humans or LLM repair loops:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest --check --diagnostics-json path\to\dsl-diagnostics.json
+```
+
 ## Design Goals
 
 - Keep test plans readable for humans and LLM agents.
@@ -386,6 +392,84 @@ The compiler rejects:
 - `eventually_response` without `eventually`,
 - `random` or `exhaustive` tests without `domains:`,
 - trace-mode runtime tests without a `trace:` block.
+
+## Diagnostics JSON
+
+`compile_test_plan.py` can write structured diagnostics with
+`--diagnostics-json`. On success, the file has this shape:
+
+```json
+{
+  "status": "success",
+  "tool": "controller_tests.compile_test_plan",
+  "file": "tests/test-plan-1.rtest",
+  "errors": [],
+  "compiled_tests": 3
+}
+```
+
+On failure, the status is `dsl_syntax_error` and the first compiler error is
+reported with a stable code, source context, and repair hint:
+
+```json
+{
+  "status": "dsl_syntax_error",
+  "tool": "controller_tests.compile_test_plan",
+  "file": "tests/test-plan-1.rtest",
+  "errors": [
+    {
+      "code": "missing_required_field",
+      "line": 8,
+      "column": null,
+      "message": "Line 8: exclusion requires forbidden.",
+      "hint": "Add `forbidden <valuation>` to this exclusion test.",
+      "context": [
+        {"line": 8, "text": "test never_both_green:", "is_error_line": true}
+      ]
+    }
+  ],
+  "repair_instruction": "Repair only the .rtest test-plan syntax and structure..."
+}
+```
+
+Diagnostic codes include:
+
+- `indentation_error`
+- `invalid_statement`
+- `unknown_key`
+- `invalid_block_syntax`
+- `invalid_valuation`
+- `invalid_domain`
+- `empty_block`
+- `invalid_integer`
+- `invalid_boolean`
+- `missing_top_level_field`
+- `missing_test_block`
+- `missing_test_kind`
+- `unsupported_test_kind`
+- `missing_required_field`
+- `invalid_exploration`
+
+These diagnostics are intended for `.rtest` repair only. A DSL compile failure
+must not be treated as evidence that the generated Spectra specification is
+wrong.
+
+## DSL Repair Loop
+
+Method-3 agents should repair invalid `.rtest` files before running the Java
+controller tests:
+
+1. Write `tests/test-plan-<n>.rtest`.
+2. Run the compiler with `--diagnostics-json`.
+3. If compilation fails, send the diagnostics JSON, the current `.rtest` file,
+   and this DSL reference to the LLM.
+4. Ask the LLM to repair only the `.rtest` syntax and structure.
+5. Save the repaired file as a new attempt.
+6. Retry compilation.
+7. Stop after at most three DSL repair attempts.
+
+Only after the `.rtest` file compiles should the generated JSON plan be passed
+to `respect.controller_tests.TestRunner`.
 
 ## Method-3 Guidance
 
