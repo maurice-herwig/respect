@@ -37,13 +37,88 @@ not committed.
 The controller directory in the plan must point at the synthesized JIT folder,
 for example `<controller_output_dir>/jit`.
 
-## Test Plan Format
+## DSL Test Plans
+
+Humans and Method-3 agents should write controller tests in the `.rtest` DSL and
+compile it to the JSON format consumed by the Java runner:
+
+```powershell
+python controller_tests\compile_test_plan.py controller_tests\examples\traffic_e2_plan.rtest -o controller_tests\examples\traffic_e2_plan.compiled.json
+```
+
+Run the compiled plan:
+
+```powershell
+java "-Djava.library.path=." -cp "controller_tests\build\classes;assets\examples\E2_execution\executor.jar" respect.controller_tests.TestRunner --plan controller_tests\examples\traffic_e2_plan.compiled.json
+```
+
+Minimal `.rtest` example:
+
+```text
+controller_dir assets/examples/E2_execution/out/jit
+spec_name TrafficE2
+spectra_file assets/examples/E2_execution/TrafficE2.spectra
+environment carA, carB
+system greenA, greenB
+
+test declared_variables:
+  kind variable_ownership
+
+test never_both_green:
+  kind exclusion
+  trace:
+    carA=true, carB=false
+    carA=false, carB=true
+  forbidden greenA=true, greenB=true
+```
+
+Top-level required fields:
+
+- `controller_dir`: synthesized JIT controller directory.
+- `spec_name`: Spectra module/spec name used by the Syntech executor.
+- `spectra_file`: generated Spectra file used by static checks.
+- `environment`: comma-separated environment-controlled input variables.
+- `system`: comma-separated system-controlled output variables.
+
+The compiler writes `system` to the JSON `outputs` field used by the Java
+runner. Old DSL files with top-level `outputs` still compile, but new plans
+should use `system`.
+
+Inside a `test <name>:` block, use `kind` plus the fields required by that test
+kind. Concrete input traces are written as a `trace:` block. Random and
+exhaustive exploration use a `domains:` block, which compiles to the JSON
+environment-domain map:
+
+```text
+test exhaustive_never_both_green:
+  kind exclusion
+  mode exhaustive
+  max_depth 4
+  max_paths 256
+  domains:
+    carA false, true
+    carB false, true
+  forbidden greenA=true, greenB=true
+```
+
+Validate a DSL file without writing JSON:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest --check
+```
+
+The existing JSON format remains the runner input and is still supported.
+
+## JSON Test Plan Format
 
 ```json
 {
   "controller_dir": "path/to/controller/jit",
   "spec_name": "TrafficE2",
   "spectra_file": "path/to/generated.spectra",
+  "environment": ["carA", "carB"],
+  "system": ["greenA", "greenB"],
+  "outputs": ["greenA", "greenB"],
   "tests": [
     {
       "kind": "variable_ownership",

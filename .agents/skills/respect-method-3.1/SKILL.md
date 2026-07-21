@@ -65,6 +65,7 @@ tmp/spectra-runs/<timestamp>-<slug>/
   diagnostics/
     unrealizable-<n>.json
   tests/
+    test-plan-<n>.rtest
     test-plan-<n>.json
     test-results-<n>.json
   final.spectra
@@ -97,7 +98,8 @@ tmp/spectra-runs/<timestamp>-<slug>/
 ```
 
 - Save the JSON output of each counter-strategy wrapper call as `diagnostics/unrealizable-<n>.json`. The actual counter-strategy text is preserved inside that JSON object's `raw_output` field.
-- Save controller test plans as `tests/test-plan-<n>.json`.
+- Save controller test DSL files as `tests/test-plan-<n>.rtest`.
+- Compile each DSL file to `tests/test-plan-<n>.json` before running the Java test runner.
 - Save controller test results as `tests/test-results-<n>.json`.
 - Keep the final `.spectra` file and synthesis output long enough for inspection.
 - Do not overwrite unrelated files.
@@ -146,6 +148,12 @@ On Linux/macOS use `:` instead of `;` in the Java classpath and adjust the nativ
 
 The test plan's `controller_dir` must point at the synthesized JIT folder, usually `<controller_output_dir>/jit`. The `spec_name` must match the `spec` name in the generated Spectra file.
 
+Compile a controller-test DSL file before running it:
+
+```powershell
+python controller_tests\compile_test_plan.py <test-plan.rtest> -o <test-plan.json>
+```
+
 ## Method 3 Boundaries
 
 - Use only the natural-language description, generated Spectra, CLI outputs, synthesized controller metadata, and controller-test outputs as repair evidence.
@@ -170,7 +178,43 @@ The test plan's `controller_dir` must point at the synthesized JIT folder, usual
 
 ## NL-Guided Controller Test Planning
 
-After successful synthesis, generate a JSON test plan for `controller_tests`. Use only the natural-language description, the generated Spectra file, and the synthesized controller location.
+After successful synthesis, generate a controller-test DSL file for `controller_tests` and compile it to JSON. Use only the natural-language description, the generated Spectra file, and the synthesized controller location.
+
+Prefer the `.rtest` DSL over writing JSON directly. The JSON file is an execution artifact produced by `controller_tests/compile_test_plan.py`.
+
+Required top-level `.rtest` fields:
+
+```text
+controller_dir <controller-output-dir>/jit
+spec_name <SpectraSpecName>
+spectra_file <generated-spectra-file>
+environment <comma-separated environment inputs>
+system <comma-separated system outputs>
+```
+
+Example `.rtest` tests:
+
+```text
+test declared_variables:
+  kind variable_ownership
+
+test never_both_green:
+  kind exclusion
+  trace:
+    carA=true, carB=false
+    carA=false, carB=true
+  forbidden greenA=true, greenB=true
+
+test exhaustive_never_both_green:
+  kind exclusion
+  mode exhaustive
+  max_depth 4
+  max_paths 256
+  domains:
+    carA false, true
+    carB false, true
+  forbidden greenA=true, greenB=true
+```
 
 Supported test kinds:
 
@@ -195,7 +239,7 @@ Default bounds:
 
 Test-plan rules:
 
-- Include top-level `outputs` so the harness reads only system-controlled outputs.
+- Include top-level `environment` and `system`. The DSL compiler uses `system` to produce the JSON `outputs` field so the harness reads only system-controlled outputs.
 - Include `spectra_file`, `controller_dir`, and `spec_name`.
 - Use finite environment domains, e.g. `"carA": ["false", "true"]`.
 - Do not create a test that is stronger than the natural-language description. For example, "eventually green" does not imply "green immediately".

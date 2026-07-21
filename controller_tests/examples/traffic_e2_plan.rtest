@@ -1,0 +1,29 @@
+# ReSpect controller-test DSL equivalent of traffic_e2_plan.json.
+controller_dir assets/examples/E2_execution/out/jit
+spec_name TrafficE2
+spectra_file assets/examples/E2_execution/TrafficE2.spectra
+environment carA, carB
+system greenA, greenB
+
+test declared_variables:
+  kind variable_ownership
+
+test never_both_green:
+  kind exclusion
+  trace:
+    carA=true, carB=false
+    carA=false, carB=true
+    carA=true, carB=true
+    carA=true, carB=false
+  forbidden greenA=true, greenB=true
+
+test car_a_eventually_green:
+  kind eventually_response
+  trace:
+    carA=true, carB=false
+    carA=true, carB=false
+    carA=true, carB=false
+    carA=true, carB=false
+  when carA=true
+  eventually greenA=true
+  within_steps 4
