@@ -238,3 +238,9 @@ Common failure codes:
 The details object includes fields such as `trace_index`, `step_index`,
 `expected`, `actual_combined`, `missing_or_different`, `when`, `then`,
 `eventually`, and `matched_variables` when relevant.
+
+The runner isolates test failures. If one test has a plan problem or throws
+during execution, that test receives `passed=false` and a structured failure
+entry, while the remaining tests continue to run. Runtime tests without a
+`requirement` field fail with `details.failure_code=missing_requirement`.
+Unexpected per-test exceptions fail with `details.failure_code=test_execution_error`.
