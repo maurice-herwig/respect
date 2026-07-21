@@ -231,6 +231,95 @@ class RTestCompilerTests(unittest.TestCase):
             },
         )
 
+    def test_translates_new_test_kinds(self):
+        """New controller-test kinds should compile to the Java runner JSON shape."""
+
+        source = textwrap.dedent("""
+        controller_dir out/jit
+        spec_name Fixture
+        spectra_file fixture.spectra
+        environment request, reset
+        system grant, alarm, idle
+
+        test outputs_mutually_exclusive:
+          kind mutual_exclusion
+          trace:
+            request=true, reset=false
+          variables grant, alarm
+
+        test exactly_one_mode:
+          kind one_hot
+          trace:
+            request=false, reset=false
+          variables grant, alarm, idle
+
+        test always_idle_on_reset:
+          kind invariant
+          trace:
+            request=false, reset=true
+          condition reset=true, idle=true
+
+        test startup_sequence:
+          kind state_sequence
+          trace:
+            request=true, reset=false
+            request=false, reset=false
+          expect:
+            grant=false
+            grant=true
+
+        test alarm_persists:
+          kind persistence
+          trace:
+            request=true, reset=false
+            request=true, reset=false
+          when alarm=true
+          maintain alarm=true
+          until reset=true
+
+        test no_grant_after_reset:
+          kind response_absence
+          trace:
+            request=false, reset=true
+            request=true, reset=false
+          when reset=true
+          absent grant=true
+          for_steps 2
+        """)
+
+        plan = compile_rtest(source)
+        tests = {test["name"]: test for test in plan["tests"]}
+
+        self.assertEqual(tests["outputs_mutually_exclusive"]["variables"], ["grant", "alarm"])
+        self.assertEqual(tests["exactly_one_mode"]["kind"], "one_hot")
+        self.assertEqual(tests["always_idle_on_reset"]["condition"], {"reset": "true", "idle": "true"})
+        self.assertEqual(tests["startup_sequence"]["expect"], [{"grant": "false"}, {"grant": "true"}])
+        self.assertEqual(tests["alarm_persists"]["maintain"], {"alarm": "true"})
+        self.assertEqual(tests["no_grant_after_reset"]["absent"], {"grant": "true"})
+        self.assertEqual(tests["no_grant_after_reset"]["for_steps"], 2)
+
+    def test_rejects_state_sequence_length_mismatch(self):
+        """State sequence tests need one expected valuation per input step."""
+
+        self.assert_dsl_error_code(
+            """
+            controller_dir out/jit
+            spec_name Fixture
+            spectra_file fixture.spectra
+            environment request
+            system grant
+
+            test bad_sequence:
+              kind state_sequence
+              trace:
+                request=true
+                request=false
+              expect:
+                grant=true
+            """,
+            "sequence_length_mismatch",
+        )
+
     def test_rejects_trace_test_without_trace_block(self):
         """Trace-mode safety tests need concrete inputs to exercise the controller."""
 

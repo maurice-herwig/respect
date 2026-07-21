@@ -163,6 +163,15 @@ Supported `kind` values:
   Set `require_closed_obligations` to `true` if a trace ending with an open
   response obligation should fail. The default is `false`, which avoids failing
   merely because a bounded trace ends before an unexpired deadline.
+- `mutual_exclusion`: fails when more than one listed variable has `active_value`
+  at the same step. `active_value` defaults to `true`.
+- `one_hot`: fails unless exactly one listed variable has `active_value`.
+- `invariant`: requires `condition` to match every explored step.
+- `state_sequence`: replays a concrete `trace:` and checks one `expect:` valuation
+  per step.
+- `persistence`: after `when` matches, `maintain` must hold until `until` matches.
+- `response_absence`: after `when` matches, `absent` must not match for
+  `for_steps` steps.
 
 Controller tests support three execution modes:
 
@@ -213,6 +222,13 @@ Common failure codes:
 - `open_response_obligation`: a trace ended with an open response obligation and
   `require_closed_obligations` was enabled.
 - `trigger_not_observed`: no explored trace matched the response trigger.
+- `mutual_exclusion_violation`: more than one variable in a group was active.
+- `one_hot_violation`: zero or more than one variable in a group was active.
+- `invariant_violation`: an invariant condition did not match a step.
+- `state_sequence_mismatch`: an expected sequence valuation did not match.
+- `persistence_violation`: a maintained valuation was lost before `until`.
+- `response_absence_violation`: a forbidden response occurred in the absence
+  window.
 
 The details object includes fields such as `trace_index`, `step_index`,
 `expected`, `actual_combined`, `missing_or_different`, `when`, `then`,

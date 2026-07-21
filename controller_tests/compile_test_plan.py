@@ -36,11 +36,24 @@ SCALAR_KEYS = {
     "name",
     "requirement",
     "confidence",
+    "active_value",
 }
-LIST_KEYS = {"outputs", "env", "sys", "environment", "system"}
-MAP_KEYS = {"forbidden", "when", "then", "eventually", "expected", "inputs", "initial_inputs"}
-BLOCK_KEYS = {"trace", "domains"}
-INT_KEYS = {"max_depth", "max_paths", "runs", "seed", "within_steps"}
+LIST_KEYS = {"outputs", "env", "sys", "environment", "system", "variables"}
+MAP_KEYS = {
+    "forbidden",
+    "when",
+    "then",
+    "eventually",
+    "expected",
+    "inputs",
+    "initial_inputs",
+    "condition",
+    "maintain",
+    "until",
+    "absent",
+}
+BLOCK_KEYS = {"trace", "domains", "expect"}
+INT_KEYS = {"max_depth", "max_paths", "runs", "seed", "within_steps", "for_steps"}
 BOOL_KEYS = {"require_closed_obligations"}
 VALID_TEST_KINDS = {
     "variable_ownership",
@@ -48,11 +61,27 @@ VALID_TEST_KINDS = {
     "exclusion",
     "always_implication",
     "eventually_response",
+    "mutual_exclusion",
+    "one_hot",
+    "invariant",
+    "state_sequence",
+    "persistence",
+    "response_absence",
 }
 VALID_EXPLORATION_MODES = {"trace", "random", "exhaustive"}
-POSITIVE_INT_FIELDS = {"max_depth", "max_paths", "runs", "within_steps"}
+POSITIVE_INT_FIELDS = {"max_depth", "max_paths", "runs", "within_steps", "for_steps"}
 INPUT_FIELDS = {"inputs", "initial_inputs"}
-OBSERVATION_FIELDS = {"expected", "then", "eventually", "when", "forbidden"}
+OBSERVATION_FIELDS = {
+    "expected",
+    "then",
+    "eventually",
+    "when",
+    "forbidden",
+    "condition",
+    "maintain",
+    "until",
+    "absent",
+}
 ALL_KEYS = sorted(SCALAR_KEYS | LIST_KEYS | MAP_KEYS | BLOCK_KEYS)
 
 
@@ -357,6 +386,9 @@ def compile_rtest(source: str, *, strict_files: bool = False) -> dict[str, Any]:
                 if key == "trace" and value == "":
                     test["trace"], index = parse_trace_block(lines, index + 1, child.indent)
                     continue
+                if key == "expect" and value == "":
+                    test["expect"], index = parse_trace_block(lines, index + 1, child.indent)
+                    continue
                 if key == "domains" and value == "":
                     test["env"], index = parse_domains_block(lines, index + 1, child.indent)
                     continue
@@ -438,6 +470,41 @@ def validate_test(test: dict[str, Any], line_number: int) -> None:
             code="missing_required_field",
             line=line_number,
             hint="Add `eventually <valuation>` to this eventually_response test.",
+        )
+    if kind in {"mutual_exclusion", "one_hot"} and not test.get("variables"):
+        raise DslError(
+            f"Line {line_number}: {kind} requires variables.",
+            code="missing_required_field",
+            line=line_number,
+            hint=f"Add `variables <comma-separated variables>` to this {kind} test.",
+        )
+    if kind == "invariant" and not test.get("condition"):
+        raise DslError(
+            f"Line {line_number}: invariant requires condition.",
+            code="missing_required_field",
+            line=line_number,
+            hint="Add `condition <valuation>` to this invariant test.",
+        )
+    if kind == "state_sequence" and not test.get("expect"):
+        raise DslError(
+            f"Line {line_number}: state_sequence requires expect.",
+            code="missing_required_field",
+            line=line_number,
+            hint="Add an `expect:` block with one expected valuation per trace step.",
+        )
+    if kind == "persistence" and not test.get("maintain"):
+        raise DslError(
+            f"Line {line_number}: persistence requires maintain.",
+            code="missing_required_field",
+            line=line_number,
+            hint="Add `maintain <valuation>` to this persistence test.",
+        )
+    if kind == "response_absence" and not test.get("absent"):
+        raise DslError(
+            f"Line {line_number}: response_absence requires absent.",
+            code="missing_required_field",
+            line=line_number,
+            hint="Add `absent <valuation>` to this response_absence test.",
         )
     mode = test.get("mode", "trace")
     if mode not in VALID_EXPLORATION_MODES:
@@ -612,6 +679,16 @@ def validate_test_semantics(test: dict[str, Any], *, env_set: set[str], sys_set:
             owner_hint="Trace steps may assign only environment variables.",
         )
 
+    if "variables" in test:
+        validate_variables(
+            test_name=test_name,
+            field="variables",
+            variables=set(test["variables"]),
+            allowed=known,
+            known=known,
+            owner_hint="`variables` may reference known environment or system variables.",
+        )
+
     for field in INPUT_FIELDS:
         if field in test:
             validate_variables(
@@ -633,6 +710,23 @@ def validate_test_semantics(test: dict[str, Any], *, env_set: set[str], sys_set:
                 allowed=known,
                 known=known,
                 owner_hint=f"`{field}` may reference known environment or system variables.",
+            )
+
+    if "expect" in test:
+        for step in test["expect"]:
+            validate_variables(
+                test_name=test_name,
+                field="expect",
+                variables=set(step),
+                allowed=known,
+                known=known,
+                owner_hint="`expect:` may reference known environment or system variables.",
+            )
+        if test.get("kind") == "state_sequence" and len(test.get("trace") or []) != len(test["expect"]):
+            raise DslError(
+                f"Test {test_name!r} has {len(test.get('trace') or [])} trace step(s) but {len(test['expect'])} expect step(s).",
+                code="sequence_length_mismatch",
+                hint="For `state_sequence`, provide exactly one `expect:` valuation for each `trace:` step.",
             )
 
 

@@ -102,6 +102,7 @@ indented_test_stmt ::= kind_stmt
                      | map_test_stmt
                      | list_test_stmt
                      | trace_block
+                     | expect_block
                      | domains_block
 
 kind_stmt       ::= "kind" test_kind
@@ -110,21 +111,31 @@ test_kind       ::= "variable_ownership"
                   | "exclusion"
                   | "always_implication"
                   | "eventually_response"
+                  | "mutual_exclusion"
+                  | "one_hot"
+                  | "invariant"
+                  | "state_sequence"
+                  | "persistence"
+                  | "response_absence"
 
 mode_stmt       ::= "mode" exploration_mode
 exploration_mode ::= "trace" | "random" | "exhaustive"
 
 scalar_test_stmt ::= ("max_depth" | "max_paths" | "runs" | "seed"
-                    | "within_steps") integer
+                    | "within_steps" | "for_steps") integer
                    | "require_closed_obligations" boolean
-                   | ("requirement" | "confidence") scalar
+                   | ("requirement" | "confidence" | "active_value") scalar
 
-list_test_stmt  ::= ("env" | "sys" | "environment" | "system") variable_list
+list_test_stmt  ::= ("env" | "sys" | "environment" | "system"
+                    | "variables") variable_list
 
 map_test_stmt   ::= ("forbidden" | "when" | "then" | "eventually"
-                    | "expected" | "inputs" | "initial_inputs") valuation
+                    | "expected" | "inputs" | "initial_inputs"
+                    | "condition" | "maintain" | "until"
+                    | "absent") valuation
 
 trace_block     ::= "trace:" indented_valuation+
+expect_block    ::= "expect:" indented_valuation+
 domains_block   ::= "domains:" indented_domain+
 
 indented_valuation ::= valuation
@@ -271,6 +282,135 @@ Optional fields:
 - `require_closed_obligations`: if `true`, a trace ending before the response is
   observed fails. Defaults to `false`.
 
+### mutual_exclusion
+
+Checks that at most one variable from a group is active at every explored step.
+
+```text
+test never_two_modes:
+  kind mutual_exclusion
+  trace:
+    request=true
+  variables idle, moving, charging
+```
+
+Required field:
+
+- `variables`: variables in the mutually exclusive group.
+
+Optional field:
+
+- `active_value`: value considered active. Defaults to `true`.
+
+### one_hot
+
+Checks that exactly one variable from a group is active at every explored step.
+
+```text
+test exactly_one_mode:
+  kind one_hot
+  trace:
+    request=false
+  variables idle, moving, charging
+```
+
+Required field:
+
+- `variables`: variables in the one-hot group.
+
+Optional field:
+
+- `active_value`: value considered active. Defaults to `true`.
+
+### invariant
+
+Checks that a valuation holds at every explored step.
+
+```text
+test reset_implies_idle:
+  kind invariant
+  trace:
+    reset=true
+  condition reset=true, idle=true
+```
+
+Required field:
+
+- `condition`: valuation that must match every step.
+
+### state_sequence
+
+Replays a concrete `trace:` and checks an `expect:` valuation for each step.
+
+```text
+test startup_sequence:
+  kind state_sequence
+  trace:
+    start=true
+    start=false
+  expect:
+    ready=false
+    ready=true
+```
+
+Required fields:
+
+- `trace`: concrete input sequence.
+- `expect`: expected valuations. It must have exactly one entry per trace step.
+
+Use this only when the natural-language requirement defines a concrete sequence;
+otherwise it can overconstrain underspecified controllers.
+
+### persistence
+
+After `when` matches, `maintain` must keep matching until `until` matches. If
+`until` is omitted, the maintained valuation must hold to the end of each trace.
+
+```text
+test alarm_persists_until_reset:
+  kind persistence
+  trace:
+    fault=true, reset=false
+    fault=false, reset=false
+    fault=false, reset=true
+  when alarm=true
+  maintain alarm=true
+  until reset=true
+```
+
+Required field:
+
+- `maintain`: valuation that must persist after the trigger.
+
+Optional fields:
+
+- `when`: trigger valuation. If omitted, the trigger is effectively immediate.
+- `until`: valuation that closes the persistence obligation.
+
+### response_absence
+
+After `when` matches, `absent` must not match for `for_steps` steps.
+
+```text
+test no_grant_during_reset:
+  kind response_absence
+  trace:
+    reset=true
+    reset=false
+  when reset=true
+  absent grant=true
+  for_steps 2
+```
+
+Required field:
+
+- `absent`: valuation that must not occur in the absence window.
+
+Optional fields:
+
+- `when`: trigger valuation. If omitted, the trigger is effectively immediate.
+- `for_steps`: absence-window length. Defaults to `1`.
+
 ## Exploration Modes
 
 Controller tests replay concrete input traces against fresh controller
@@ -396,6 +536,11 @@ The compiler rejects:
 - `exclusion` without `forbidden`,
 - `always_implication` without `then`,
 - `eventually_response` without `eventually`,
+- `mutual_exclusion` or `one_hot` without `variables`,
+- `invariant` without `condition`,
+- `state_sequence` without `expect`,
+- `persistence` without `maintain`,
+- `response_absence` without `absent`,
 - `random` or `exhaustive` tests without `domains:`,
 - trace-mode runtime tests without a `trace:` block.
 
@@ -412,6 +557,8 @@ The compiler also performs semantic validation:
 - `expected`, `then`, `eventually`, `when`, and `forbidden` may reference known
   environment or system variables because tests match the combined input/output
   valuation observed at each step,
+- `condition`, `maintain`, `until`, `absent`, `expect`, and `variables` may also
+  reference known environment or system variables,
 - `trace:` must not be combined with `mode random` or `mode exhaustive`,
 - `domains:` must not be used with default trace mode,
 - `max_depth`, `max_paths`, `runs`, `seed`, and `within_steps` must be positive
@@ -488,6 +635,7 @@ Diagnostic codes include:
 - `conflicting_exploration_fields`
 - `invalid_bound`
 - `duplicate_domain_value`
+- `sequence_length_mismatch`
 - `missing_file`
 - `missing_controller_dir`
 

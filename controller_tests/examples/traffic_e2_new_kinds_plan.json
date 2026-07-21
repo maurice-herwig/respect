@@ -1,0 +1,65 @@
+{
+  "controller_dir": "assets/examples/E2_execution/out/jit",
+  "spec_name": "TrafficE2",
+  "spectra_file": "assets/examples/E2_execution/TrafficE2.spectra",
+  "environment": ["carA", "carB"],
+  "system": ["greenA", "greenB"],
+  "outputs": ["greenA", "greenB"],
+  "tests": [
+    {
+      "kind": "mutual_exclusion",
+      "name": "single_car_input_mutually_exclusive",
+      "trace": [
+        {"carA": "true", "carB": "false"},
+        {"carA": "false", "carB": "true"}
+      ],
+      "variables": ["carA", "carB"]
+    },
+    {
+      "kind": "one_hot",
+      "name": "exactly_one_car_input",
+      "trace": [
+        {"carA": "true", "carB": "false"},
+        {"carA": "false", "carB": "true"}
+      ],
+      "variables": ["carA", "carB"]
+    },
+    {
+      "kind": "invariant",
+      "name": "trace_inputs_are_observed",
+      "trace": [
+        {"carA": "true", "carB": "false"}
+      ],
+      "condition": {"carA": "true", "carB": "false"}
+    },
+    {
+      "kind": "state_sequence",
+      "name": "first_step_inputs_match",
+      "trace": [
+        {"carA": "true", "carB": "false"}
+      ],
+      "expect": [
+        {"carA": "true", "carB": "false"}
+      ]
+    },
+    {
+      "kind": "persistence",
+      "name": "car_a_persists_for_single_step",
+      "trace": [
+        {"carA": "true", "carB": "false"}
+      ],
+      "when": {"carA": "true"},
+      "maintain": {"carA": "true"}
+    },
+    {
+      "kind": "response_absence",
+      "name": "car_b_absent_on_first_request",
+      "trace": [
+        {"carA": "true", "carB": "false"}
+      ],
+      "when": {"carA": "true"},
+      "absent": {"carB": "true"},
+      "for_steps": 1
+    }
+  ]
+}
