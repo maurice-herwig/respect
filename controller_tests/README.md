@@ -46,6 +46,8 @@ compile it to the JSON format consumed by the Java runner:
 python controller_tests\compile_test_plan.py controller_tests\examples\traffic_e2_plan.rtest -o controller_tests\examples\traffic_e2_plan.compiled.json
 ```
 
+The complete DSL syntax and semantics are defined in [`DSL.md`](DSL.md).
+
 Run the compiled plan:
 
 ```powershell

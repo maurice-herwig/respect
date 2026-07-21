@@ -25,6 +25,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 class RTestCompilerTests(unittest.TestCase):
     """Unit tests for representative `.rtest` compiler behavior."""
 
+    maxDiff = None
+
     def test_compiles_traffic_example_to_existing_json_plan(self):
         """The checked-in DSL example should compile to the checked-in JSON plan."""
 
@@ -34,6 +36,100 @@ class RTestCompilerTests(unittest.TestCase):
         )
 
         self.assertEqual(compile_rtest(source), expected)
+
+    def test_translates_top_level_environment_and_system_to_runner_outputs(self):
+        """Top-level DSL ownership metadata should be preserved and normalized."""
+
+        source = textwrap.dedent("""
+        controller_dir generated/out/jit
+        spec_name Door
+        spectra_file generated/Door.spectra
+        environment request, reset
+        system grant, alarm
+
+        test declared:
+          kind variable_ownership
+        """)
+
+        plan = compile_rtest(source)
+
+        self.assertEqual(plan["controller_dir"], "generated/out/jit")
+        self.assertEqual(plan["spec_name"], "Door")
+        self.assertEqual(plan["spectra_file"], "generated/Door.spectra")
+        self.assertEqual(plan["environment"], ["request", "reset"])
+        self.assertEqual(plan["system"], ["grant", "alarm"])
+        self.assertEqual(plan["outputs"], ["grant", "alarm"])
+        self.assertEqual(
+            plan["tests"],
+            [
+                {
+                    "name": "declared",
+                    "kind": "variable_ownership",
+                    "env": ["request", "reset"],
+                    "sys": ["grant", "alarm"],
+                }
+            ],
+        )
+
+    def test_translates_legacy_outputs_alias_to_system_and_outputs(self):
+        """Old DSL files using `outputs` should still compile to the new shape."""
+
+        source = textwrap.dedent("""
+        controller_dir out/jit
+        spec_name Fixture
+        spectra_file fixture.spectra
+        environment request
+        outputs grant
+
+        test declared:
+          kind variable_ownership
+        """)
+
+        plan = compile_rtest(source)
+
+        self.assertEqual(plan["system"], ["grant"])
+        self.assertEqual(plan["outputs"], ["grant"])
+        self.assertEqual(plan["tests"][0]["sys"], ["grant"])
+
+    def test_translates_trace_block_and_valuations_to_json_strings(self):
+        """Concrete traces and expected valuations should become JSON string maps."""
+
+        source = textwrap.dedent("""
+        controller_dir out/jit
+        spec_name Fixture
+        spectra_file fixture.spectra
+        environment request, level
+        system grant
+
+        test concrete_response:
+          kind eventually_response
+          trace:
+            request=true, level=0
+            request=true, level=1
+          when request=true
+          eventually grant=true
+          within_steps 2
+          require_closed_obligations true
+        """)
+
+        plan = compile_rtest(source)
+        test = plan["tests"][0]
+
+        self.assertEqual(
+            test,
+            {
+                "name": "concrete_response",
+                "kind": "eventually_response",
+                "trace": [
+                    {"request": "true", "level": "0"},
+                    {"request": "true", "level": "1"},
+                ],
+                "when": {"request": "true"},
+                "eventually": {"grant": "true"},
+                "within_steps": 2,
+                "require_closed_obligations": True,
+            },
+        )
 
     def test_compiles_exhaustive_domains_block(self):
         """Exploration domains should become the JSON `env` domain map."""
@@ -65,6 +161,75 @@ class RTestCompilerTests(unittest.TestCase):
         self.assertEqual(test["mode"], "exhaustive")
         self.assertEqual(test["max_depth"], 3)
         self.assertEqual(test["then"], {"grant": "false"})
+
+    def test_translates_random_exploration_settings(self):
+        """Random exploration settings should compile without losing bounds."""
+
+        source = textwrap.dedent("""
+        controller_dir out/jit
+        spec_name Fixture
+        spectra_file fixture.spectra
+        environment request, reset
+        system error
+
+        test random_no_error:
+          kind exclusion
+          mode random
+          runs 25
+          max_depth 8
+          seed 99
+          domains:
+            request false, true
+            reset false, true
+          forbidden error=true
+        """)
+
+        plan = compile_rtest(source)
+
+        self.assertEqual(
+            plan["tests"][0],
+            {
+                "name": "random_no_error",
+                "kind": "exclusion",
+                "mode": "random",
+                "runs": 25,
+                "max_depth": 8,
+                "seed": 99,
+                "env": {
+                    "request": ["false", "true"],
+                    "reset": ["false", "true"],
+                },
+                "forbidden": {"error": "true"},
+            },
+        )
+
+    def test_translates_test_level_environment_system_aliases(self):
+        """Test-block `environment` and `system` aliases should become `env`/`sys`."""
+
+        source = textwrap.dedent("""
+        controller_dir out/jit
+        spec_name Fixture
+        spectra_file fixture.spectra
+        environment request, cancel
+        system grant, alarm
+
+        test selected_ownership:
+          kind variable_ownership
+          environment request
+          system grant
+        """)
+
+        plan = compile_rtest(source)
+
+        self.assertEqual(
+            plan["tests"][0],
+            {
+                "name": "selected_ownership",
+                "kind": "variable_ownership",
+                "env": ["request"],
+                "sys": ["grant"],
+            },
+        )
 
     def test_rejects_trace_test_without_trace_block(self):
         """Trace-mode safety tests need concrete inputs to exercise the controller."""
