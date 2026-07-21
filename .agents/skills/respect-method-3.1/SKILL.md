@@ -259,11 +259,13 @@ Default bounds:
 
 Test-plan rules:
 
+- Include `requirement "<natural-language requirement>"` in every runtime test. The requirement must quote or closely paraphrase the natural-language description and justify the test.
+- Do not include a test if no natural-language requirement justifies it.
 - Include top-level `environment` and `system`. The DSL compiler uses `system` to produce the JSON `outputs` field so the harness reads only system-controlled outputs.
 - Include `spectra_file`, `controller_dir`, and `spec_name`.
 - Use finite environment domains, e.g. `"carA": ["false", "true"]`.
 - Do not create a test that is stronger than the natural-language description. For example, "eventually green" does not imply "green immediately".
-- Prefer a small set of high-confidence tests over many speculative tests.
+- Prefer a small set of tests that are clearly justified by the natural-language description over many speculative tests.
 
 ## Test Failure Repair Rules
 
@@ -271,12 +273,13 @@ When a controller test fails:
 
 1. Read the test result JSON, especially `name`, `kind`, `reason`, `trace`, and `details`.
 2. Use `details.failure_code` and fields such as `actual_combined`, `missing_or_different`, `trace_index`, and `step_index` to diagnose the failure.
-3. Compare the failed expectation against the natural-language description.
-4. If the test is not justified by the description, revise or remove the test and rerun tests. Do not change Spectra for an invalid test.
-5. If the test is justified, identify the minimal Spectra change needed to satisfy the description.
-6. Apply the repair, increment `test_repair_loops`, rerun CLI validation, rerun synthesis, write a fresh test plan, and rerun tests.
-7. Stop after 3 test-repair attempts.
-8. If tests still fail, report the last failure and whether the remaining issue appears to be a generated-Spectra problem or a test-plan uncertainty.
+3. Compare the failed test's `requirement` field against the natural-language description.
+4. If the `requirement` field is missing, too vague, or not supported by the natural-language description, repair or remove the test instead of changing Spectra.
+5. If the test is not justified by the description, revise or remove the test and rerun tests. Do not change Spectra for an invalid test.
+6. If the test is justified, identify the minimal Spectra change needed to satisfy the description.
+7. Apply the repair, increment `test_repair_loops`, rerun CLI validation, rerun synthesis, write a fresh test plan, and rerun tests.
+8. Stop after 3 test-repair attempts.
+9. If tests still fail, report the last failure and whether the remaining issue appears to be a generated-Spectra problem or a test-plan uncertainty.
 
 ## Final Response Format
 

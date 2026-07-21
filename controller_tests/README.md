@@ -68,11 +68,16 @@ test declared_variables:
 
 test never_both_green:
   kind exclusion
+  requirement "The two traffic lights must never be green at the same time."
   trace:
     carA=true, carB=false
     carA=false, carB=true
   forbidden greenA=true, greenB=true
 ```
+
+For Method-3 runs, every runtime test should include a `requirement` field that
+quotes or closely paraphrases the natural-language requirement justifying the
+test. The DSL does not use a `confidence` field.
 
 Top-level required fields:
 

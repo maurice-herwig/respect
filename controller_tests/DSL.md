@@ -124,7 +124,7 @@ exploration_mode ::= "trace" | "random" | "exhaustive"
 scalar_test_stmt ::= ("max_depth" | "max_paths" | "runs" | "seed"
                     | "within_steps" | "for_steps") integer
                    | "require_closed_obligations" boolean
-                   | ("requirement" | "confidence" | "active_value") scalar
+                   | ("requirement" | "active_value") scalar
 
 list_test_stmt  ::= ("env" | "sys" | "environment" | "system"
                     | "variables") variable_list
@@ -169,6 +169,19 @@ underscore and may contain letters, digits, underscores, and hyphens.
 
 Each test block must contain a `kind` statement. Supported kinds are described
 below.
+
+Method-3 test plans should also include a `requirement` statement for every
+runtime test. The value should quote or closely paraphrase the natural-language
+requirement that justifies the test:
+
+```text
+test never_both_green:
+  kind mutual_exclusion
+  requirement "The two traffic lights must never be green at the same time."
+  variables greenA, greenB
+```
+
+Do not add tests that cannot be justified by a natural-language requirement.
 
 ### variable_ownership
 
@@ -671,7 +684,8 @@ For ReSpect Method 3, tests must be derived only from:
 Do not derive `.rtest` files from the original benchmark Spectra file or from an
 oracle controller.
 
-Prefer small, high-confidence tests:
+Prefer a small set of tests that are clearly justified by the natural-language
+requirements:
 
 - one `variable_ownership` test,
 - safety tests for explicit "never" or "always" requirements,

@@ -35,7 +35,6 @@ SCALAR_KEYS = {
     "require_closed_obligations",
     "name",
     "requirement",
-    "confidence",
     "active_value",
 }
 LIST_KEYS = {"outputs", "env", "sys", "environment", "system", "variables"}
