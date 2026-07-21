@@ -135,4 +135,31 @@ public final class TestUtil {
         }
         return true;
     }
+
+    public static List<String> matchedVariables(Map<String, String> actual, Map<String, String> expected) {
+        List<String> result = new ArrayList<>();
+        for (Map.Entry<String, String> entry : expected.entrySet()) {
+            if (entry.getValue().equals(actual.get(entry.getKey()))) {
+                result.add(entry.getKey());
+            }
+        }
+        return result;
+    }
+
+    public static List<String> missingOrDifferentVariables(Map<String, String> actual, Map<String, String> expected) {
+        List<String> result = new ArrayList<>();
+        for (Map.Entry<String, String> entry : expected.entrySet()) {
+            String actualValue = actual.get(entry.getKey());
+            if (!entry.getValue().equals(actualValue)) {
+                result.add(entry.getKey());
+            }
+        }
+        return result;
+    }
+
+    public static Map<String, Object> failureDetails(String failureCode) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("failure_code", failureCode);
+        return details;
+    }
 }

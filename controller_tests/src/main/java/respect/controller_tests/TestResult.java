@@ -10,21 +10,27 @@ public final class TestResult {
     private final boolean passed;
     private final String reason;
     private final List<Map<String, Object>> trace;
+    private final Map<String, Object> details;
 
-    private TestResult(String name, String kind, boolean passed, String reason, List<Map<String, Object>> trace) {
+    private TestResult(String name, String kind, boolean passed, String reason, List<Map<String, Object>> trace, Map<String, Object> details) {
         this.name = name;
         this.kind = kind;
         this.passed = passed;
         this.reason = reason;
         this.trace = trace;
+        this.details = details;
     }
 
     public static TestResult pass(String name, String kind) {
-        return new TestResult(name, kind, true, null, null);
+        return new TestResult(name, kind, true, null, null, null);
     }
 
     public static TestResult fail(String name, String kind, String reason, List<Map<String, Object>> trace) {
-        return new TestResult(name, kind, false, reason, trace);
+        return new TestResult(name, kind, false, reason, trace, null);
+    }
+
+    public static TestResult fail(String name, String kind, String reason, List<Map<String, Object>> trace, Map<String, Object> details) {
+        return new TestResult(name, kind, false, reason, trace, details);
     }
 
     public boolean passed() {
@@ -41,6 +47,9 @@ public final class TestResult {
         }
         if (trace != null) {
             value.put("trace", trace);
+        }
+        if (details != null) {
+            value.put("details", details);
         }
         return value;
     }

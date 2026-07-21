@@ -26,7 +26,19 @@ public final class InitialConditionTest implements TestCase {
         ControllerHarness harness = context.newHarness();
         StepResult step = harness.step(inputs);
         if (!TestUtil.matches(step.combined(), expected)) {
-            return TestResult.fail(name, "initial_condition", "Initial condition did not match expected valuation", List.of(step.toJson()));
+            Map<String, String> combined = step.combined();
+            Map<String, Object> details = TestUtil.failureDetails("initial_condition_mismatch");
+            details.put("inputs", inputs);
+            details.put("expected", expected);
+            details.put("actual_combined", combined);
+            details.put("missing_or_different", TestUtil.missingOrDifferentVariables(combined, expected));
+            return TestResult.fail(
+                name,
+                "initial_condition",
+                "Initial condition did not match expected valuation",
+                List.of(step.toJson()),
+                details
+            );
         }
         return TestResult.pass(name, "initial_condition");
     }

@@ -269,13 +269,14 @@ Test-plan rules:
 
 When a controller test fails:
 
-1. Read the test result JSON, especially `name`, `kind`, `reason`, and `trace`.
-2. Compare the failed expectation against the natural-language description.
-3. If the test is not justified by the description, revise or remove the test and rerun tests. Do not change Spectra for an invalid test.
-4. If the test is justified, identify the minimal Spectra change needed to satisfy the description.
-5. Apply the repair, increment `test_repair_loops`, rerun CLI validation, rerun synthesis, write a fresh test plan, and rerun tests.
-6. Stop after 3 test-repair attempts.
-7. If tests still fail, report the last failure and whether the remaining issue appears to be a generated-Spectra problem or a test-plan uncertainty.
+1. Read the test result JSON, especially `name`, `kind`, `reason`, `trace`, and `details`.
+2. Use `details.failure_code` and fields such as `actual_combined`, `missing_or_different`, `trace_index`, and `step_index` to diagnose the failure.
+3. Compare the failed expectation against the natural-language description.
+4. If the test is not justified by the description, revise or remove the test and rerun tests. Do not change Spectra for an invalid test.
+5. If the test is justified, identify the minimal Spectra change needed to satisfy the description.
+6. Apply the repair, increment `test_repair_loops`, rerun CLI validation, rerun synthesis, write a fresh test plan, and rerun tests.
+7. Stop after 3 test-repair attempts.
+8. If tests still fail, report the last failure and whether the remaining issue appears to be a generated-Spectra problem or a test-plan uncertainty.
 
 ## Final Response Format
 

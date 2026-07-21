@@ -25,22 +25,34 @@ public final class VariableOwnershipTest implements TestCase {
     @Override
     public TestResult run(TestContext context) throws Exception {
         if (context.spectraFile() == null) {
-            return TestResult.fail(name, "variable_ownership", "spectra_file is required", null);
+            Map<String, Object> details = TestUtil.failureDetails("missing_spectra_file");
+            return TestResult.fail(name, "variable_ownership", "spectra_file is required", null, details);
         }
         String source = Files.readString(context.spectraFile());
         List<String> missing = new ArrayList<>();
+        List<String> missingEnv = new ArrayList<>();
+        List<String> missingSys = new ArrayList<>();
         for (String variable : env) {
             if (!declared(source, "env", variable)) {
                 missing.add("env " + variable);
+                missingEnv.add(variable);
             }
         }
         for (String variable : sys) {
             if (!declared(source, "sys", variable)) {
                 missing.add("sys " + variable);
+                missingSys.add(variable);
             }
         }
         if (!missing.isEmpty()) {
-            return TestResult.fail(name, "variable_ownership", "Missing or wrong ownership: " + missing, null);
+            Map<String, Object> details = TestUtil.failureDetails("variable_ownership_mismatch");
+            details.put("expected_env", env);
+            details.put("expected_sys", sys);
+            details.put("missing_or_wrong", missing);
+            details.put("missing_env", missingEnv);
+            details.put("missing_sys", missingSys);
+            details.put("spectra_file", context.spectraFile().toString());
+            return TestResult.fail(name, "variable_ownership", "Missing or wrong ownership: " + missing, null, details);
         }
         return TestResult.pass(name, "variable_ownership");
     }

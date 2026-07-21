@@ -36,6 +36,7 @@ public final class EventuallyResponseTest implements TestCase {
             ControllerHarness harness = context.newHarness();
             List<Map<String, Object>> observed = new ArrayList<>();
             Integer deadline = when.isEmpty() ? withinSteps : null;
+            Integer triggerStep = deadline != null ? 0 : null;
             triggerObserved = triggerObserved || deadline != null;
             List<Map<String, String>> trace = traces.get(traceIndex);
 
@@ -46,34 +47,58 @@ public final class EventuallyResponseTest implements TestCase {
                 // Start the bounded response window once the trigger valuation is observed.
                 if (deadline == null && TestUtil.matches(combined, when)) {
                     deadline = withinSteps;
+                    triggerStep = i;
                     triggerObserved = true;
                 }
                 if (deadline != null && TestUtil.matches(combined, eventually)) {
                     deadline = null;
+                    triggerStep = null;
                 }
                 if (deadline != null) {
                     deadline--;
                     if (deadline < 0) {
+                        Map<String, Object> details = TestUtil.failureDetails("response_timeout");
+                        details.put("trace_index", traceIndex);
+                        details.put("trigger_step", triggerStep);
+                        details.put("failed_at_step", i);
+                        details.put("within_steps", withinSteps);
+                        details.put("when", when);
+                        details.put("eventually", eventually);
+                        details.put("last_actual_combined", combined);
+                        details.put("missing_or_different", TestUtil.missingOrDifferentVariables(combined, eventually));
                         return TestResult.fail(
                             name,
                             "eventually_response",
                             "Expected response did not occur within " + withinSteps + " steps at trace " + traceIndex,
-                            observed
+                            observed,
+                            details
                         );
                     }
                 }
             }
             if (deadline != null && requireClosedObligations) {
+                Map<String, Object> details = TestUtil.failureDetails("open_response_obligation");
+                details.put("trace_index", traceIndex);
+                details.put("trigger_step", triggerStep);
+                details.put("within_steps", withinSteps);
+                details.put("when", when);
+                details.put("eventually", eventually);
+                details.put("remaining_steps", deadline);
                 return TestResult.fail(
                     name,
                     "eventually_response",
                     "Trace ended before expected response occurred at trace " + traceIndex,
-                    observed
+                    observed,
+                    details
                 );
             }
         }
         if (!triggerObserved) {
-            return TestResult.fail(name, "eventually_response", "Trigger valuation was not observed in any explored trace", null);
+            Map<String, Object> details = TestUtil.failureDetails("trigger_not_observed");
+            details.put("when", when);
+            details.put("eventually", eventually);
+            details.put("traces_explored", traces.size());
+            return TestResult.fail(name, "eventually_response", "Trigger valuation was not observed in any explored trace", null, details);
         }
         return TestResult.pass(name, "eventually_response");
     }

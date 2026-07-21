@@ -190,3 +190,30 @@ Example exploration test:
 All controller tests are bounded black-box tests. They replay generated input
 traces against fresh controller instances. They are evidence for semantic
 quality, not full equivalence proofs.
+
+## Failure Diagnostics
+
+Failed Java controller tests include a structured `details` object in addition
+to the existing human-readable `reason` and observed `trace`. Method-3 agents
+should inspect `details.failure_code` before deciding whether to repair the
+test plan or the generated Spectra file.
+
+Common failure codes:
+
+- `variable_ownership_mismatch`: expected `env`/`sys` declarations were missing
+  or declared with the wrong owner.
+- `initial_condition_mismatch`: the initial controller output did not match
+  `expected`.
+- `forbidden_valuation_reached`: an `exclusion` test observed the forbidden
+  valuation.
+- `implication_violation`: `when` matched, but `then` did not match in the same
+  step.
+- `response_timeout`: an `eventually_response` obligation did not close within
+  `within_steps`.
+- `open_response_obligation`: a trace ended with an open response obligation and
+  `require_closed_obligations` was enabled.
+- `trigger_not_observed`: no explored trace matched the response trigger.
+
+The details object includes fields such as `trace_index`, `step_index`,
+`expected`, `actual_combined`, `missing_or_different`, `when`, `then`,
+`eventually`, and `matched_variables` when relevant.

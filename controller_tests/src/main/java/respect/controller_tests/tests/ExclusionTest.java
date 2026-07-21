@@ -34,7 +34,20 @@ public final class ExclusionTest implements TestCase {
                 observed.add(step.toJson());
                 // Exclusion checks safety-style requirements: this valuation must never appear.
                 if (TestUtil.matches(step.combined(), forbidden)) {
-                    return TestResult.fail(name, "exclusion", "Forbidden valuation reached at trace " + traceIndex + ", step " + i, observed);
+                    Map<String, String> combined = step.combined();
+                    Map<String, Object> details = TestUtil.failureDetails("forbidden_valuation_reached");
+                    details.put("trace_index", traceIndex);
+                    details.put("step_index", i);
+                    details.put("forbidden", forbidden);
+                    details.put("actual_combined", combined);
+                    details.put("matched_variables", TestUtil.matchedVariables(combined, forbidden));
+                    return TestResult.fail(
+                        name,
+                        "exclusion",
+                        "Forbidden valuation reached at trace " + traceIndex + ", step " + i,
+                        observed,
+                        details
+                    );
                 }
             }
         }

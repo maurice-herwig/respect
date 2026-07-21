@@ -37,7 +37,20 @@ public final class AlwaysImplicationTest implements TestCase {
                 Map<String, String> combined = step.combined();
                 // Safety implication: whenever the trigger holds, the consequence must hold immediately.
                 if (TestUtil.matches(combined, when) && !TestUtil.matches(combined, then)) {
-                    return TestResult.fail(name, "always_implication", "Implication violated at trace " + traceIndex + ", step " + i, observed);
+                    Map<String, Object> details = TestUtil.failureDetails("implication_violation");
+                    details.put("trace_index", traceIndex);
+                    details.put("step_index", i);
+                    details.put("when", when);
+                    details.put("then", then);
+                    details.put("actual_combined", combined);
+                    details.put("missing_or_different", TestUtil.missingOrDifferentVariables(combined, then));
+                    return TestResult.fail(
+                        name,
+                        "always_implication",
+                        "Implication violated at trace " + traceIndex + ", step " + i,
+                        observed,
+                        details
+                    );
                 }
             }
         }
