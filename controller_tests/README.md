@@ -205,6 +205,16 @@ All controller tests are bounded black-box tests. They replay generated input
 traces against fresh controller instances. They are evidence for semantic
 quality, not full equivalence proofs.
 
+Example fixtures:
+
+- `controller_tests/examples/traffic_e2_plan.rtest`: basic DSL fixture.
+- `controller_tests/examples/traffic_e2_new_kinds_plan.rtest`: DSL fixture for
+  `mutual_exclusion`, `one_hot`, `invariant`, `state_sequence`, `persistence`,
+  and `response_absence`.
+- `controller_tests/examples/traffic_e2_new_kinds_failing_plan.json`: negative
+  Java-runner fixture that exercises the structured failure codes for the new
+  test kinds.
+
 ## Failure Diagnostics
 
 Failed Java controller tests include a structured `details` object in addition

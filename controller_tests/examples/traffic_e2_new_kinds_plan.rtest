@@ -1,0 +1,54 @@
+# ReSpect controller-test DSL smoke plan for the newer controller-test kinds.
+controller_dir assets/examples/E2_execution/out/jit
+spec_name TrafficE2
+spectra_file assets/examples/E2_execution/TrafficE2.spectra
+environment carA, carB
+system greenA, greenB
+
+test single_car_input_mutually_exclusive:
+  kind mutual_exclusion
+  requirement "This smoke test uses a trace with exactly one active car input."
+  trace:
+    carA=true, carB=false
+    carA=false, carB=true
+  variables carA, carB
+
+test exactly_one_car_input:
+  kind one_hot
+  requirement "This smoke test uses a trace with exactly one active car input."
+  trace:
+    carA=true, carB=false
+    carA=false, carB=true
+  variables carA, carB
+
+test trace_inputs_are_observed:
+  kind invariant
+  requirement "The controller test harness should report the supplied environment inputs in each observed step."
+  trace:
+    carA=true, carB=false
+  condition carA=true, carB=false
+
+test first_step_inputs_match:
+  kind state_sequence
+  requirement "The controller test harness should report the supplied environment inputs in the observed step sequence."
+  trace:
+    carA=true, carB=false
+  expect:
+    carA=true, carB=false
+
+test car_a_persists_for_single_step:
+  kind persistence
+  requirement "The one-step smoke trace keeps carA true for its full duration."
+  trace:
+    carA=true, carB=false
+  when carA=true
+  maintain carA=true
+
+test car_b_absent_on_first_request:
+  kind response_absence
+  requirement "The one-step smoke trace keeps carB false while carA is true."
+  trace:
+    carA=true, carB=false
+  when carA=true
+  absent carB=true
+  for_steps 1

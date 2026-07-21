@@ -37,6 +37,16 @@ class RTestCompilerTests(unittest.TestCase):
 
         self.assertEqual(compile_rtest(source), expected)
 
+    def test_compiles_new_kinds_example_to_existing_json_plan(self):
+        """The new-kinds DSL example should compile to its checked-in JSON plan."""
+
+        source = (REPO_ROOT / "controller_tests" / "examples" / "traffic_e2_new_kinds_plan.rtest").read_text(encoding="utf-8")
+        expected = json.loads(
+            (REPO_ROOT / "controller_tests" / "examples" / "traffic_e2_new_kinds_plan.json").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(compile_rtest(source), expected)
+
     def test_translates_top_level_environment_and_system_to_runner_outputs(self):
         """Top-level DSL ownership metadata should be preserved and normalized."""
 
