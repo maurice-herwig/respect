@@ -33,7 +33,7 @@ from evaluation.summarize_reconstruction_runs import summarize as summarize_reco
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--skill", required=True, help="Skill/method to summarize, e.g. respect-method-2.")
+    parser.add_argument("--skill", required=True, help="Skill/method to summarize, e.g. respect.")
     parser.add_argument("--model", required=True, help="Model label, e.g. llama-3.")
     parser.add_argument("--runs-manifest", default=str(DEFAULT_RUNS_MANIFEST))
     parser.add_argument("--buchi-distance-root", default=str(DEFAULT_BUCHI_DISTANCE_ROOT))

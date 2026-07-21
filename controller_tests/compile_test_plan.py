@@ -3,7 +3,7 @@
 
 The Java controller test runner intentionally stays JSON-based. This module is
 the human/agent-facing layer in front of it: it accepts a compact `.rtest` DSL,
-checks that the plan has the fields Method 3 needs, and emits the JSON shape
+checks that the plan has the fields ReSpect needs, and emits the JSON shape
 already understood by `respect.controller_tests.TestRunner`.
 """
 
@@ -530,7 +530,7 @@ def validate_test(test: dict[str, Any], line_number: int) -> None:
 
 
 def validate_plan(plan: dict[str, Any]) -> None:
-    """Validate top-level fields required by Method 3 and the Java runner."""
+    """Validate top-level fields required by ReSpect and the Java runner."""
 
     missing = [key for key in ("controller_dir", "spec_name", "spectra_file", "environment", "system") if not plan.get(key)]
     if missing:

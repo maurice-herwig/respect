@@ -544,7 +544,7 @@ def parse_args() -> argparse.Namespace:
             "against their accepted-dataset baselines."
         )
     )
-    parser.add_argument("--skill", required=True, help="Skill/method to evaluate, e.g. respect-method-2.")
+    parser.add_argument("--skill", required=True, help="Skill/method to evaluate, e.g. respect.")
     parser.add_argument("--model", required=True, help="Model label, e.g. llama-3.")
     parser.add_argument("--runs-manifest", default=str(DEFAULT_RUNS_MANIFEST))
     parser.add_argument("--output-root", default=str(DEFAULT_OUTPUT_ROOT))

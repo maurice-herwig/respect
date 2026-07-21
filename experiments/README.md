@@ -13,25 +13,25 @@ for each description. The selected skill is injected into the agent prompt.
 From the repository root, run:
 
 ```powershell
-python experiments\reconstruct_with_skill.py --skill respect-method-3.1 --dry-run --limit 3
+python experiments\reconstruct_with_skill.py --skill respect --dry-run --limit 3
 ```
 
 From this `experiments` directory, run:
 
 ```powershell
-python reconstruct_with_skill.py --skill respect-method-3.1 --dry-run --limit 3
+python reconstruct_with_skill.py --skill respect --dry-run --limit 3
 ```
 
 Run a limited real experiment from the repository root:
 
 ```powershell
-python reconstruct_with_skill.py --skill respect-method-3.1 --limit 195
+python reconstruct_with_skill.py --skill respect --limit 195
 ```
 
 Run all pending descriptions with the default agent command:
 
 ```powershell
-python experiments\reconstruct_with_skill.py --skill respect-method-3.1
+python experiments\reconstruct_with_skill.py --skill respect
 ```
 
 The default command is:
@@ -51,7 +51,7 @@ If your Codex CLI uses a different invocation, pass it explicitly:
 
 ```powershell
 python experiments\reconstruct_with_skill.py `
-  --skill respect-method-3.1 `
+  --skill respect `
   --agent-command "codex --ask-for-approval never exec --ephemeral --sandbox danger-full-access -"
 ```
 
@@ -66,7 +66,7 @@ dataset/nl_descriptions/responses/A/B/C.txt
 becomes:
 
 ```text
-experiments/runs/A/B/C/respect-method-3.1/
+experiments/runs/A/B/C/respect/
 ```
 
 Each run directory stores:
@@ -76,7 +76,7 @@ Each run directory stores:
 - `agent_stdout.txt`
 - `agent_stderr.txt`
 - `parsed_result.json`, if the agent prints a final JSON object
-- `respect-method-3.1.spectra`, if the agent reports a Spectra file
+- `respect.spectra`, if the agent reports a Spectra file
 - a row in `runs.jsonl`
 
 ## Cross-Broker Reconstruction
@@ -103,7 +103,7 @@ Use an explicit skill or agent command:
 
 ```powershell
 python experiments\reconstruct_with_cross_repair.py `
-  --skill respect-method-cross-broker `
+  --skill respect-broker `
   --agent-command "codex --ask-for-approval never exec --ephemeral --sandbox danger-full-access -" `
   --limit 10
 ```
@@ -121,7 +121,7 @@ wrapper, call the single-run orchestrator directly:
 ```powershell
 python experiments\cross_repair_with_broker.py `
   --description-file path\to\description.txt `
-  --skill respect-method-cross-broker `
+  --skill respect-broker `
   --dry-run
 ```
 

@@ -583,7 +583,7 @@ def main() -> int:
             "Buchi-distance comparison. Raw exported HOA files are printed by default."
         )
     )
-    parser.add_argument("--skill", default="respect-method-3")
+    parser.add_argument("--skill", default="respect")
     parser.add_argument("--model", default="llama-3")
     parser.add_argument("--jsonl", default=None, help="Explicit distances.jsonl path.")
     parser.add_argument(

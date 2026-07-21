@@ -19,11 +19,11 @@ agent-based reconstruction experiments, and summarizes the results.
   See [`evaluation/README.md`](evaluation/README.md).
 - `assets/`: Example Spectra specifications and diagrams used for explanation
   and development. See [`assets/examples/README.md`](assets/examples/README.md).
-- `.agents/skills/respect-method-3.1/`: Codex skill used for the reconstruction
+- `.agents/skills/respect/`: Codex skill used for the reconstruction
   condition. It generates Spectra with grammar guidance, validates with
   `spectra-cli.jar`, repairs CLI-reported syntax and realizability issues,
   synthesizes a controller when realizable, and runs NL-guided controller tests.
-- `.agents/skills/respect-method-cross-broker/`: Codex skill used for the
+- `.agents/skills/respect-broker/`: Codex skill used for the
   cross-agent reconstruction condition. It uses grammar-guided CLI validation,
   counter-strategy diagnostics, synthesis, and peer disagreement feedback from
   `experiments/cross_broker.py`.

@@ -1,13 +1,13 @@
 ---
-name: respect-method-3.1
-description: Method 3.1 agent for the ReSpect study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate and synthesize with spectra-cli.jar, repair unrealizability with CLI counter-strategy diagnostics, and after successful synthesis create and run NL-guided controller tests with controller_tests. Repair generated Spectra only when CLI/test feedback indicates a problem and the repair is consistent with the natural-language description. Do not compare against source Spectra files or benchmark oracles.
+name: respect
+description: Primary ReSpect agent for the study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate and synthesize with spectra-cli.jar, repair unrealizability with CLI counter-strategy diagnostics, and after successful synthesis create and run NL-guided controller tests with controller_tests. Repair generated Spectra only when CLI/test feedback indicates a problem and the repair is consistent with the natural-language description. Do not compare against source Spectra files or benchmark oracles.
 ---
 
-# ReSpect Method 3.1: Grammar-Guided CLI-Diagnosed Repair With NL-Guided Controller Tests
+# ReSpect: Grammar-Guided CLI-Diagnosed Repair With NL-Guided Controller Tests
 
 ## Research Role
 
-This skill implements the method 3.1 ReSpect reconstruction condition:
+This skill implements the primary ReSpect reconstruction condition:
 
 - Input: natural-language requirements for a reactive system.
 - Output: a generated Spectra specification plus CLI validation, diagnosis, synthesis, test, and repair results.
@@ -48,7 +48,7 @@ The goal is to measure whether CLI diagnostics plus NL-guided bounded controller
 26. If a failing test is justified by the natural-language description, minimally repair the generated Spectra, increment `test_repair_loops`, rerun CLI validation, rerun synthesis, create a fresh test plan, and rerun tests.
 27. After the test-repair phase ends and the tests are rerun or the run stops, save the stable repaired specification as `specs/03_after_test_repair.spectra` and append one transition record to `repair_log.jsonl`.
 28. Limit test-repair loops to at most 3 attempts.
-29. Save the final Spectra version as `final.spectra`. Always include the final method-3.1 result fields in the response.
+29. Save the final Spectra version as `final.spectra`. Always include the final ReSpect result fields in the response.
 
 ## Temporary File Handling
 
@@ -76,7 +76,7 @@ tmp/spectra-runs/<timestamp>-<slug>/
 - Omit phase-specific spec files and repair-log entries for phases that did not run. For example, if no test repair was attempted, do not create `specs/03_after_test_repair.spectra`.
 - Keep `final.spectra` as a copy of the last stable Spectra version and report `spectra_file` as that path.
 - Append one JSON object per phase transition to `repair_log.jsonl`.
-- Use this `repair_log.jsonl` schema consistently for method 3.1 runs:
+- Use this `repair_log.jsonl` schema consistently for ReSpect runs:
 
 ```json
 {
@@ -110,25 +110,25 @@ tmp/spectra-runs/<timestamp>-<slug>/
 Use the bundled wrapper instead of calling the jar directly:
 
 ```bash
-python .agents/skills/respect-method-3.1/scripts/run_spectra_cli.py --input <path-to-file> --timeout 120
+python .agents/skills/respect/scripts/run_spectra_cli.py --input <path-to-file> --timeout 120
 ```
 
 For counter-strategy diagnostics after an `unrealizable` result:
 
 ```bash
-python .agents/skills/respect-method-3.1/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy --timeout 120
+python .agents/skills/respect/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy --timeout 120
 ```
 
 Use JTLV text format only if the default counter-strategy output is not useful:
 
 ```bash
-python .agents/skills/respect-method-3.1/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy-jtlv-format --timeout 120
+python .agents/skills/respect/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy-jtlv-format --timeout 120
 ```
 
 For synthesis after a `realizable` result:
 
 ```bash
-python .agents/skills/respect-method-3.1/scripts/run_spectra_cli.py --input <path-to-file> --synthesize --output-dir <path-to-output-dir> --timeout 120
+python .agents/skills/respect/scripts/run_spectra_cli.py --input <path-to-file> --synthesize --output-dir <path-to-output-dir> --timeout 120
 ```
 
 ## Controller Test Commands
@@ -163,7 +163,7 @@ python controller_tests\compile_test_plan.py <test-plan.rtest> --check --diagnos
 
 Use `--strict-files` only after the generated Spectra file and synthesized JIT controller directory are expected to exist.
 
-## Method 3.1 Boundaries
+## ReSpect Boundaries
 
 - Use only the natural-language description, generated Spectra, CLI outputs, synthesized controller metadata, and controller-test outputs as repair evidence.
 - Use `assets/grammar/Spectra.xtext` as a syntax reference, not as semantic feedback or a repair oracle.

@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Summarize reconstruct_with_skill experiment runs.")
     parser.add_argument("--runs-manifest", default=DEFAULT_RUNS_MANIFEST, help="Path to experiments/runs/runs.jsonl.")
-    parser.add_argument("--skill", required=True, help="Skill/method to summarize, e.g. respect-method-2.")
+    parser.add_argument("--skill", required=True, help="Skill/method to summarize, e.g. respect.")
     parser.add_argument(
         "--model",
         required=True,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Run spectra-cli.jar and normalize its output for method-3 skill workflows.
+Run spectra-cli.jar and normalize its output for ReSpect skill workflows.
 """
 
 from __future__ import annotations

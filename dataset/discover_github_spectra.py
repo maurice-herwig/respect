@@ -114,7 +114,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--cli-wrapper",
-        default=".agents/skills/respect-method-2/scripts/run_spectra_cli.py",
+        default=".agents/skills/respect/scripts/run_spectra_cli.py",
         help="Path to the Spectra CLI wrapper.",
     )
     parser.add_argument(

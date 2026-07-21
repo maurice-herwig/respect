@@ -23,7 +23,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "experiments" / "cross_runs"
 DEFAULT_AGENT_COMMAND = "codex --ask-for-approval never exec --ephemeral --sandbox danger-full-access -"
-DEFAULT_SKILL = "respect-method-cross-broker"
+DEFAULT_SKILL = "respect-broker"
 DEFAULT_AGENTS = ("agent_a", "agent_b")
 DEFAULT_MAX_BROKER_REPAIR_LOOPS = 3
 

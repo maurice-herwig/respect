@@ -1,5 +1,5 @@
 ---
-name: respect-method-cross-broker
+name: respect-broker
 description: Method cross-broker agent for the ReSpect study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate and synthesize with spectra-cli.jar, repair syntax errors, repair unrealizability with CLI counter-strategy diagnostics when consistent with the natural-language description, and after successful synthesis submit the generated specification to experiments/cross_broker.py for peer disagreement feedback. Do not run controller_tests, generated semantic tests, equivalence checks, mutation checks, or benchmark oracles.
 ---
 
@@ -110,25 +110,25 @@ tmp/spectra-runs/<timestamp>-<slug>/
 Use the bundled wrapper instead of calling the jar directly:
 
 ```bash
-python .agents/skills/respect-method-cross-broker/scripts/run_spectra_cli.py --input <path-to-file> --timeout 120
+python .agents/skills/respect-broker/scripts/run_spectra_cli.py --input <path-to-file> --timeout 120
 ```
 
 For counter-strategy diagnostics after an `unrealizable` result:
 
 ```bash
-python .agents/skills/respect-method-cross-broker/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy --timeout 120
+python .agents/skills/respect-broker/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy --timeout 120
 ```
 
 Use JTLV text format only if the default counter-strategy output is not useful:
 
 ```bash
-python .agents/skills/respect-method-cross-broker/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy-jtlv-format --timeout 120
+python .agents/skills/respect-broker/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy-jtlv-format --timeout 120
 ```
 
 For synthesis after a `realizable` result:
 
 ```bash
-python .agents/skills/respect-method-cross-broker/scripts/run_spectra_cli.py --input <path-to-file> --synthesize --output-dir <path-to-output-dir> --timeout 120
+python .agents/skills/respect-broker/scripts/run_spectra_cli.py --input <path-to-file> --synthesize --output-dir <path-to-output-dir> --timeout 120
 ```
 
 ## Broker Command

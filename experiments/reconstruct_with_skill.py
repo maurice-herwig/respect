@@ -41,7 +41,7 @@ LOGGER = logging.getLogger("reconstruct_with_skill")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a selected skill for each NL description.")
-    parser.add_argument("--skill", required=True, help="Skill name, e.g. respect-method-2.")
+    parser.add_argument("--skill", required=True, help="Skill name, e.g. respect.")
     parser.add_argument("--descriptions-manifest", default=DEFAULT_DESCRIPTIONS_MANIFEST)
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
     parser.add_argument(
