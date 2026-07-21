@@ -658,7 +658,7 @@ wrong.
 
 ## DSL Repair Loop
 
-Method-3 agents should repair invalid `.rtest` files before running the Java
+Method-3.1 agents should repair invalid `.rtest` files before running the Java
 controller tests:
 
 1. Write `tests/test-plan-<n>.rtest`.
@@ -673,9 +673,9 @@ controller tests:
 Only after the `.rtest` file compiles should the generated JSON plan be passed
 to `respect.controller_tests.TestRunner`.
 
-## Method-3 Guidance
+## Method-3.1 Guidance
 
-For ReSpect Method 3, tests must be derived only from:
+For ReSpect Method 3.1, tests must be derived only from:
 
 - the natural-language requirement,
 - the generated Spectra file,

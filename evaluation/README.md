@@ -13,13 +13,13 @@ controller evaluations; it reads the existing JSONL files and reports one global
 summary.
 
 ```powershell
-python summarize_all_results.py --skill respect-method-3 --model llama-3
+python summarize_all_results.py --skill respect-method-3.1 --model llama-3
 ```
 
 For machine-readable output:
 
 ```powershell
-python evaluation\summarize_all_results.py --skill respect-method-2 --model llama-3 --json
+python evaluation\summarize_all_results.py --skill respect-method-3.1 --model llama-3 --json
 ```
 
 The summary includes:
@@ -34,14 +34,14 @@ After reconstruction experiments have produced `experiments/runs/runs.jsonl`,
 summarize the CLI outcomes and repair-loop counts for a selected skill/model:
 
 ```powershell
-python evaluation\summarize_reconstruction_runs.py --skill respect-method-2 --model llama-3
+python evaluation\summarize_reconstruction_runs.py --skill respect-method-3.1 --model llama-3
 ```
 
 From this `evaluation` directory, for example when an IDE uses `evaluation` as
 the working directory:
 
 ```powershell
-python summarize_reconstruction_runs.py --skill respect-method-3 --model llama-3
+python summarize_reconstruction_runs.py --skill respect-method-3.1 --model llama-3
 ```
 
 The script reports:
@@ -55,13 +55,13 @@ percentage of runs with reported_cli_status=synthesized and reported_repair_loop
 For machine-readable output:
 
 ```powershell
-python evaluation\summarize_reconstruction_runs.py --skill respect-method-2 --model llama-3 --json
+python evaluation\summarize_reconstruction_runs.py --skill respect-method-3.1 --model llama-3 --json
 ```
 
 Use `--include-dry-run` to include dry-run records:
 
 ```powershell
-python evaluation\summarize_reconstruction_runs.py --skill respect-method-2 --model llama-3 --include-dry-run
+python evaluation\summarize_reconstruction_runs.py --skill respect-method-3.1 --model llama-3 --include-dry-run
 ```
 
 ## Buchi / HOA Evaluation
@@ -71,8 +71,9 @@ directed disagreement-language helpers now live in `evaluation/buchi/`.
 
 See [`buchi/README.md`](buchi/README.md) for commands such as:
 
+See [`buchi/README.md`](buchi/README.md) for commands such as:
+
 ```powershell
-x
 python evaluation\buchi\disagreement_languages.py --left path\to\a.spectra --right path\to\b.spectra
 ```
 
@@ -86,13 +87,13 @@ input traces, and their system outputs are compared step by step.
 Metric overview: [`controller_distance_metrics.svg`](evaluation.svg)
 
 ```powershell
-python evaluate_controller_distances.py --skill respect-method-3 --model llama-3 --mode exhaustive --max-depth 6 --max-paths 10000
+python evaluate_controller_distances.py --skill respect-method-3.1 --model llama-3 --mode exhaustive --max-depth 6 --max-paths 10000
 ```
 
 For larger input domains, use random sampling:
 
 ```powershell
-  python evaluation/evaluate_controller_distances.py --skill respect-method-2 --model llama-3 --mode random --max-depth 10 --runs 1000 --seed 1           
+  python evaluation/evaluate_controller_distances.py --skill respect-method-3.1 --model llama-3 --mode random --max-depth 10 --runs 1000 --seed 1
 ```
 
 The script automatically synthesizes both controllers into:
@@ -118,7 +119,7 @@ LLM-assisted signature mapping:
 
 ```powershell
 python evaluation\evaluate_controller_distances.py `
-  --skill respect-method-2 `
+  --skill respect-method-3.1 `
   --model llama-3 `
   --signature-mapping llm
 ```

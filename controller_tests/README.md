@@ -1,6 +1,6 @@
 # ReSpect Controller Tests
 
-Java test library for method-3 controller checks.
+Java test library for method-3.1 controller checks.
 
 The library executes synthesized Spectra JIT controllers through Syntech's
 `ControllerExecutor` and checks bounded, natural-language-derived properties.
@@ -21,7 +21,7 @@ First synthesize the example JIT controller if `assets/examples/E2_execution/out
 does not exist:
 
 ```powershell
-python .agents\skills\respect-method-3\scripts\run_spectra_cli.py --input assets\examples\E2_execution\TrafficE2.spectra --synthesize --output-dir assets\examples\E2_execution\out --timeout 120
+python .agents\skills\respect-method-3.1\scripts\run_spectra_cli.py --input assets\examples\E2_execution\TrafficE2.spectra --synthesize --output-dir assets\examples\E2_execution\out --timeout 120
 ```
 
 ```powershell
@@ -39,7 +39,7 @@ for example `<controller_output_dir>/jit`.
 
 ## DSL Test Plans
 
-Humans and Method-3 agents should write controller tests in the `.rtest` DSL and
+Humans and Method-3.1 agents should write controller tests in the `.rtest` DSL and
 compile it to the JSON format consumed by the Java runner:
 
 ```powershell
@@ -75,7 +75,7 @@ test never_both_green:
   forbidden greenA=true, greenB=true
 ```
 
-For Method-3 runs, every runtime test should include a `requirement` field that
+For Method-3.1 runs, every runtime test should include a `requirement` field that
 quotes or closely paraphrases the natural-language requirement justifying the
 test. The DSL does not use a `confidence` field.
 
@@ -218,7 +218,7 @@ Example fixtures:
 ## Failure Diagnostics
 
 Failed Java controller tests include a structured `details` object in addition
-to the existing human-readable `reason` and observed `trace`. Method-3 agents
+to the existing human-readable `reason` and observed `trace`. Method-3.1 agents
 should inspect `details.failure_code` before deciding whether to repair the
 test plan or the generated Spectra file.
 

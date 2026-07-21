@@ -1,6 +1,6 @@
 ---
 name: respect-method-cross-broker
-description: Method cross-broker agent for the ReSpect study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate and synthesize with spectra-cli.jar like method 2, repair syntax errors, repair unrealizability with CLI counter-strategy diagnostics like method 3 when consistent with the natural-language description, and after successful synthesis submit the generated specification to experiments/cross_broker.py for peer disagreement feedback. Do not run controller_tests, generated semantic tests, equivalence checks, mutation checks, or benchmark oracles.
+description: Method cross-broker agent for the ReSpect study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate and synthesize with spectra-cli.jar, repair syntax errors, repair unrealizability with CLI counter-strategy diagnostics when consistent with the natural-language description, and after successful synthesis submit the generated specification to experiments/cross_broker.py for peer disagreement feedback. Do not run controller_tests, generated semantic tests, equivalence checks, mutation checks, or benchmark oracles.
 ---
 
 # ReSpect Method Cross-Broker: Grammar-Guided CLI-Diagnosed Repair With Peer Disagreement Feedback
@@ -17,7 +17,7 @@ This skill implements a cross-agent ReSpect reconstruction condition:
 - Allowed repair signal: parser output, realizability status, counter-strategy output, generated Spectra, the natural-language description, and broker disagreement feedback.
 - Not allowed: `controller_tests`, generated controller tests, semantic equivalence checks against the benchmark, mutation checks, oracle-based tests, reading or comparing against the original/reference Spectra file, accepted dataset files, HOA distance results, or benchmark fixtures.
 
-The goal is to measure whether peer disagreement feedback can improve reconstruction after the same syntax and unrealizability handling used by method 3, while avoiding the method-3 controller-test feedback source.
+The goal is to measure whether peer disagreement feedback can improve reconstruction after syntax and unrealizability handling, while avoiding the controller-test feedback source.
 
 ## Workflow
 
@@ -77,7 +77,7 @@ tmp/spectra-runs/<timestamp>-<slug>/
 - Omit phase-specific spec files and repair-log entries for phases that did not run. For example, if no broker repair was attempted, do not create `specs/03_after_broker_repair.spectra`.
 - Keep `final.spectra` as a copy of the last stable Spectra version and report `spectra_file` as that path.
 - Append one JSON object per phase transition to `repair_log.jsonl`.
-- Use this `repair_log.jsonl` schema consistently across method 2.1, method 3.1, and cross-broker:
+- Use this `repair_log.jsonl` schema consistently for cross-broker runs:
 
 ```json
 {
@@ -170,7 +170,7 @@ Broker words are disagreement evidence, not oracle counterexamples. The peer spe
 
 ## Method Cross-Broker Boundaries
 
-- Use the same syntax-repair and unrealizability-repair discipline as method 3.
+- Use the syntax-repair and unrealizability-repair discipline defined in this skill.
 - Use `assets/grammar/Spectra.xtext` as a syntax reference, not as semantic feedback or a repair oracle.
 - Do not run `controller_tests`.
 - Do not create or run NL-guided controller tests.

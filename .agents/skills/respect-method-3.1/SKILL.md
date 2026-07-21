@@ -1,6 +1,6 @@
 ---
 name: respect-method-3.1
-description: Method 3.1 agent for the ReSpect study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate and synthesize with spectra-cli.jar like method 2, repair unrealizability with CLI counter-strategy diagnostics, and after successful synthesis create and run NL-guided controller tests with controller_tests. Repair generated Spectra only when CLI/test feedback indicates a problem and the repair is consistent with the natural-language description. Do not compare against source Spectra files or benchmark oracles.
+description: Method 3.1 agent for the ReSpect study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate and synthesize with spectra-cli.jar, repair unrealizability with CLI counter-strategy diagnostics, and after successful synthesis create and run NL-guided controller tests with controller_tests. Repair generated Spectra only when CLI/test feedback indicates a problem and the repair is consistent with the natural-language description. Do not compare against source Spectra files or benchmark oracles.
 ---
 
 # ReSpect Method 3.1: Grammar-Guided CLI-Diagnosed Repair With NL-Guided Controller Tests
@@ -16,7 +16,7 @@ This skill implements the method 3.1 ReSpect reconstruction condition:
 - Allowed repair signal: parser output, realizability status, counter-strategy output, controller-test failures, failing traces, generated Spectra, and the natural-language description.
 - Not allowed: reading or comparing against the original/reference Spectra file, semantic equivalence checks against the benchmark, mutation checks, or oracle-based tests.
 
-The goal is to measure whether CLI diagnostics plus NL-guided bounded controller tests improve reconstruction over method 2 while avoiding leakage from the original specification.
+The goal is to measure whether CLI diagnostics plus NL-guided bounded controller tests improve reconstruction while avoiding leakage from the original specification.
 
 ## Workflow
 
@@ -76,7 +76,7 @@ tmp/spectra-runs/<timestamp>-<slug>/
 - Omit phase-specific spec files and repair-log entries for phases that did not run. For example, if no test repair was attempted, do not create `specs/03_after_test_repair.spectra`.
 - Keep `final.spectra` as a copy of the last stable Spectra version and report `spectra_file` as that path.
 - Append one JSON object per phase transition to `repair_log.jsonl`.
-- Use this `repair_log.jsonl` schema consistently across method 2.1, method 3.1, and cross-broker:
+- Use this `repair_log.jsonl` schema consistently for method 3.1 runs:
 
 ```json
 {
@@ -163,7 +163,7 @@ python controller_tests\compile_test_plan.py <test-plan.rtest> --check --diagnos
 
 Use `--strict-files` only after the generated Spectra file and synthesized JIT controller directory are expected to exist.
 
-## Method 3 Boundaries
+## Method 3.1 Boundaries
 
 - Use only the natural-language description, generated Spectra, CLI outputs, synthesized controller metadata, and controller-test outputs as repair evidence.
 - Use `assets/grammar/Spectra.xtext` as a syntax reference, not as semantic feedback or a repair oracle.

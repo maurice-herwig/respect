@@ -11,7 +11,7 @@ Spectra file against the corresponding `dataset/accepted` baseline, writes one
 JSONL result row, and prints an aggregate overview.
 
 ```powershell
-python evaluation\buchi\evaluate_reconstruction_distances.py --skill respect-method-2 --model llama-3 --force
+python evaluation\buchi\evaluate_reconstruction_distances.py --skill respect-method-3.1 --model llama-3 --force
 ```
 
 For each run, the script exports both Spectra files with
@@ -40,7 +40,7 @@ Disable this strict fallback only for debugging:
 
 ```powershell
 python evaluation\buchi\evaluate_reconstruction_distances.py `
-  --skill respect-method-2 `
+  --skill respect-method-3.1 `
   --model llama-3 `
   --no-determinize
 ```
@@ -60,7 +60,7 @@ To make the resume behavior explicit:
 
 ```powershell
 python evaluation\buchi\evaluate_reconstruction_distances.py `
-  --skill respect-method-2 `
+  --skill respect-method-3.1 `
   --model llama-3 `
   --resume
 ```
@@ -79,12 +79,12 @@ summary. Adjust or disable it with:
 
 ```powershell
 python evaluation\buchi\evaluate_reconstruction_distances.py `
-  --skill respect-method-2 `
+  --skill respect-method-3.1 `
   --model llama-3 `
   --run-timeout 300
 
 python evaluation\buchi\evaluate_reconstruction_distances.py `
-  --skill respect-method-2 `
+  --skill respect-method-3.1 `
   --model llama-3 `
   --run-timeout 0
 ```
@@ -94,7 +94,7 @@ mapping when the pre-mapping HOA AP alphabets differ:
 
 ```powershell
 python evaluation\buchi\evaluate_reconstruction_distances.py `
-  --skill respect-method-2 `
+  --skill respect-method-3.1 `
   --model llama-3
 ```
 
@@ -109,7 +109,7 @@ To require identical HOA AP names without any LLM-assisted renaming:
 
 ```powershell
 python evaluation\buchi\evaluate_reconstruction_distances.py `
-  --skill respect-method-2 `
+  --skill respect-method-3.1 `
   --model llama-3 `
   --signature-mapping strict
 ```
@@ -117,7 +117,7 @@ python evaluation\buchi\evaluate_reconstruction_distances.py `
 For a quick smoke test:
 
 ```powershell
-python evaluation\buchi\evaluate_reconstruction_distances.py --skill respect-method-2 --model llama-3 --limit 1
+python evaluation\buchi\evaluate_reconstruction_distances.py --skill respect-method-3.1 --model llama-3 --limit 1
 ```
 
 To test the distance computation without the modified Spectra CLI, translate two
