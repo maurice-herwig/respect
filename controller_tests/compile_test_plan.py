@@ -49,6 +49,10 @@ VALID_TEST_KINDS = {
     "always_implication",
     "eventually_response",
 }
+VALID_EXPLORATION_MODES = {"trace", "random", "exhaustive"}
+POSITIVE_INT_FIELDS = {"max_depth", "max_paths", "runs", "within_steps"}
+INPUT_FIELDS = {"inputs", "initial_inputs"}
+OBSERVATION_FIELDS = {"expected", "then", "eventually", "when", "forbidden"}
 ALL_KEYS = sorted(SCALAR_KEYS | LIST_KEYS | MAP_KEYS | BLOCK_KEYS)
 
 
@@ -318,7 +322,7 @@ def assign(target: dict[str, Any], key: str, value: str, line_number: int) -> No
         )
 
 
-def compile_rtest(source: str) -> dict[str, Any]:
+def compile_rtest(source: str, *, strict_files: bool = False) -> dict[str, Any]:
     """Compile `.rtest` source text into the Java runner's JSON plan object."""
 
     lines = logical_lines(source)
@@ -375,6 +379,7 @@ def compile_rtest(source: str) -> dict[str, Any]:
     for test in plan["tests"]:
         validate_test(test, test.get("__line", 1))
         test.pop("__line", None)
+    validate_plan_semantics(plan, strict_files=strict_files)
     return plan
 
 
@@ -435,6 +440,13 @@ def validate_test(test: dict[str, Any], line_number: int) -> None:
             hint="Add `eventually <valuation>` to this eventually_response test.",
         )
     mode = test.get("mode", "trace")
+    if mode not in VALID_EXPLORATION_MODES:
+        raise DslError(
+            f"Line {line_number}: unsupported exploration mode {mode!r}.",
+            code="unsupported_exploration_mode",
+            line=line_number,
+            hint="Use `mode trace`, `mode random`, or `mode exhaustive`.",
+        )
     if mode in {"random", "exhaustive"} and not isinstance(test.get("env"), dict):
         raise DslError(
             f"Line {line_number}: {mode} tests require a domains: block.",
@@ -442,7 +454,7 @@ def validate_test(test: dict[str, Any], line_number: int) -> None:
             line=line_number,
             hint=f"Add a `domains:` block with finite environment domains for this {mode} test.",
         )
-    if mode in {"trace", "traces"} and kind not in {"variable_ownership", "initial_condition"} and not test.get("trace"):
+    if mode == "trace" and kind not in {"variable_ownership", "initial_condition"} and not test.get("trace"):
         raise DslError(
             f"Line {line_number}: {kind} with trace mode requires a trace: block.",
             code="missing_required_field",
@@ -490,6 +502,214 @@ def normalize_plan(plan: dict[str, Any]) -> None:
             # DSL does not force authors to repeat the same variable lists.
             test.setdefault("env", plan.get("environment", []))
             test.setdefault("sys", plan.get("system", []))
+
+
+def duplicates(values: list[str]) -> list[str]:
+    """Return duplicate entries while preserving first duplicate encounter order."""
+
+    seen: set[str] = set()
+    repeated: list[str] = []
+    repeated_seen: set[str] = set()
+    for value in values:
+        if value in seen and value not in repeated_seen:
+            repeated.append(value)
+            repeated_seen.add(value)
+        seen.add(value)
+    return repeated
+
+
+def validate_plan_semantics(plan: dict[str, Any], *, strict_files: bool = False) -> None:
+    """Validate variable ownership, exploration consistency, and numeric bounds."""
+
+    environment = list(plan.get("environment") or [])
+    system = list(plan.get("system") or [])
+    env_set = set(environment)
+    sys_set = set(system)
+    known = env_set | sys_set
+
+    validate_top_level_signature(environment, system)
+    validate_unique_test_names(plan.get("tests", []))
+    for test in plan.get("tests", []):
+        validate_test_semantics(test, env_set=env_set, sys_set=sys_set, known=known)
+    if strict_files:
+        validate_files(plan)
+
+
+def validate_top_level_signature(environment: list[str], system: list[str]) -> None:
+    """Ensure environment and system declarations are unique and disjoint."""
+
+    for label, values in (("environment", environment), ("system", system)):
+        repeated = duplicates(values)
+        if repeated:
+            raise DslError(
+                f"Duplicate variable(s) in top-level {label}: {', '.join(repeated)}.",
+                code="duplicate_variable",
+                hint=f"Remove duplicate variable names from the top-level `{label}` declaration.",
+            )
+    overlap = sorted(set(environment) & set(system))
+    if overlap:
+        raise DslError(
+            f"Variable(s) declared as both environment and system: {', '.join(overlap)}.",
+            code="variable_owner_conflict",
+            hint="Each variable must be controlled by either the environment or the system, not both.",
+        )
+
+
+def validate_unique_test_names(tests: list[dict[str, Any]]) -> None:
+    """Reject duplicate test names because they make repair feedback ambiguous."""
+
+    seen: set[str] = set()
+    for test in tests:
+        name = str(test.get("name"))
+        if name in seen:
+            raise DslError(
+                f"Duplicate test name {name!r}.",
+                code="duplicate_test_name",
+                hint="Rename one of the tests so every `test <name>:` block has a unique name.",
+            )
+        seen.add(name)
+
+
+def validate_test_semantics(test: dict[str, Any], *, env_set: set[str], sys_set: set[str], known: set[str]) -> None:
+    """Validate semantic consistency inside one compiled test block."""
+
+    test_name = str(test.get("name"))
+    mode = test.get("mode", "trace")
+    has_trace = "trace" in test
+    has_domains = isinstance(test.get("env"), dict)
+
+    if mode in {"random", "exhaustive"} and has_trace:
+        raise DslError(
+            f"Test {test_name!r} uses mode {mode!r} but also defines a trace block.",
+            code="conflicting_exploration_fields",
+            hint="Use either `trace:` with default trace mode or `domains:` with random/exhaustive mode, not both.",
+        )
+    if mode == "trace" and has_domains:
+        raise DslError(
+            f"Test {test_name!r} uses trace mode but defines a domains block.",
+            code="conflicting_exploration_fields",
+            hint="Remove `domains:` or switch to `mode random` or `mode exhaustive`.",
+        )
+
+    for field in POSITIVE_INT_FIELDS:
+        if field in test and int(test[field]) <= 0:
+            raise DslError(
+                f"Test {test_name!r} has non-positive {field}: {test[field]}.",
+                code="invalid_bound",
+                hint=f"Use a positive integer for `{field}`.",
+            )
+
+    if has_domains:
+        validate_domain_map(test_name, test["env"], env_set=env_set, known=known)
+
+    for step in test.get("trace") or []:
+        validate_variables(
+            test_name=test_name,
+            field="trace",
+            variables=set(step),
+            allowed=env_set,
+            known=known,
+            owner_hint="Trace steps may assign only environment variables.",
+        )
+
+    for field in INPUT_FIELDS:
+        if field in test:
+            validate_variables(
+                test_name=test_name,
+                field=field,
+                variables=set(test[field]),
+                allowed=env_set,
+                known=known,
+                owner_hint=f"`{field}` may assign only environment variables.",
+            )
+
+    for field in OBSERVATION_FIELDS:
+        if field in test:
+            variables = set(test[field])
+            validate_variables(
+                test_name=test_name,
+                field=field,
+                variables=variables,
+                allowed=known,
+                known=known,
+                owner_hint=f"`{field}` may reference known environment or system variables.",
+            )
+
+
+def validate_domain_map(test_name: str, domains: dict[str, list[str]], *, env_set: set[str], known: set[str]) -> None:
+    """Validate exploration domains and reject duplicate domain values."""
+
+    validate_variables(
+        test_name=test_name,
+        field="domains",
+        variables=set(domains),
+        allowed=env_set,
+        known=known,
+        owner_hint="`domains:` may define only environment input variables.",
+    )
+    for variable, values in domains.items():
+        repeated = duplicates(values)
+        if repeated:
+            raise DslError(
+                f"Test {test_name!r} domain for {variable!r} contains duplicate value(s): {', '.join(repeated)}.",
+                code="duplicate_domain_value",
+                hint=f"Remove duplicate values from the domain for `{variable}`.",
+            )
+
+
+def validate_variables(
+    *,
+    test_name: str,
+    field: str,
+    variables: set[str],
+    allowed: set[str],
+    known: set[str],
+    owner_hint: str,
+) -> None:
+    """Validate that referenced variables are known and owned by the right side."""
+
+    unknown = sorted(variables - known)
+    if unknown:
+        suggestion = variable_suggestion(unknown[0], known)
+        hint = f"Did you mean `{suggestion}`?" if suggestion else "Declare the variable in top-level `environment` or `system`, or fix the typo."
+        raise DslError(
+            f"Test {test_name!r} field `{field}` references unknown variable(s): {', '.join(unknown)}.",
+            code="unknown_variable",
+            hint=hint,
+        )
+    wrong_owner = sorted(variables - allowed)
+    if wrong_owner:
+        raise DslError(
+            f"Test {test_name!r} field `{field}` uses variable(s) with the wrong owner: {', '.join(wrong_owner)}.",
+            code="wrong_variable_owner",
+            hint=owner_hint,
+        )
+
+
+def variable_suggestion(name: str, known: set[str]) -> str | None:
+    """Return a close known variable name for typo-oriented diagnostics."""
+
+    matches = difflib.get_close_matches(name, sorted(known), n=1)
+    return matches[0] if matches else None
+
+
+def validate_files(plan: dict[str, Any]) -> None:
+    """Optionally ensure referenced files/directories already exist."""
+
+    spectra_file = Path(str(plan.get("spectra_file")))
+    if not spectra_file.is_file():
+        raise DslError(
+            f"spectra_file does not exist: {spectra_file}",
+            code="missing_file",
+            hint="Create the generated Spectra file before compiling with `--strict-files`, or omit `--strict-files`.",
+        )
+    controller_dir = Path(str(plan.get("controller_dir")))
+    if not controller_dir.is_dir():
+        raise DslError(
+            f"controller_dir does not exist: {controller_dir}",
+            code="missing_controller_dir",
+            hint="Synthesize the controller before compiling with `--strict-files`, or omit `--strict-files`.",
+        )
 
 
 def source_context(source: str, line_number: int | None, radius: int = 3) -> list[dict[str, Any]]:
@@ -571,11 +791,16 @@ def main(argv: list[str] | None = None) -> int:
         "--diagnostics-json",
         help="Optional path for machine-readable compile diagnostics used by DSL repair loops.",
     )
+    parser.add_argument(
+        "--strict-files",
+        action="store_true",
+        help="Also require spectra_file and controller_dir paths to exist.",
+    )
     args = parser.parse_args(argv)
 
     source = Path(args.input).read_text(encoding="utf-8")
     try:
-        plan = compile_rtest(source)
+        plan = compile_rtest(source, strict_files=args.strict_files)
         write_diagnostics(
             args.diagnostics_json,
             diagnostic_payload(source=source, path=args.input, compiled_plan=plan),

@@ -22,6 +22,12 @@ Write machine-readable diagnostics for humans or LLM repair loops:
 python controller_tests\compile_test_plan.py path\to\plan.rtest --check --diagnostics-json path\to\dsl-diagnostics.json
 ```
 
+Require referenced runtime artifacts to already exist:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest --check --strict-files
+```
+
 ## Design Goals
 
 - Keep test plans readable for humans and LLM agents.
@@ -393,6 +399,30 @@ The compiler rejects:
 - `random` or `exhaustive` tests without `domains:`,
 - trace-mode runtime tests without a `trace:` block.
 
+The compiler also performs semantic validation:
+
+- top-level `environment` and `system` variables must be unique,
+- a variable may not appear in both `environment` and `system`,
+- every test name must be unique,
+- all referenced variables must be declared in top-level `environment` or
+  `system`,
+- `trace:`, `inputs`, and `initial_inputs` may assign only environment
+  variables,
+- `domains:` may define only environment variables,
+- `expected`, `then`, `eventually`, `when`, and `forbidden` may reference known
+  environment or system variables because tests match the combined input/output
+  valuation observed at each step,
+- `trace:` must not be combined with `mode random` or `mode exhaustive`,
+- `domains:` must not be used with default trace mode,
+- `max_depth`, `max_paths`, `runs`, `seed`, and `within_steps` must be positive
+  when present,
+- domain values must not contain duplicates.
+
+With `--strict-files`, the compiler additionally requires `spectra_file` to be
+an existing file and `controller_dir` to be an existing directory. This check is
+optional because Method-3 agents may create plans before final runtime artifacts
+are available.
+
 ## Diagnostics JSON
 
 `compile_test_plan.py` can write structured diagnostics with
@@ -449,6 +479,17 @@ Diagnostic codes include:
 - `unsupported_test_kind`
 - `missing_required_field`
 - `invalid_exploration`
+- `duplicate_variable`
+- `variable_owner_conflict`
+- `duplicate_test_name`
+- `unknown_variable`
+- `wrong_variable_owner`
+- `unsupported_exploration_mode`
+- `conflicting_exploration_fields`
+- `invalid_bound`
+- `duplicate_domain_value`
+- `missing_file`
+- `missing_controller_dir`
 
 These diagnostics are intended for `.rtest` repair only. A DSL compile failure
 must not be treated as evidence that the generated Spectra specification is

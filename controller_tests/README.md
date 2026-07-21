@@ -115,6 +115,12 @@ Write machine-readable diagnostics for a repair loop:
 python controller_tests\compile_test_plan.py path\to\plan.rtest --check --diagnostics-json path\to\dsl-diagnostics.json
 ```
 
+Require referenced files and controller directories to exist:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest --check --strict-files
+```
+
 The existing JSON format remains the runner input and is still supported.
 
 ## JSON Test Plan Format

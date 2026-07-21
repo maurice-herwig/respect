@@ -273,6 +273,226 @@ class RTestCompilerTests(unittest.TestCase):
         self.assertEqual(raised.exception.line, 12)
         self.assertIn("forbidden", raised.exception.hint)
 
+    def assert_dsl_error_code(self, source: str, code: str) -> DslError:
+        """Compile source and assert that it fails with the expected error code."""
+
+        with self.assertRaises(DslError) as raised:
+            compile_rtest(textwrap.dedent(source))
+        self.assertEqual(raised.exception.code, code)
+        return raised.exception
+
+    def test_rejects_trace_steps_that_assign_system_variables(self):
+        """Input traces should assign only environment variables."""
+
+        error = self.assert_dsl_error_code(
+            """
+            controller_dir out/jit
+            spec_name Fixture
+            spectra_file fixture.spectra
+            environment request
+            system grant
+
+            test bad_trace:
+              kind exclusion
+              trace:
+                grant=true
+              forbidden grant=true
+            """,
+            "wrong_variable_owner",
+        )
+
+        self.assertIn("Trace steps", error.hint)
+
+    def test_rejects_unknown_variables_in_expectations(self):
+        """Typos in output expectations should be reported before Java execution."""
+
+        error = self.assert_dsl_error_code(
+            """
+            controller_dir out/jit
+            spec_name Fixture
+            spectra_file fixture.spectra
+            environment request
+            system grant
+
+            test typo:
+              kind eventually_response
+              trace:
+                request=true
+              when request=true
+              eventually ggrant=true
+            """,
+            "unknown_variable",
+        )
+
+        self.assertIn("grant", error.hint)
+
+    def test_rejects_duplicate_top_level_variables(self):
+        """Top-level ownership declarations should not contain duplicates."""
+
+        self.assert_dsl_error_code(
+            """
+            controller_dir out/jit
+            spec_name Fixture
+            spectra_file fixture.spectra
+            environment request, request
+            system grant
+
+            test declared:
+              kind variable_ownership
+            """,
+            "duplicate_variable",
+        )
+
+    def test_rejects_environment_system_owner_conflict(self):
+        """A variable cannot be controlled by both players."""
+
+        self.assert_dsl_error_code(
+            """
+            controller_dir out/jit
+            spec_name Fixture
+            spectra_file fixture.spectra
+            environment request
+            system request
+
+            test declared:
+              kind variable_ownership
+            """,
+            "variable_owner_conflict",
+        )
+
+    def test_rejects_duplicate_test_names(self):
+        """Duplicate test names make repair feedback ambiguous."""
+
+        self.assert_dsl_error_code(
+            """
+            controller_dir out/jit
+            spec_name Fixture
+            spectra_file fixture.spectra
+            environment request
+            system grant
+
+            test duplicate:
+              kind variable_ownership
+
+            test duplicate:
+              kind variable_ownership
+            """,
+            "duplicate_test_name",
+        )
+
+    def test_rejects_exploration_conflicts(self):
+        """Random/exhaustive tests should not also provide concrete traces."""
+
+        self.assert_dsl_error_code(
+            """
+            controller_dir out/jit
+            spec_name Fixture
+            spectra_file fixture.spectra
+            environment request
+            system grant
+
+            test conflicting:
+              kind exclusion
+              mode exhaustive
+              domains:
+                request false, true
+              trace:
+                request=true
+              forbidden grant=true
+            """,
+            "conflicting_exploration_fields",
+        )
+
+    def test_rejects_non_positive_bounds(self):
+        """Bounds used for exploration and response windows should be positive."""
+
+        self.assert_dsl_error_code(
+            """
+            controller_dir out/jit
+            spec_name Fixture
+            spectra_file fixture.spectra
+            environment request
+            system grant
+
+            test bad_bound:
+              kind eventually_response
+              trace:
+                request=true
+              eventually grant=true
+              within_steps 0
+            """,
+            "invalid_bound",
+        )
+
+    def test_rejects_system_variables_in_domains(self):
+        """Exploration domains describe environment input choices."""
+
+        self.assert_dsl_error_code(
+            """
+            controller_dir out/jit
+            spec_name Fixture
+            spectra_file fixture.spectra
+            environment request
+            system grant
+
+            test bad_domain:
+              kind exclusion
+              mode exhaustive
+              domains:
+                grant false, true
+              forbidden grant=true
+            """,
+            "wrong_variable_owner",
+        )
+
+    def test_observation_fields_may_reference_environment_and_system_variables(self):
+        """Assertions may match combined input/output valuations from each step."""
+
+        source = textwrap.dedent("""
+        controller_dir out/jit
+        spec_name Fixture
+        spectra_file fixture.spectra
+        environment request, reset
+        system grant
+
+        test mixed_observation:
+          kind always_implication
+          trace:
+            request=true, reset=false
+          when request=true
+          then request=true, grant=true
+
+        test input_only_forbidden:
+          kind exclusion
+          trace:
+            request=true, reset=false
+          forbidden request=true
+        """)
+
+        plan = compile_rtest(source)
+
+        self.assertEqual(plan["tests"][0]["then"], {"request": "true", "grant": "true"})
+        self.assertEqual(plan["tests"][1]["forbidden"], {"request": "true"})
+
+    def test_strict_files_requires_referenced_paths(self):
+        """Strict file mode should check that runtime artifacts already exist."""
+
+        source = textwrap.dedent("""
+        controller_dir missing/out/jit
+        spec_name Fixture
+        spectra_file missing/fixture.spectra
+        environment request
+        system grant
+
+        test declared:
+          kind variable_ownership
+        """)
+
+        with self.assertRaises(DslError) as raised:
+            compile_rtest(source, strict_files=True)
+
+        self.assertEqual(raised.exception.code, "missing_file")
+
     def test_cli_writes_json_output(self):
         """The command-line compiler should create a JSON file for the Java runner."""
 

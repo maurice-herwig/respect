@@ -113,6 +113,8 @@ For DSL repair feedback:
 python controller_tests\compile_test_plan.py <test-plan.rtest> --check --diagnostics-json <dsl-diagnostics.json>
 ```
 
+Use `--strict-files` only after the generated Spectra file and synthesized JIT controller directory are expected to exist.
+
 ## Method 3 Boundaries
 
 - Use only the natural-language description, generated Spectra, CLI outputs, synthesized controller metadata, and controller-test outputs as repair evidence.
@@ -143,12 +145,13 @@ Prefer the `.rtest` DSL over writing JSON directly. The JSON file is an executio
 If the DSL compiler reports `dsl_syntax_error`, repair only the `.rtest` file:
 
 1. Read the diagnostics JSON, especially `errors[0].code`, `message`, `hint`, and `context`.
-2. Compare the intended tests against the natural-language description.
-3. Fix only DSL syntax or test-plan structure. Do not change the generated Spectra file.
-4. Do not add tests that are not justified by the natural-language description.
-5. Save the repaired `.rtest` as the next attempt and rerun the compiler.
-6. Limit DSL repair to at most 3 attempts.
-7. If the DSL still does not compile, report the final diagnostics and do not run Java controller tests.
+2. Treat semantic plan errors such as `unknown_variable`, `wrong_variable_owner`, `conflicting_exploration_fields`, and `invalid_bound` as test-plan problems, not Spectra problems.
+3. Compare the intended tests against the natural-language description.
+4. Fix only DSL syntax or test-plan structure. Do not change the generated Spectra file.
+5. Do not add tests that are not justified by the natural-language description.
+6. Save the repaired `.rtest` as the next attempt and rerun the compiler.
+7. Limit DSL repair to at most 3 attempts.
+8. If the DSL still does not compile, report the final diagnostics and do not run Java controller tests.
 
 Required top-level `.rtest` fields:
 
