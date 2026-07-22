@@ -139,3 +139,63 @@ python experiments\cross_repair_with_broker.py `
 ```
 
 Remove `--dry-run` to start the two agent processes for that one description.
+
+## Independent-Test Reconstruction
+
+`independent_test_repair.py` runs one specification agent and one independent
+test-writer agent. The specification agent uses `respect-spec-tester` to
+generate, validate, repair, check well-separation, and synthesize Spectra. The
+test-writer agent uses `respect-test-writer` to write `.rtest` plans from only
+the natural-language description, fixed env/sys signature, and controller
+metadata. The test-writer must not inspect generated Spectra contents.
+
+Run a single dry run:
+
+```powershell
+python experiments\independent_test_repair.py `
+  --description-file path\to\description.txt `
+  --signature-file path\to\signature.json `
+  --dry-run
+```
+
+Run a real single-description experiment:
+
+```powershell
+python experiments\independent_test_repair.py `
+  --description-file path\to\description.txt `
+  --signature-file path\to\signature.json `
+  --max-feedback-rounds 3
+```
+
+The runner repeats feedback rounds until tests pass, the spec agent no longer
+synthesizes, or `--max-feedback-rounds` is reached. Each round is:
+
+```text
+spec agent -> synthesize controller -> test writer -> compile/run tests
+  -> if justified failures remain, feed test results back to spec agent
+```
+
+Batch runs use `reconstruct_with_independent_tests.py`. It expects one signature
+JSON per description under `--signature-root`, named either
+`<description_id>.json` or `<dataset_id>.json`.
+
+```powershell
+python experiments\reconstruct_with_independent_tests.py `
+  --signature-root dataset\signatures `
+  --limit 3 `
+  --dry-run
+```
+
+Signature JSON format:
+
+```json
+{
+  "spec_name": "TrafficE2",
+  "environment": [
+    {"name": "carA", "type": "boolean", "domain": ["false", "true"]}
+  ],
+  "system": [
+    {"name": "greenA", "type": "boolean", "domain": ["false", "true"]}
+  ]
+}
+```
