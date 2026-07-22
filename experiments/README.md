@@ -175,6 +175,28 @@ spec agent -> synthesize controller -> test writer -> compile/run tests
   -> if justified failures remain, feed test results back to spec agent
 ```
 
+After each new synthesized Spectra version, the runner executes all test plans
+accumulated from previous rounds against the current controller, plus the newly
+generated test plan for the current round. If the specification agent rejects a
+failing test as invalid and reports its exact name in `invalid_test_names`, the
+runner excludes that test from later aggregate feedback and records it under
+`ignored_invalid_tests`. This keeps valid earlier tests as regression checks
+without forcing repairs for tests that are stronger than the natural-language
+requirements.
+
+Single-run summaries use granular terminal statuses:
+
+- `tests_passed`: synthesized and all active tests passed.
+- `invalid_tests_rejected`: synthesized and active tests passed after rejected
+  invalid tests were filtered from feedback.
+- `max_rounds_with_failures`: synthesized, but active test failures remained at
+  the feedback-round limit.
+- `spec_not_synthesized`: the specification agent did not produce a synthesized
+  controller.
+- `test_generation_failed`: the test writer failed, omitted a plan path, or the
+  generated `.rtest` plan did not compile.
+- `completed_without_test_success`: fallback for unusual completed states.
+
 Batch runs use `reconstruct_with_independent_tests.py`. It expects one signature
 JSON per description under `--signature-root`, named either
 `<description_id>.json` or `<dataset_id>.json`.

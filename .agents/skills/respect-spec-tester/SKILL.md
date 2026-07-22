@@ -40,6 +40,7 @@ When the prompt provides a test result file:
 - Read `tests_total`, `tests_passed`, `tests_failed`, each failing test's `name`, `kind`, `requirement`, `reason`, `trace`, and `details`.
 - Decide whether each failure is justified by the natural-language description.
 - If the test is too strong, underspecified, or unsupported, report `test_feedback_decision = rejected_invalid_test` and do not modify Spectra for that failure.
+- When rejecting invalid tests, list every rejected test name exactly as it appears in the aggregated result file under `invalid_test_names`, and give a short `invalid_test_reason`.
 - If the failure is justified, make the smallest Spectra repair, increment `repair_loops` and `independent_test_repair_loops`, then rerun validation, well-separation, and synthesis.
 - Do not inspect the test-writer agent's stdout except for the test artifacts explicitly provided by the orchestrator.
 
@@ -79,6 +80,8 @@ used_counter_strategy: <true|false>
 well_separation_status: <well_separated|non_well_separated|not_checked|unknown>
 blocked_by_nl_conflict: <true|false>
 test_feedback_decision: <none|rejected_invalid_test|repaired|blocked_by_nl_conflict>
+invalid_test_names: <JSON array of rejected test names, or []>
+invalid_test_reason: <short reason or none>
 diagnostic_file: <path or none>
 well_separation_file: <path or none>
 spectra_file: <path>

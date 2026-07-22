@@ -135,6 +135,33 @@ def extract_agent_result(text: str) -> dict[str, Any] | None:
     return extract_last_json_object(text) or extract_key_value_result(text)
 
 
+def extract_string_list(value: Any) -> list[str]:
+    """Normalize agent-reported string lists from JSON or key-value output."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped or stripped.lower() in {"none", "null", "[]"}:
+            return []
+        try:
+            parsed = json.loads(stripped)
+        except json.JSONDecodeError:
+            return [part.strip() for part in stripped.split(",") if part.strip()]
+        return extract_string_list(parsed)
+    return [str(value).strip()] if str(value).strip() else []
+
+
+def invalid_test_names_from_result(spec_result: dict[str, Any] | None) -> list[str]:
+    """Extract rejected independent-test names from a spec-agent result."""
+    if not spec_result:
+        return []
+    names = extract_string_list(spec_result.get("invalid_test_names"))
+    names.extend(extract_string_list(spec_result.get("rejected_invalid_test_names")))
+    return sorted(set(names))
+
+
 def build_command(agent_command: str, prompt_file: Path) -> tuple[str, bool]:
     """Render the agent command and report whether the prompt goes to stdin."""
     if "{prompt_file}" in agent_command:
@@ -214,11 +241,13 @@ def build_spec_prompt(
         feedback = f"""Repair round {round_index}.
 
 Previous generated Spectra file: {previous_spectra_file}
-Independent test result file: {test_result_file}
+Aggregated independent test result file: {test_result_file}
 
-Read the previous generated Spectra and test results. Repair the Spectra only
-when a failing test is justified by the natural-language requirements. After
-any Spectra edit, rerun validation, well-separation, and synthesis.
+Read the previous generated Spectra and aggregated test results. The aggregate
+contains all valid independent test plans accumulated so far, rerun against the
+latest controller from the previous round. Repair the Spectra only when a
+failing test is justified by the natural-language requirements. After any
+Spectra edit, rerun validation, well-separation, and synthesis.
 """
     return f"""Use ${skill}.
 
@@ -273,6 +302,8 @@ Important boundaries:
 - Do not open or inspect the generated Spectra file. Use spectra_file only as a DSL path.
 - Do not read the specification agent stdout, repair logs, source Spectra, benchmark oracles, or distance results.
 - Derive expected behavior only from the natural-language requirements and fixed signature.
+- Do not write only happy-path tests. Include adversarial bounded tests such as simultaneous requests, no-request cases, persistent one-sided requests, alternating inputs, and boundary values when supported by the natural-language requirements.
+- Do not turn unbounded liveness into a hard bounded deadline unless the natural-language requirements state that deadline.
 
 Natural-language requirements:
 
@@ -332,6 +363,15 @@ def run_controller_tests(plan_file: Path, result_file: Path) -> subprocess.Compl
     )
 
 
+def rebind_test_plan(source_plan: Path, target_plan: Path, *, spec_name: str, spectra_file: Path, controller_dir: Path) -> None:
+    """Copy a compiled test plan while pointing it at the current controller."""
+    plan = load_json(source_plan)
+    plan["spec_name"] = spec_name
+    plan["spectra_file"] = str(spectra_file)
+    plan["controller_dir"] = str(controller_dir)
+    write_json(target_plan, plan)
+
+
 def test_counts(result_file: Path) -> tuple[int, int, int]:
     """Return total, passed, and failed counts from a controller-test result file."""
     if not result_file.is_file():
@@ -343,20 +383,71 @@ def test_counts(result_file: Path) -> tuple[int, int, int]:
     return total, passed, total - passed
 
 
+def aggregate_test_results(
+    result_files: list[tuple[int, Path]],
+    aggregate_file: Path,
+    invalid_test_names: set[str] | None = None,
+) -> tuple[int, int, int, int]:
+    """Merge controller-test results, excluding tests the spec agent rejected.
+
+    Rejected tests are retained as metadata so the experiment can audit them,
+    but they are not counted as active regression feedback in later rounds.
+    """
+    invalid_test_names = invalid_test_names or set()
+    aggregate_results: list[dict[str, Any]] = []
+    ignored_invalid_tests: list[dict[str, Any]] = []
+    total = passed = failed = 0
+    for source_round, result_file in result_files:
+        payload = load_json(result_file)
+        for result in payload.get("results") or payload.get("tests") or []:
+            annotated = dict(result)
+            annotated["source_test_round"] = source_round
+            annotated["source_result_file"] = str(result_file)
+            if str(result.get("name", "")).strip() in invalid_test_names:
+                ignored_invalid_tests.append(annotated)
+                continue
+            aggregate_results.append(annotated)
+            total += 1
+            if result.get("passed") is True:
+                passed += 1
+            else:
+                failed += 1
+
+    write_json(
+        aggregate_file,
+        {
+            "status": "passed" if failed == 0 else "failed",
+            "total": total,
+            "passed": passed,
+            "failed": failed,
+            "invalid_tests_filtered": len(ignored_invalid_tests),
+            "invalid_test_names": sorted(invalid_test_names),
+            "ignored_invalid_tests": ignored_invalid_tests,
+            "results": aggregate_results,
+        },
+    )
+    return total, passed, failed, len(ignored_invalid_tests)
+
+
 def summarize_status(rounds: list[dict[str, Any]], final_spec_result: dict[str, Any] | None) -> str:
-    """Classify the run outcome without hiding unresolved test failures."""
+    """Classify the run outcome with experiment-specific terminal statuses."""
     if not final_spec_result or final_spec_result.get("cli_status") != "synthesized":
-        return "failed"
+        return "spec_not_synthesized"
     if not rounds:
-        return "failed"
+        return "spec_not_synthesized"
 
     last_round = rounds[-1]
+    stop_reason = last_round.get("stop_reason")
+    if stop_reason in {"test_agent_failed", "missing_test_plan_path", "test_plan_compile_failed"}:
+        return "test_generation_failed"
     if last_round.get("stop_reason") == "tests_passed":
-        return "success"
+        if last_round.get("invalid_tests_filtered", 0):
+            return "invalid_tests_rejected"
+        return "tests_passed"
     if isinstance(last_round.get("tests_failed"), int) and last_round["tests_failed"] > 0:
-        return "unresolved_test_failures"
+        return "max_rounds_with_failures"
     if last_round.get("stop_reason") == "max_feedback_rounds_reached":
-        return "unresolved_test_failures"
+        return "max_rounds_with_failures"
     return "completed_without_test_success"
 
 
@@ -392,8 +483,10 @@ def main() -> int:
     started = time.perf_counter()
     previous_spectra_file: Path | None = None
     previous_test_result_file: Path | None = None
+    compiled_test_plans: list[tuple[int, Path]] = []
     rounds: list[dict[str, Any]] = []
     final_spec_result: dict[str, Any] | None = None
+    invalid_test_names: set[str] = set()
 
     for round_index in range(args.max_feedback_rounds + 1):
         round_dir = run_dir / f"round-{round_index:02d}"
@@ -426,6 +519,10 @@ def main() -> int:
         }
         rounds.append(round_record)
         final_spec_result = spec_result
+        newly_invalid_tests = invalid_test_names_from_result(spec_result)
+        invalid_test_names.update(newly_invalid_tests)
+        round_record["new_invalid_test_names"] = newly_invalid_tests
+        round_record["invalid_test_names"] = sorted(invalid_test_names)
 
         if spec_exit != 0 or not spec_result or spec_result.get("cli_status") != "synthesized":
             round_record["stop_reason"] = "spec_agent_not_synthesized"
@@ -483,18 +580,50 @@ def main() -> int:
             round_record["stop_reason"] = "test_plan_compile_failed"
             break
 
-        result_file = test_dir / "test-results.json"
-        run_result = run_controller_tests(compiled_file, result_file)
-        write_text(test_dir / "test-run.stdout.txt", run_result.stdout)
-        write_text(test_dir / "test-run.stderr.txt", run_result.stderr)
-        tests_total, tests_passed, tests_failed = test_counts(result_file)
+        compiled_test_plans.append((round_index, compiled_file))
+        result_files: list[tuple[int, Path]] = []
+        replay_records: list[dict[str, Any]] = []
+        for source_round, source_plan in compiled_test_plans:
+            replay_plan = test_dir / f"replay-plan-round-{source_round:02d}.json"
+            replay_result = test_dir / f"test-results-round-{source_round:02d}.json"
+            rebind_test_plan(
+                source_plan,
+                replay_plan,
+                spec_name=spec_name,
+                spectra_file=spectra_file,
+                controller_dir=controller_dir,
+            )
+            run_result = run_controller_tests(replay_plan, replay_result)
+            write_text(test_dir / f"test-run-round-{source_round:02d}.stdout.txt", run_result.stdout)
+            write_text(test_dir / f"test-run-round-{source_round:02d}.stderr.txt", run_result.stderr)
+            plan_total, plan_passed, plan_failed = test_counts(replay_result)
+            result_files.append((source_round, replay_result))
+            replay_records.append(
+                {
+                    "source_test_round": source_round,
+                    "plan_file": str(replay_plan),
+                    "result_file": str(replay_result),
+                    "exit_code": run_result.returncode,
+                    "tests_total": plan_total,
+                    "tests_passed": plan_passed,
+                    "tests_failed": plan_failed,
+                }
+            )
+
+        result_file = test_dir / "test-results-aggregate.json"
+        tests_total, tests_passed, tests_failed, invalid_tests_filtered = aggregate_test_results(
+            result_files,
+            result_file,
+            invalid_test_names,
+        )
         round_record.update(
             {
-                "test_run_exit_code": run_result.returncode,
                 "test_result_file": str(result_file),
+                "replayed_test_plans": replay_records,
                 "tests_total": tests_total,
                 "tests_passed": tests_passed,
                 "tests_failed": tests_failed,
+                "invalid_tests_filtered": invalid_tests_filtered,
             }
         )
 
@@ -520,12 +649,13 @@ def main() -> int:
         "spec_skill": args.spec_skill,
         "test_skill": args.test_skill,
         "max_feedback_rounds": args.max_feedback_rounds,
+        "invalid_test_names": sorted(invalid_test_names),
         "rounds": rounds,
         "final_spec_result": final_spec_result,
     }
     write_json(run_dir / "summary.json", summary)
     print(json.dumps(summary, indent=2, sort_keys=True))
-    return 0 if summary["status"] in {"success", "unresolved_test_failures"} else 1
+    return 0 if summary["status"] in {"tests_passed", "invalid_tests_rejected", "max_rounds_with_failures"} else 1
 
 
 if __name__ == "__main__":

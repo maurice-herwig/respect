@@ -109,9 +109,14 @@ def description_relative_stem(response_file: Path) -> Path:
     return Path(*[safe_path_part(part) for part in relative_parts]).with_suffix("")
 
 
+def completed_statuses() -> set[str]:
+    """Return statuses that represent completed experiment runs."""
+    return {"tests_passed", "invalid_tests_rejected", "max_rounds_with_failures"}
+
+
 def completed_run_keys(runs_manifest: Path) -> set[str]:
-    """Return run keys for successful records to support resume behavior."""
-    return {record["run_key"] for record in load_jsonl(runs_manifest) if record.get("status") == "success" and record.get("run_key")}
+    """Return completed run keys to support resume behavior."""
+    return {record["run_key"] for record in load_jsonl(runs_manifest) if record.get("status") in completed_statuses() and record.get("run_key")}
 
 
 def make_run_key(record: dict[str, Any], args: argparse.Namespace, signature_file: Path) -> str:
@@ -214,7 +219,7 @@ def process_record(record: dict[str, Any], args: argparse.Namespace, output_dir:
             write_text(stdout_file, completed_process.stdout)
             write_text(stderr_file, completed_process.stderr)
             summary_status = load_json(summary_file).get("status") if summary_file.is_file() else None
-            status = str(summary_status or "success") if exit_code == 0 else "agent_error"
+            status = str(summary_status) if summary_status else ("agent_error" if exit_code != 0 else "tests_passed")
             if args.dry_run:
                 status = "dry_run"
         except subprocess.TimeoutExpired as exc:
@@ -252,7 +257,7 @@ def process_record(record: dict[str, Any], args: argparse.Namespace, output_dir:
         "dry_run": args.dry_run,
     }
     append_jsonl(runs_manifest, manifest_record)
-    if status in {"success", "unresolved_test_failures"}:
+    if status in completed_statuses():
         completed.add(run_key)
     return status
 
@@ -267,8 +272,12 @@ def main() -> int:
     completed = set() if args.force else completed_run_keys(runs_manifest)
     stats = {
         "processed": 0,
-        "success": 0,
-        "unresolved_test_failures": 0,
+        "tests_passed": 0,
+        "invalid_tests_rejected": 0,
+        "max_rounds_with_failures": 0,
+        "spec_not_synthesized": 0,
+        "test_generation_failed": 0,
+        "completed_without_test_success": 0,
         "skipped": 0,
         "agent_error": 0,
         "timeout": 0,

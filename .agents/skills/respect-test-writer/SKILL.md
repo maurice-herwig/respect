@@ -22,7 +22,7 @@ The goal is to test the natural-language requirements independently of the gener
 2. Read the fixed signature from the prompt. Use exactly those environment and system variables.
 3. Derive tests only from the natural-language requirements.
 4. Use `spectra_file` only as a top-level DSL path. Do not open or inspect its contents.
-5. Prefer adversarial tests that could expose incomplete, over-permissive, over-restrictive, or wrongly initialized controllers.
+5. Prefer adversarial tests that could expose incomplete, over-permissive, over-restrictive, wrongly initialized, or unfair controllers. Do not write only happy-path tests.
 6. Include a `variable_ownership` test.
 7. For every runtime test, include `requirement "<quote or close paraphrase from the NL description>"`.
 8. Use bounded trace, random, or exhaustive modes with conservative bounds. Prefer `max_depth <= 6`, `max_paths <= 256`, `runs <= 50`, and `within_steps <= 10` unless the description gives a bound.
@@ -39,6 +39,8 @@ Cover each clearly testable requirement at least once:
 - Immediate implications.
 - Bounded evidence for response/liveness requirements.
 - Small exhaustive exploration for Boolean or small finite input domains.
+
+Do not limit the plan to traces where the controller is expected to behave nicely. Include stress cases when supported by the natural-language requirements, such as simultaneous requests, no requests, persistent one-sided requests, alternating requests, rapid input changes, boundary enum values, and inputs that could reveal over-permissive behavior. Do not turn an unbounded liveness requirement into a hard bounded deadline unless the natural-language text gives that deadline.
 
 If a requirement cannot be tested soundly with bounded controller tests, record it in the final response under `untestable_requirements`.
 
