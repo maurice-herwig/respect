@@ -1,0 +1,15 @@
+spec CounterExample
+
+env boolean atStation;
+sys boolean light;
+
+define blink := next(light) != light;
+
+counter blinks(0..5) {
+  blinks = 0;
+  inc: atStation & blink;
+  reset: !atStation;
+  overflow: false;
+}
+
+gar alw atStation & blinks < 5 -> blink;

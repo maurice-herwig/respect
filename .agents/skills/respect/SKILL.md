@@ -310,5 +310,6 @@ repair_log_file: <path>
 
 - `scripts/run_spectra_cli.py`: Run `spectra-cli.jar`, normalize the outcome, optionally request counter-strategy diagnostics, and preserve raw output.
 - `references/spectra-workflow.md`: Spectra examples, CLI result patterns, and drafting/repair guidance.
+- `assets/examples/LanguageFeatures/`: Compact `.spectra` syntax examples for less common Spectra language constructs.
 - `assets/grammar/Spectra.xtext`: Repository-level Xtext grammar for Spectra syntax. Read this before drafting generated specifications.
 - `controller_tests/`: Java test library used after synthesis for NL-guided bounded controller tests.

@@ -13,6 +13,8 @@
 - Declare environment variables with `env` and system variables with `sys`.
 - Encode assumptions with `asm` and guarantees with `gar`.
 - Prefer a minimal complete model over speculative features.
+- Prefer the simplest Spectra construct that directly expresses the requirement.
+- Use advanced constructs such as `counter`, `monitor`, `pattern`, `regexp`, quantifiers, aggregates, and triggers only when the natural-language description clearly calls for them or they materially simplify the specification.
 - If the description leaves key semantics unstated, make the smallest explicit assumption and report it.
 
 ## Validation And Synthesis Branches
@@ -86,6 +88,8 @@ Common invalid repairs:
 
 ## Useful Local Sources
 
+Use these files only as syntax and idiom references. Do not copy their behavior unless the natural-language requirements call for the same behavior, and do not use them as semantic or benchmark oracles.
+
 - `assets/examples/A1_firstController/TrafficA1.spectra`
 - `assets/examples/A2_unrealizability/TrafficA2b.spectra`
 - `assets/examples/L1_firstSpec_solution/`
@@ -94,3 +98,4 @@ Common invalid repairs:
 - `assets/examples/L4_triggers_solution/`
 - `assets/examples/UserGuideSpecs/Blink5.spectra`
 - `assets/examples/UserGuideSpecs/Rover.spectra`
+- `assets/examples/LanguageFeatures/`

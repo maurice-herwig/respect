@@ -1,0 +1,11 @@
+spec MonitorExample
+
+env boolean found;
+sys {SEEK, IDLE} mode;
+
+monitor boolean expectFinding {
+  !expectFinding;
+  alw next(expectFinding) = (mode = SEEK | (expectFinding & !found));
+}
+
+asm alwEv !expectFinding;
