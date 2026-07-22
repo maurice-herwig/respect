@@ -95,6 +95,21 @@ def percent(count: int, total: int) -> float:
     return 100.0 * count / total
 
 
+def reported_counter(records: list[dict[str, Any]], key: str) -> Counter[str]:
+    return Counter(str(record.get(key) if record.get(key) is not None else "missing") for record in records)
+
+
+def sorted_distribution(counts: Counter[str], total: int, value_key: str) -> list[dict[str, Any]]:
+    return [
+        {
+            value_key: value,
+            "count": count,
+            "percent": percent(count, total),
+        }
+        for value, count in sorted(counts.items(), key=lambda item: (not item[0].isdigit(), item[0]))
+    ]
+
+
 def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry_run: bool) -> dict[str, Any]:
     filtered: list[dict[str, Any]] = []
     skipped_without_model = 0
@@ -116,25 +131,14 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
 
     total = len(filtered)
     cli_status_counts: Counter[str] = Counter(str(record.get("reported_cli_status") or "missing") for record in filtered)
-    repair_loop_counts: Counter[str] = Counter(
-        str(record.get("reported_repair_loops") if record.get("reported_repair_loops") is not None else "missing")
-        for record in filtered
-    )
-    syntax_repair_loop_counts: Counter[str] = Counter(
-        str(record.get("reported_syntax_repair_loops") if record.get("reported_syntax_repair_loops") is not None else "missing")
-        for record in filtered
-    )
-    unrealizable_repair_loop_counts: Counter[str] = Counter(
-        str(
-            record.get("reported_unrealizable_repair_loops")
-            if record.get("reported_unrealizable_repair_loops") is not None
-            else "missing"
-        )
-        for record in filtered
-    )
-    test_repair_loop_counts: Counter[str] = Counter(
-        str(record.get("reported_test_repair_loops") if record.get("reported_test_repair_loops") is not None else "missing")
-        for record in filtered
+    repair_loop_counts = reported_counter(filtered, "reported_repair_loops")
+    syntax_repair_loop_counts = reported_counter(filtered, "reported_syntax_repair_loops")
+    unrealizable_repair_loop_counts = reported_counter(filtered, "reported_unrealizable_repair_loops")
+    well_separation_repair_loop_counts = reported_counter(filtered, "reported_well_separation_repair_loops")
+    test_repair_loop_counts = reported_counter(filtered, "reported_test_repair_loops")
+    broker_repair_loop_counts = reported_counter(filtered, "reported_broker_repair_loops")
+    well_separation_status_counts = Counter(
+        str(record.get("reported_well_separation_status") or "missing") for record in filtered
     )
 
     synthesized_without_repair = sum(
@@ -155,6 +159,14 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
         and record["reported_repair_loops"] > 0
     )
     counter_strategy_used = sum(1 for record in filtered if record.get("reported_used_counter_strategy") is True)
+    well_separation_checked = sum(
+        1
+        for record in filtered
+        if record.get("reported_well_separation_status") not in (None, "not_checked", "missing")
+    )
+    non_well_separated = sum(
+        1 for record in filtered if record.get("reported_well_separation_status") == "non_well_separated"
+    )
     blocked_by_nl_conflict = sum(1 for record in filtered if record.get("reported_blocked_by_nl_conflict") is True)
     test_runs_reported = sum(1 for record in filtered if isinstance(record.get("reported_tests_total"), int))
     tests_total = sum(record.get("reported_tests_total") for record in filtered if isinstance(record.get("reported_tests_total"), int))
@@ -174,39 +186,23 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
             }
             for status, count in sorted(cli_status_counts.items())
         ],
-        "repair_loops": [
+        "repair_loops": sorted_distribution(repair_loop_counts, total, "repair_loops"),
+        "syntax_repair_loops": sorted_distribution(syntax_repair_loop_counts, total, "syntax_repair_loops"),
+        "unrealizable_repair_loops": sorted_distribution(
+            unrealizable_repair_loop_counts, total, "unrealizable_repair_loops"
+        ),
+        "well_separation_repair_loops": sorted_distribution(
+            well_separation_repair_loop_counts, total, "well_separation_repair_loops"
+        ),
+        "test_repair_loops": sorted_distribution(test_repair_loop_counts, total, "test_repair_loops"),
+        "broker_repair_loops": sorted_distribution(broker_repair_loop_counts, total, "broker_repair_loops"),
+        "well_separation_status": [
             {
-                "repair_loops": repair_loops,
+                "status": status,
                 "count": count,
                 "percent": percent(count, total),
             }
-            for repair_loops, count in sorted(repair_loop_counts.items(), key=lambda item: (not item[0].isdigit(), item[0]))
-        ],
-        "syntax_repair_loops": [
-            {
-                "syntax_repair_loops": repair_loops,
-                "count": count,
-                "percent": percent(count, total),
-            }
-            for repair_loops, count in sorted(syntax_repair_loop_counts.items(), key=lambda item: (not item[0].isdigit(), item[0]))
-        ],
-        "unrealizable_repair_loops": [
-            {
-                "unrealizable_repair_loops": repair_loops,
-                "count": count,
-                "percent": percent(count, total),
-            }
-            for repair_loops, count in sorted(
-                unrealizable_repair_loop_counts.items(), key=lambda item: (not item[0].isdigit(), item[0])
-            )
-        ],
-        "test_repair_loops": [
-            {
-                "test_repair_loops": repair_loops,
-                "count": count,
-                "percent": percent(count, total),
-            }
-            for repair_loops, count in sorted(test_repair_loop_counts.items(), key=lambda item: (not item[0].isdigit(), item[0]))
+            for status, count in sorted(well_separation_status_counts.items())
         ],
         "synthesized_with_zero_repair_loops": {
             "count": synthesized_without_repair,
@@ -224,6 +220,15 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
         "counter_strategy_used": {
             "count": counter_strategy_used,
             "percent": percent(counter_strategy_used, total),
+        },
+        "well_separation_checked": {
+            "count": well_separation_checked,
+            "percent": percent(well_separation_checked, total),
+        },
+        "non_well_separated": {
+            "count": non_well_separated,
+            "percent": percent(non_well_separated, total),
+            "percent_of_checked": percent(non_well_separated, well_separation_checked),
         },
         "blocked_by_nl_conflict": {
             "count": blocked_by_nl_conflict,
@@ -268,11 +273,29 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         for item in summary["unrealizable_repair_loops"]:
             print(f"  {item['unrealizable_repair_loops']}: {item['count']} ({item['percent']:.2f}%)")
 
+    if any(item["well_separation_repair_loops"] != "missing" for item in summary["well_separation_repair_loops"]):
+        print()
+        print("Well-separation repair loops:")
+        for item in summary["well_separation_repair_loops"]:
+            print(f"  {item['well_separation_repair_loops']}: {item['count']} ({item['percent']:.2f}%)")
+
     if any(item["test_repair_loops"] != "missing" for item in summary["test_repair_loops"]):
         print()
         print("Test repair loops:")
         for item in summary["test_repair_loops"]:
             print(f"  {item['test_repair_loops']}: {item['count']} ({item['percent']:.2f}%)")
+
+    if any(item["broker_repair_loops"] != "missing" for item in summary["broker_repair_loops"]):
+        print()
+        print("Broker repair loops:")
+        for item in summary["broker_repair_loops"]:
+            print(f"  {item['broker_repair_loops']}: {item['count']} ({item['percent']:.2f}%)")
+
+    if any(item["status"] != "missing" for item in summary["well_separation_status"]):
+        print()
+        print("Well-separation status:")
+        for item in summary["well_separation_status"]:
+            print(f"  {item['status']}: {item['count']} ({item['percent']:.2f}%)")
 
     zero_repair = summary["synthesized_with_zero_repair_loops"]
     print()
@@ -303,6 +326,19 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         print(
             "Blocked by NL conflict: "
             f"{summary['blocked_by_nl_conflict']['count']} ({summary['blocked_by_nl_conflict']['percent']:.2f}%)"
+        )
+
+    if summary["well_separation_checked"]["count"] or summary["non_well_separated"]["count"]:
+        print()
+        print(
+            "Well-separation checked: "
+            f"{summary['well_separation_checked']['count']} ({summary['well_separation_checked']['percent']:.2f}%)"
+        )
+        print(
+            "Non-well-separated: "
+            f"{summary['non_well_separated']['count']} "
+            f"({summary['non_well_separated']['percent']:.2f}% of all, "
+            f"{summary['non_well_separated']['percent_of_checked']:.2f}% of checked)"
         )
 
     tests = summary["controller_tests"]

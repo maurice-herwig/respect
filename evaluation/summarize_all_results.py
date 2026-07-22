@@ -263,8 +263,18 @@ def print_text_summary(summary: dict[str, Any]) -> None:
             reconstruction["unrealizable_repair_loops"],
             key_name="unrealizable_repair_loops",
         )
+    if any(item["well_separation_repair_loops"] != "missing" for item in reconstruction["well_separation_repair_loops"]):
+        print_distribution(
+            "  well_separation_repair_loops:",
+            reconstruction["well_separation_repair_loops"],
+            key_name="well_separation_repair_loops",
+        )
     if any(item["test_repair_loops"] != "missing" for item in reconstruction["test_repair_loops"]):
         print_distribution("  test_repair_loops:", reconstruction["test_repair_loops"], key_name="test_repair_loops")
+    if any(item["broker_repair_loops"] != "missing" for item in reconstruction["broker_repair_loops"]):
+        print_distribution("  broker_repair_loops:", reconstruction["broker_repair_loops"], key_name="broker_repair_loops")
+    if any(item["status"] != "missing" for item in reconstruction["well_separation_status"]):
+        print_distribution("  well_separation_status:", reconstruction["well_separation_status"])
     print(
         "  synthesized_with_zero_repair_loops: "
         f"{reconstruction['synthesized_with_zero_repair_loops']['count']} "
@@ -291,6 +301,18 @@ def print_text_summary(summary: dict[str, Any]) -> None:
             "  blocked_by_nl_conflict: "
             f"{reconstruction['blocked_by_nl_conflict']['count']} "
             f"({reconstruction['blocked_by_nl_conflict']['percent']:.2f}%)"
+        )
+    if reconstruction["well_separation_checked"]["count"] or reconstruction["non_well_separated"]["count"]:
+        print(
+            "  well_separation_checked: "
+            f"{reconstruction['well_separation_checked']['count']} "
+            f"({reconstruction['well_separation_checked']['percent']:.2f}%)"
+        )
+        print(
+            "  non_well_separated: "
+            f"{reconstruction['non_well_separated']['count']} "
+            f"({reconstruction['non_well_separated']['percent']:.2f}% of all, "
+            f"{reconstruction['non_well_separated']['percent_of_checked']:.2f}% of checked)"
         )
     tests = reconstruction["controller_tests"]
     if tests["runs_reported"]:

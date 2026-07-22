@@ -87,7 +87,10 @@ Each run directory stores:
 The `runs.jsonl` row records these persistent artifacts in
 `intermediate_spectra_files`, keyed by stage names such as `00_initial`,
 `01_after_syntax_repair`, `02_after_unrealizable_repair`,
-`03_after_test_repair`, and `final`.
+`03_after_well_separation_repair`, `04_after_test_repair`, and `final`.
+It also records reported well-separation fields such as
+`reported_well_separation_repair_loops`, `reported_well_separation_status`,
+and `reported_well_separation_file` when the selected skill reports them.
 
 ## Cross-Broker Reconstruction
 

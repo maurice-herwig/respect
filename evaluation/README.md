@@ -49,6 +49,12 @@ The script reports:
 ```text
 reported_cli_status counts and percentages
 reported_repair_loops counts and percentages
+reported_syntax_repair_loops counts and percentages, when present
+reported_unrealizable_repair_loops counts and percentages, when present
+reported_well_separation_repair_loops counts and percentages, when present
+reported_test_repair_loops counts and percentages, when present
+reported_broker_repair_loops counts and percentages, when present
+reported_well_separation_status counts and percentages, when present
 percentage of runs with reported_cli_status=synthesized and reported_repair_loops=0
 ```
 
