@@ -18,7 +18,9 @@ predicate fix (Coord c):
 
 asm ini rob[0]=0 & rob[1]=0;
 asm alw moveRob=UP implies next(rob[1])=rob[1]-1;
- 
+
+gar alw invMove(moveRob, moveDrone); 
+
 gar alw (rob[0]=0 implies moveRob!=LEFT) & 
 		(rob[0]=4 implies moveRob!=RIGHT) &
 		(rob[1]=0 implies moveRob!=UP) & 
@@ -26,7 +28,14 @@ gar alw (rob[0]=0 implies moveRob!=LEFT) &
 
 gar alw moveRob=STAY -> fix(rob[0]) & fix(rob[1]);
 
-gar alw coordSum < 7;
-
 // Extend specification GridL2.spectra with the following predicate
 // invMove(Move a, Move b) to assert that two parameters of type Move are inverse to each other, e.g., UP and DOWN or LEFT and RIGHT.
+
+predicate invMove (Move a, Move b):
+ upDown(a, b) | upDown(b, a) | leftRight(a, b) | leftRight(b, a);
+
+predicate upDown (Move a, Move b):
+ a=UP & b=DOWN;
+predicate leftRight (Move a, Move b):
+ a=LEFT & b=RIGHT;
+ 

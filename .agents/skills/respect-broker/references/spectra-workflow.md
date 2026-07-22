@@ -88,6 +88,7 @@ Common invalid repairs:
 
 - `assets/examples/A1_firstController/TrafficA1.spectra`
 - `assets/examples/A2_unrealizability/TrafficA2b.spectra`
-- `assets/examples/L1_firstSpec/`
-- `assets/examples/L2_defsArrays/`
-- `assets/examples/L3_patterns/`
+- `assets/examples/L1_firstSpec_solution/`
+- `assets/examples/L2_defsArrays_solution/`
+- `assets/examples/L3_patterns_solution/`
+- `assets/examples/L4_triggers_solution/`
