@@ -92,3 +92,5 @@ Common invalid repairs:
 - `assets/examples/L2_defsArrays_solution/`
 - `assets/examples/L3_patterns_solution/`
 - `assets/examples/L4_triggers_solution/`
+- `assets/examples/UserGuideSpecs/Blink5.spectra`
+- `assets/examples/UserGuideSpecs/Rover.spectra`
