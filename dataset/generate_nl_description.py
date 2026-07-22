@@ -33,7 +33,11 @@ from prompts import DEFAULT_NL_DESCRIPTION_SYSTEM_PROMPT, PROMPTS
 DEFAULT_BASE_URL = "https://chat-ai.academiccloud.de/v1"
 DEFAULT_OUTPUT_DIR = "dataset/nl_descriptions"
 DEFAULT_ACCEPTED_MANIFEST = "dataset/accepted/accepted_manifest.jsonl"
+SIGNATURE_FILENAME_TAG = "sig"
 LOGGER = logging.getLogger("generate_nl_description")
+SPEC_RE = re.compile(r"^\s*(?:spec|module)\s+([A-Za-z_][A-Za-z0-9_]*)\b", re.MULTILINE)
+TYPE_RE = re.compile(r"^\s*type\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)\s*;", re.MULTILINE)
+DECLARATION_RE = re.compile(r"^\s*(env|sys)\s+(.+?)\s+([A-Za-z_][A-Za-z0-9_]*)\s*;", re.MULTILINE)
 
 
 def parse_args() -> argparse.Namespace:
@@ -43,6 +47,11 @@ def parse_args() -> argparse.Namespace:
     source.add_argument("--prompt-file", help="Path to a text file containing the user prompt for --single-run.")
     parser.add_argument("--prompt-name", choices=sorted(PROMPTS), default="spectra_to_english_v1", help="Name of a prompt from prompts.py.")
     parser.add_argument("--accepted-manifest", default=DEFAULT_ACCEPTED_MANIFEST, help="Path to accepted Spectra manifest JSONL.")
+    parser.add_argument(
+        "--include-signature",
+        action="store_true",
+        help="Ask the model to include the exact environment and system variable signature in the description.",
+    )
     parser.add_argument(
         "--dedupe-by-content",
         action=argparse.BooleanOptionalAction,
@@ -143,12 +152,71 @@ def read_prompt(args: argparse.Namespace) -> tuple[str, str | None]:
     return prompt_path.read_text(encoding="utf-8"), str(prompt_path)
 
 
-def render_prompt(template: str, spectra_code: str | None = None) -> str:
+def strip_line_comments(source: str) -> str:
+    return "\n".join(line.split("//", 1)[0] for line in source.splitlines())
+
+
+def extract_spectra_signature(spectra_code: str) -> dict[str, Any]:
+    source = strip_line_comments(spectra_code)
+    spec_match = SPEC_RE.search(source)
+    type_defs = [
+        {"name": match.group(1), "domain": " ".join(match.group(2).strip().split())}
+        for match in TYPE_RE.finditer(source)
+    ]
+    env: list[dict[str, str]] = []
+    sys_vars: list[dict[str, str]] = []
+
+    for match in DECLARATION_RE.finditer(source):
+        owner, type_expr, variable = match.group(1), " ".join(match.group(2).strip().split()), match.group(3)
+        target = env if owner == "env" else sys_vars
+        target.append({"name": variable, "type": type_expr})
+
+    return {
+        "spec_name": spec_match.group(1) if spec_match else None,
+        "type_definitions": type_defs,
+        "environment": env,
+        "system": sys_vars,
+    }
+
+
+def format_signature_lines(variables: list[dict[str, str]]) -> list[str]:
+    if not variables:
+        return ["- none"]
+    return [f"- {variable['name']}: {variable['type']}" for variable in variables]
+
+
+def build_signature_prompt_section(signature: dict[str, Any]) -> str:
+    lines = [
+        "Additional fixed-interface requirement:",
+        "Include the following exact interface in the English requirements description.",
+        "Preserve every variable name and domain exactly. State which variables are environment-controlled inputs and which are system-controlled outputs. Do not rename variables and do not introduce additional variables.",
+    ]
+    if signature.get("spec_name"):
+        lines.extend(["", f"Specification name: {signature['spec_name']}"])
+    type_defs = signature.get("type_definitions") or []
+    if type_defs:
+        lines.append("")
+        lines.append("Named domains:")
+        lines.extend(f"- {type_def['name']}: {type_def['domain']}" for type_def in type_defs)
+    lines.append("")
+    lines.append("Environment variables:")
+    lines.extend(format_signature_lines(signature.get("environment") or []))
+    lines.append("")
+    lines.append("System variables:")
+    lines.extend(format_signature_lines(signature.get("system") or []))
+    return "\n".join(lines)
+
+
+def render_prompt(template: str, spectra_code: str | None = None, signature_section: str | None = None) -> str:
     if "{spectra_code}" in template:
         if spectra_code is None:
             raise RuntimeError("Selected prompt requires Spectra code, but no Spectra file was provided.")
-        return template.format(spectra_code=spectra_code)
-    return template
+        rendered = template.format(spectra_code=spectra_code)
+    else:
+        rendered = template
+    if signature_section:
+        rendered = rendered.rstrip() + "\n\n" + signature_section + "\n"
+    return rendered
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -306,15 +374,22 @@ def generation_variant_name(
     top_p: float | None,
     max_tokens: int | None,
     generation_config_key: str,
+    filename_tag: str | None = None,
 ) -> str:
     parts = [
         f"model={safe_path_part(model, 80)}",
         f"prompt={safe_path_part(prompt_name or 'adhoc', 60)}",
-        f"temperature={temperature if temperature is not None else 'default'}",
-        f"top_p={top_p if top_p is not None else 'default'}",
-        f"max_tokens={max_tokens if max_tokens is not None else 'default'}",
-        f"id={generation_config_key[:12]}",
     ]
+    if filename_tag:
+        parts.append(f"tag={safe_path_part(filename_tag, 60)}")
+    parts.extend(
+        [
+            f"temperature={temperature if temperature is not None else 'default'}",
+            f"top_p={top_p if top_p is not None else 'default'}",
+            f"max_tokens={max_tokens if max_tokens is not None else 'default'}",
+            f"id={generation_config_key[:12]}",
+        ]
+    )
     return "__".join(parts)
 
 
@@ -457,6 +532,7 @@ def generate_one(
     dataset_record: dict[str, Any] | None,
     spectra_file: str | None,
     spectra_sha256: str | None,
+    source_signature: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     request_started_at = utc_now()
     started = time.perf_counter()
@@ -505,6 +581,9 @@ def generate_one(
         "user_prompt_sha256": prompt_sha256,
         "prompt_name": prompt_name,
         "prompt_file": prompt_file,
+        "include_signature": args.include_signature,
+        "signature_filename_tag": SIGNATURE_FILENAME_TAG if args.include_signature else None,
+        "source_signature": source_signature,
         "dataset_id": dataset_id,
         "source_spectra_file": spectra_file,
         "source_spectra_sha256": spectra_sha256,
@@ -525,6 +604,7 @@ def generate_one(
         top_p=args.top_p,
         max_tokens=args.max_tokens,
         generation_config_key=config_key,
+        filename_tag=SIGNATURE_FILENAME_TAG if args.include_signature else None,
     )
     return write_outputs(
         output_dir=Path(args.output_dir),
@@ -537,6 +617,9 @@ def generate_one(
 
 
 def run_single(args: argparse.Namespace, api_key: str) -> int:
+    if args.include_signature:
+        LOGGER.error("--include-signature is only supported in dataset mode, where a source Spectra file is available.")
+        return 2
     if args.prompt_name and args.prompt is None and args.prompt_file is None:
         user_prompt = render_prompt(PROMPTS[args.prompt_name])
         prompt_file = None
@@ -551,6 +634,7 @@ def run_single(args: argparse.Namespace, api_key: str) -> int:
         dataset_record=None,
         spectra_file=None,
         spectra_sha256=None,
+        source_signature=None,
     )
     print(json.dumps(manifest_record, indent=2, sort_keys=True))
     return 0
@@ -594,7 +678,9 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
 
         spectra_file = Path(record["accepted_file"])
         spectra_code = spectra_file.read_text(encoding="utf-8")
-        user_prompt = render_prompt(template, spectra_code=spectra_code)
+        source_signature = extract_spectra_signature(spectra_code) if args.include_signature else None
+        signature_section = build_signature_prompt_section(source_signature) if source_signature else None
+        user_prompt = render_prompt(template, spectra_code=spectra_code, signature_section=signature_section)
         spectra_sha256 = sha256_text(spectra_code)
         prompt_sha256 = sha256_text(user_prompt)
         system_prompt_sha256 = sha256_text(args.system_prompt)
@@ -637,6 +723,7 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
                 dataset_record=record,
                 spectra_file=str(spectra_file),
                 spectra_sha256=spectra_sha256,
+                source_signature=source_signature,
             )
             completed_keys.add(config_key)
             completed_content_keys.add(content_key)
@@ -661,6 +748,8 @@ def run_dataset(args: argparse.Namespace, api_key: str) -> int:
         "temperature": args.temperature,
         "top_p": args.top_p,
         "max_tokens": args.max_tokens,
+        "include_signature": args.include_signature,
+        "signature_filename_tag": SIGNATURE_FILENAME_TAG if args.include_signature else None,
         "force": args.force,
         "refresh_before": refresh_before.isoformat() if refresh_before else None,
     }

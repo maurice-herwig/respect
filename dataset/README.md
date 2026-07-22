@@ -120,6 +120,20 @@ Use a specific prompt template from `prompts.py`:
 python dataset\generate_nl_description.py --prompt-name spectra_to_english_v1
 ```
 
+To make later reconstruction runs use the exact original alphabet, include the
+environment and system variable signature in the generated natural-language
+description prompt:
+
+```powershell
+python dataset\generate_nl_description.py --include-signature
+```
+
+With this option, the prompt asks the model to include the exact variable names
+and domains, grouped as environment-controlled inputs and system-controlled
+outputs. Generated response filenames include the fixed `tag=sig` marker, and
+`descriptions.jsonl` records `include_signature`, `signature_filename_tag`, and
+`source_signature`.
+
 Existing successful descriptions for the same Spectra content, model, prompt,
 and explicit generation settings are skipped automatically. Use a timestamp to
 refresh older descriptions:
