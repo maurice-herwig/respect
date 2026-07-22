@@ -18,11 +18,23 @@ This skill implements the primary ReSpect reconstruction condition:
 
 The goal is to measure whether CLI diagnostics plus NL-guided bounded controller tests improve reconstruction while avoiding leakage from the original specification.
 
+## Best-Practice Drafting Order
+
+Before writing the first complete Spectra draft, perform a concise requirements decomposition:
+
+1. Identify the system boundary and declare which named concepts are environment-controlled inputs and which are system-controlled outputs.
+2. Separate environment assumptions from system guarantees. Do not encode an assumption unless the natural-language description states or strongly implies the environment constraint.
+3. Classify each requirement as an initial condition, safety/update rule, liveness/justice requirement, or response/pattern requirement.
+4. Prefer the smallest kernel-level Spectra model that covers the stated requirements. Use advanced constructs such as patterns, monitors, counters, triggers, quantifiers, or arrays only when they express the natural-language requirement more directly or materially improve readability.
+5. Build the first draft incrementally in reasoning: add one coherent requirement group at a time, checking for ownership mistakes, hidden assumptions, contradictory initial conditions, over-strong guarantees, and duplicate or unused variables before saving `specs/00_initial.spectra`.
+
+This decomposition is a drafting discipline only. Do not read benchmark or source Spectra files, and do not run oracle-style checks.
+
 ## Workflow
 
 1. Read `references/spectra-workflow.md` before drafting a new specification.
 2. Read `assets/grammar/Spectra.xtext` before drafting, and use it only as syntax guidance for valid Spectra constructs.
-3. Translate the user's natural-language description into a complete Spectra specification.
+3. Follow the best-practice drafting order above, then translate the user's natural-language description into a complete Spectra specification.
 4. Save the initial draft as `specs/00_initial.spectra` before validation.
 5. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, and `test_repair_loops = 0`.
 6. Run `scripts/run_spectra_cli.py` on the saved file with an explicit timeout.

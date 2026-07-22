@@ -9,9 +9,12 @@
 
 ## Drafting Guidance
 
+- Before writing a full draft, decompose the natural-language requirements into system boundary, environment inputs, system outputs, assumptions, guarantees, initial conditions, safety/update rules, liveness/justice requirements, and response/pattern requirements.
+- Add requirement groups incrementally in reasoning. After each group, check for ownership mistakes, hidden assumptions, contradictory initial conditions, over-strong guarantees, duplicate constraints, and unused variables.
 - Start with one named `spec`.
 - Declare environment variables with `env` and system variables with `sys`.
 - Encode assumptions with `asm` and guarantees with `gar`.
+- Add environment assumptions only when the description states or strongly implies an environment constraint.
 - Prefer a minimal complete model over speculative features.
 - Prefer the simplest Spectra construct that directly expresses the requirement.
 - Use advanced constructs such as `counter`, `monitor`, `pattern`, `regexp`, quantifiers, aggregates, and triggers only when the natural-language description clearly calls for them or they materially simplify the specification.
