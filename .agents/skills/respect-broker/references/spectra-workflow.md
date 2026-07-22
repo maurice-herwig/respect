@@ -6,6 +6,7 @@
 - Interpreting `spectra-cli.jar` results
 - Repairing parser errors without drifting away from the user's intent
 - Using counter-strategy diagnostics to repair unrealizable drafts
+- Checking well-separation after realizability and before synthesis
 
 ## Drafting Guidance
 
@@ -43,6 +44,19 @@ java -jar spectra-cli.jar -i <path-to-file> -s -o <output-dir>
 Observed synthesis success pattern:
 
 - `Result: Successfully synthesized a just-in-time controller in output folder`
+
+Run well-separation after a realizable result and before synthesis:
+
+```bash
+java -jar spectra-cli.jar -i <path-to-file> --well-separation
+```
+
+Observed well-separation result patterns in this repo:
+
+- Well-separated: `Result: Specification is well-separated`
+- Non-well-separated: `Result: Specification is non-well-separated`
+
+The CLI returns exit code 0 for both well-separated and non-well-separated results; branch on the result text or wrapper status.
 
 ## Counter-Strategy Diagnostics
 
@@ -88,6 +102,15 @@ Common invalid repairs:
 - Adding an assumption that forbids inputs the description explicitly permits.
 - Weakening "must always" into "may sometimes" without textual support.
 - Ignoring a named input/output or changing control ownership.
+
+## Well-Separation Loop
+
+1. Run the well-separation check only after the normal check reports `Result: Specification is realizable`.
+2. If the result is non-well-separated, inspect environment assumptions first, especially assumptions that mention system variables or depend on system-controlled behavior.
+3. Compare any candidate repair against the natural-language description.
+4. Apply a repair only when it is consistent with the description.
+5. Re-run the normal CLI check and then the well-separation check.
+6. Stop after 3 well-separation-repair attempts or when all plausible repairs would contradict the description.
 
 ## Useful Local Sources
 

@@ -1,6 +1,6 @@
 ---
 name: respect-broker
-description: Method cross-broker agent for the ReSpect study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate and synthesize with spectra-cli.jar, repair syntax errors, repair unrealizability with CLI counter-strategy diagnostics when consistent with the natural-language description, and after successful synthesis submit the generated specification to experiments/cross_broker.py for peer disagreement feedback. Do not run controller_tests, generated semantic tests, equivalence checks, mutation checks, or benchmark oracles.
+description: Method cross-broker agent for the ReSpect study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate with spectra-cli.jar, repair syntax errors, repair unrealizability with CLI counter-strategy diagnostics when consistent with the natural-language description, check and repair well-separation before synthesis, and after successful synthesis submit the generated specification to experiments/cross_broker.py for peer disagreement feedback. Do not run controller_tests, generated semantic tests, equivalence checks, mutation checks, or benchmark oracles.
 ---
 
 # ReSpect Method Cross-Broker: Grammar-Guided CLI-Diagnosed Repair With Peer Disagreement Feedback
@@ -12,9 +12,9 @@ This skill implements a cross-agent ReSpect reconstruction condition:
 - Input: natural-language requirements for a reactive system.
 - Output: a generated Spectra specification plus CLI validation, diagnosis, synthesis, broker feedback, and repair results.
 - Initial syntax reference: `assets/grammar/Spectra.xtext`.
-- Feedback sources before broker submission: `spectra-cli.jar` parser/realizability/synthesis output and CLI counter-strategy diagnostics for unrealizable specifications.
+- Feedback sources before broker submission: `spectra-cli.jar` parser/realizability/synthesis/well-separation output and CLI counter-strategy diagnostics for unrealizable specifications.
 - Feedback source after successful synthesis: disagreement feedback returned by `experiments/cross_broker.py`.
-- Allowed repair signal: parser output, realizability status, counter-strategy output, generated Spectra, the natural-language description, and broker disagreement feedback.
+- Allowed repair signal: parser output, realizability status, well-separation status, counter-strategy output, generated Spectra, the natural-language description, and broker disagreement feedback.
 - Not allowed: `controller_tests`, generated controller tests, semantic equivalence checks against the benchmark, mutation checks, oracle-based tests, reading or comparing against the original/reference Spectra file, accepted dataset files, HOA distance results, or benchmark fixtures.
 
 The goal is to measure whether peer disagreement feedback can improve reconstruction after syntax and unrealizability handling, while avoiding the controller-test feedback source.
@@ -37,7 +37,7 @@ This decomposition is a drafting discipline only. Do not read benchmark or sourc
 2. Read `assets/grammar/Spectra.xtext` before drafting, and use it only as syntax guidance for valid Spectra constructs.
 3. Follow the best-practice drafting order above, then translate the user's natural-language description into a complete Spectra specification.
 4. Save the initial draft as `specs/00_initial.spectra` before validation.
-5. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, `broker_repair_loops = 0`, `broker_witnesses_received = 0`, `accepted_by_self_rejected_by_peer_repaired = 0`, `accepted_by_self_rejected_by_peer_ignored = 0`, `rejected_by_self_accepted_by_peer_repaired = 0`, and `rejected_by_self_accepted_by_peer_ignored = 0`.
+5. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, `well_separation_repair_loops = 0`, `broker_repair_loops = 0`, `broker_witnesses_received = 0`, `accepted_by_self_rejected_by_peer_repaired = 0`, `accepted_by_self_rejected_by_peer_ignored = 0`, `rejected_by_self_accepted_by_peer_repaired = 0`, and `rejected_by_self_accepted_by_peer_ignored = 0`.
 6. Run `scripts/run_spectra_cli.py` on the saved file with an explicit timeout.
 7. If the result is `syntax_error`, inspect the parser message, increment both `repair_loops` and `syntax_repair_loops`, repair only the syntax, and rerun validation.
 8. After the syntax-repair phase ends and the run moves to the next phase, save the stable repaired specification as `specs/01_after_syntax_repair.spectra` and append one transition record to `repair_log.jsonl`.
@@ -48,20 +48,26 @@ This decomposition is a drafting discipline only. Do not read benchmark or sourc
 13. Repair unrealizability only if the proposed change is consistent with the natural-language description.
 14. Prefer minimal repairs that preserve stated requirements: fix overly strong initialization, add environment assumptions only when implied by the description, or relax/reshape a guarantee only when the description supports the weaker form.
 15. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
-16. After the unrealizability-repair phase ends and the run moves to synthesis, save the stable repaired specification as `specs/02_after_unrealizable_repair.spectra` and append one transition record to `repair_log.jsonl`.
-17. After each unrealizability repair, increment both `repair_loops` and `unrealizable_repair_loops`, save the current working file, rerun validation, and continue from the appropriate branch.
-18. Limit unrealizability-repair loops to at most 3 attempts.
-19. If the result is `realizable`, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to broker submission.
-20. Submit the current synthesized Spectra file to the broker by running `experiments/cross_broker.py submit-and-wait` with the run id, current round id, agent id, spec path, expected agents, and timeout provided by the task prompt.
-21. Save the broker JSON response as `broker/feedback-<round>.json`. If the response contains a `feedback_file`, read that file and use it as the authoritative broker feedback for the round.
-22. If broker feedback is unavailable, has a non-ready status, or reports `semantic_relation = equivalent`, record the status and stop the broker loop.
-23. If broker feedback reports disagreement words, inspect both `accepted_by_you_rejected_by_peer` and `rejected_by_you_accepted_by_peer`. Treat them as peer disagreement evidence only, not as ground truth.
-24. Decide for each word whether the natural-language description supports a specification change. Count every word as either leading to repair or ignored, separately for each direction.
-25. If no word justifies a change, stop the broker loop and report that broker feedback was not applied.
-26. If at least one word justifies a change, make the minimal Spectra repair consistent with the natural-language description, increment both `repair_loops` and `broker_repair_loops`, save the file, rerun CLI validation, rerun synthesis, increment the broker round id, and submit the repaired Spectra to the broker again.
-27. After the broker-repair phase ends and the run moves to the next broker round or stops, save the stable repaired specification as `specs/03_after_broker_repair.spectra` and append one transition record to `repair_log.jsonl`.
-28. Limit broker-repair loops to at most 3 attempts.
-29. Save the final Spectra version as `final.spectra`. Always include the final method cross-broker result fields in the response.
+16. After each unrealizability repair, increment both `repair_loops` and `unrealizable_repair_loops`, save the current working file, rerun validation, and continue from the appropriate branch.
+17. Limit unrealizability-repair loops to at most 3 attempts.
+18. After the unrealizability-repair phase ends and the run moves to well-separation or stops, save the stable repaired specification as `specs/02_after_unrealizable_repair.spectra` and append one transition record to `repair_log.jsonl`.
+19. If the specification is `realizable`, run the well-separation check before synthesis and save the wrapper JSON as `diagnostics/well-separation-<n>.json`.
+20. If the well-separation result is `non_well_separated`, inspect the generated Spectra and the natural-language description before changing the specification.
+21. Repair non-well-separation only by changing environment assumptions or related modeling choices that are inconsistent with, or not justified by, the natural-language description. Do not delete stated requirements, add artificial assumptions, or weaken guarantees unless the natural-language description supports that change.
+22. After each well-separation repair, increment both `repair_loops` and `well_separation_repair_loops`, save the current working file, rerun validation, rerun well-separation when realizable, and continue from the appropriate branch.
+23. Limit well-separation-repair loops to at most 3 attempts. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
+24. After the well-separation-repair phase ends and the run moves to synthesis or stops, save the stable repaired specification as `specs/03_after_well_separation_repair.spectra` and append one transition record to `repair_log.jsonl`.
+25. If the well-separation result is `well_separated`, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to broker submission.
+26. Submit the current synthesized Spectra file to the broker by running `experiments/cross_broker.py submit-and-wait` with the run id, current round id, agent id, spec path, expected agents, and timeout provided by the task prompt.
+27. Save the broker JSON response as `broker/feedback-<round>.json`. If the response contains a `feedback_file`, read that file and use it as the authoritative broker feedback for the round.
+28. If broker feedback is unavailable, has a non-ready status, or reports `semantic_relation = equivalent`, record the status and stop the broker loop.
+29. If broker feedback reports disagreement words, inspect both `accepted_by_you_rejected_by_peer` and `rejected_by_you_accepted_by_peer`. Treat them as peer disagreement evidence only, not as ground truth.
+30. Decide for each word whether the natural-language description supports a specification change. Count every word as either leading to repair or ignored, separately for each direction.
+31. If no word justifies a change, stop the broker loop and report that broker feedback was not applied.
+32. If at least one word justifies a change, make the minimal Spectra repair consistent with the natural-language description, increment both `repair_loops` and `broker_repair_loops`, save the file, rerun CLI validation, rerun well-separation when realizable, rerun synthesis, increment the broker round id, and submit the repaired Spectra to the broker again.
+33. After the broker-repair phase ends and the run moves to the next broker round or stops, save the stable repaired specification as `specs/04_after_broker_repair.spectra` and append one transition record to `repair_log.jsonl`.
+34. Limit broker-repair loops to at most 3 attempts.
+35. Save the final Spectra version as `final.spectra`. Always include the final method cross-broker result fields in the response.
 
 ## Temporary File Handling
 
@@ -74,9 +80,11 @@ tmp/spectra-runs/<timestamp>-<slug>/
     00_initial.spectra
     01_after_syntax_repair.spectra
     02_after_unrealizable_repair.spectra
-    03_after_broker_repair.spectra
+    03_after_well_separation_repair.spectra
+    04_after_broker_repair.spectra
   diagnostics/
     unrealizable-<n>.json
+    well-separation-<n>.json
   broker/
     feedback-<round>.json
     feedback-detail-<round>.json
@@ -86,23 +94,24 @@ tmp/spectra-runs/<timestamp>-<slug>/
 ```
 
 - Save only stable Spectra versions at phase boundaries: the initial draft, the specification that leaves each repair phase, and the final specification. Do not save every intermediate failed repair attempt inside a loop unless it is also the final state.
-- Omit phase-specific spec files and repair-log entries for phases that did not run. For example, if no broker repair was attempted, do not create `specs/03_after_broker_repair.spectra`.
+- Omit phase-specific spec files and repair-log entries for phases that did not run. For example, if no broker repair was attempted, do not create `specs/04_after_broker_repair.spectra`.
 - Keep `final.spectra` as a copy of the last stable Spectra version and report `spectra_file` as that path.
 - Append one JSON object per phase transition to `repair_log.jsonl`.
 - Use this `repair_log.jsonl` schema consistently for cross-broker runs:
 
 ```json
 {
-  "version": "03_after_broker_repair",
+  "version": "04_after_broker_repair",
   "phase": "broker_repair",
-  "input_spec": "specs/02_after_unrealizable_repair.spectra",
-  "output_spec": "specs/03_after_broker_repair.spectra",
+  "input_spec": "specs/03_after_well_separation_repair.spectra",
+  "output_spec": "specs/04_after_broker_repair.spectra",
   "trigger": "broker_disagreement",
   "result_before": "synthesized",
   "result_after": "synthesized",
   "repair_loops_total": 2,
   "syntax_repair_loops": 0,
   "unrealizable_repair_loops": 1,
+  "well_separation_repair_loops": 0,
   "test_repair_loops": 0,
   "broker_repair_loops": 1,
   "diagnostic_files": ["broker/feedback-1.json", "broker/repair-decisions-1.json"],
@@ -111,6 +120,7 @@ tmp/spectra-runs/<timestamp>-<slug>/
 ```
 
 - Save the JSON output of each counter-strategy wrapper call as `diagnostics/unrealizable-<n>.json`. The actual counter-strategy text is preserved inside that JSON object's `raw_output` field.
+- Save the JSON output of each well-separation wrapper call as `diagnostics/well-separation-<n>.json`. The actual CLI text is preserved inside that JSON object's `raw_output` field.
 - Save broker responses as `broker/feedback-<round>.json`.
 - If the broker response references `feedback_file`, read that file and save a copy as `broker/feedback-detail-<round>.json` before making any repair decision.
 - Save a concise repair-decision log as `broker/repair-decisions-<round>.json`, including per-word decisions and counters.
@@ -130,6 +140,14 @@ For counter-strategy diagnostics after an `unrealizable` result:
 ```bash
 python .agents/skills/respect-broker/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy --timeout 120
 ```
+
+For well-separation after a `realizable` result and before synthesis:
+
+```bash
+python .agents/skills/respect-broker/scripts/run_spectra_cli.py --input <path-to-file> --well-separation --timeout 120
+```
+
+The wrapper returns `status = well_separated` or `status = non_well_separated`. The underlying CLI returns exit code 0 for both outcomes, so use the normalized `status`, not the process exit code, to branch.
 
 Use JTLV text format only if the default counter-strategy output is not useful:
 
@@ -206,6 +224,15 @@ Broker words are disagreement evidence, not oracle counterexamples. The peer spe
 - Preserve all explicitly described inputs, outputs, initial conditions, safety requirements, liveness requirements, and update rules unless the description itself leaves room for the change.
 - Keep a concise repair log for each unrealizability loop.
 
+## Well-Separation Repair Rules
+
+- Treat `non_well_separated` as diagnostic evidence that the system may be able to force the environment to violate its own assumptions.
+- Inspect environment assumptions first, especially assumptions that mention system variables or constrain the environment based on system-controlled behavior.
+- Repair only when the natural-language description supports the change.
+- Prefer removing or reshaping unjustified environment assumptions over adding new assumptions.
+- Do not delete stated guarantees or weaken required behavior solely to make the well-separation check pass.
+- If the natural-language description genuinely requires a non-well-separated environment contract, stop and report `blocked_by_nl_conflict = true`.
+
 ## Broker Feedback Handling
 
 When broker feedback is ready:
@@ -234,11 +261,14 @@ cli_status: <syntax_error|unrealizable|realizable|synthesized|timeout|unknown>
 repair_loops: <number>
 syntax_repair_loops: <number>
 unrealizable_repair_loops: <number>
+well_separation_repair_loops: <number>
 broker_repair_loops: <number>
 timeout_seconds: <number>
 used_counter_strategy: <true|false>
+well_separation_status: <well_separated|non_well_separated|not_checked|unknown>
 blocked_by_nl_conflict: <true|false>
 diagnostic_file: <path or none>
+well_separation_file: <path or none>
 broker_feedback_status: <ready|timeout|comparison_failed|alphabet_mismatch|none|other>
 broker_feedback_file: <path or none>
 broker_witnesses_received: <number>

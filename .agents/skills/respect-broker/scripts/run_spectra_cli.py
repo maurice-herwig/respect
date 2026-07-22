@@ -19,6 +19,10 @@ def default_jar_path() -> Path:
 def detect_status(stdout: str, synthesize: bool) -> str:
     if "Could not prepare game input from Spectra file" in stdout or "ErrorsInSpectraException" in stdout:
         return "syntax_error"
+    if "Result: Specification is non-well-separated" in stdout:
+        return "non_well_separated"
+    if "Result: Specification is well-separated" in stdout:
+        return "well_separated"
     if "Result: Specification is unrealizable" in stdout:
         return "unrealizable"
     if "Result: Specification is realizable" in stdout:
@@ -35,6 +39,7 @@ def build_command(
     synthesize: bool,
     counter_strategy: bool,
     counter_strategy_jtlv_format: bool,
+    well_separation: bool,
 ) -> list[str]:
     command = ["java", "-jar", str(jar_path), "-i", str(input_path)]
     if synthesize:
@@ -45,6 +50,8 @@ def build_command(
         command.append("--counter-strategy-jtlv-format")
     elif counter_strategy:
         command.append("--counter-strategy")
+    if well_separation:
+        command.append("--well-separation")
     return command
 
 
@@ -65,6 +72,11 @@ def main() -> int:
         help="Generate a counter-strategy and print it in JTLV text format",
     )
     parser.add_argument(
+        "--well-separation",
+        action="store_true",
+        help="Check whether the specification is well-separated",
+    )
+    parser.add_argument(
         "--timeout",
         type=float,
         default=120.0,
@@ -77,8 +89,8 @@ def main() -> int:
     output_dir = Path(args.output_dir).resolve() if args.output_dir else None
     counter_strategy = args.counter_strategy or args.counter_strategy_jtlv_format
 
-    if args.synthesize and counter_strategy:
-        print(json.dumps({"status": "error", "message": "Cannot combine synthesis and counter-strategy diagnostics."}))
+    if sum(bool(flag) for flag in (args.synthesize, counter_strategy, args.well_separation)) > 1:
+        print(json.dumps({"status": "error", "message": "Cannot combine synthesis, counter-strategy diagnostics, and well-separation checks."}))
         return 2
 
     if not input_path.is_file():
@@ -99,6 +111,7 @@ def main() -> int:
         args.synthesize,
         args.counter_strategy,
         args.counter_strategy_jtlv_format,
+        args.well_separation,
     )
     try:
         completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=args.timeout)
@@ -115,6 +128,7 @@ def main() -> int:
             "synthesize": args.synthesize,
             "counter_strategy": counter_strategy,
             "counter_strategy_format": "jtlv" if args.counter_strategy_jtlv_format else "default",
+            "well_separation": args.well_separation,
             "output_dir": str(output_dir) if output_dir else None,
             "timeout_seconds": args.timeout,
             "raw_output": combined_output,
@@ -135,6 +149,7 @@ def main() -> int:
         "synthesize": args.synthesize,
         "counter_strategy": counter_strategy,
         "counter_strategy_format": "jtlv" if args.counter_strategy_jtlv_format else "default",
+        "well_separation": args.well_separation,
         "output_dir": str(output_dir) if output_dir else None,
         "timeout_seconds": args.timeout,
         "raw_output": combined_output,

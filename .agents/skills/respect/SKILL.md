@@ -1,6 +1,6 @@
 ---
 name: respect
-description: Primary ReSpect agent for the study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate and synthesize with spectra-cli.jar, repair unrealizability with CLI counter-strategy diagnostics, and after successful synthesis create and run NL-guided controller tests with controller_tests. Repair generated Spectra only when CLI/test feedback indicates a problem and the repair is consistent with the natural-language description. Do not compare against source Spectra files or benchmark oracles.
+description: Primary ReSpect agent for the study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate with spectra-cli.jar, repair unrealizability with CLI counter-strategy diagnostics, check and repair well-separation before synthesis, and after successful synthesis create and run NL-guided controller tests with controller_tests. Repair generated Spectra only when CLI/test feedback indicates a problem and the repair is consistent with the natural-language description. Do not compare against source Spectra files or benchmark oracles.
 ---
 
 # ReSpect: Grammar-Guided CLI-Diagnosed Repair With NL-Guided Controller Tests
@@ -12,8 +12,8 @@ This skill implements the primary ReSpect reconstruction condition:
 - Input: natural-language requirements for a reactive system.
 - Output: a generated Spectra specification plus CLI validation, diagnosis, synthesis, test, and repair results.
 - Initial syntax reference: `assets/grammar/Spectra.xtext`.
-- Feedback sources: `spectra-cli.jar` realizability/synthesis output, CLI counter-strategy diagnostics for unrealizable specifications, and NL-guided controller tests from `controller_tests`.
-- Allowed repair signal: parser output, realizability status, counter-strategy output, controller-test failures, failing traces, generated Spectra, and the natural-language description.
+- Feedback sources: `spectra-cli.jar` realizability/synthesis/well-separation output, CLI counter-strategy diagnostics for unrealizable specifications, and NL-guided controller tests from `controller_tests`.
+- Allowed repair signal: parser output, realizability status, well-separation status, counter-strategy output, controller-test failures, failing traces, generated Spectra, and the natural-language description.
 - Not allowed: reading or comparing against the original/reference Spectra file, semantic equivalence checks against the benchmark, mutation checks, or oracle-based tests.
 
 The goal is to measure whether CLI diagnostics plus NL-guided bounded controller tests improve reconstruction while avoiding leakage from the original specification.
@@ -36,31 +36,36 @@ This decomposition is a drafting discipline only. Do not read benchmark or sourc
 2. Read `assets/grammar/Spectra.xtext` before drafting, and use it only as syntax guidance for valid Spectra constructs.
 3. Follow the best-practice drafting order above, then translate the user's natural-language description into a complete Spectra specification.
 4. Save the initial draft as `specs/00_initial.spectra` before validation.
-5. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, and `test_repair_loops = 0`.
+5. Initialize `repair_loops = 0`, `syntax_repair_loops = 0`, `unrealizable_repair_loops = 0`, `well_separation_repair_loops = 0`, and `test_repair_loops = 0`.
 6. Run `scripts/run_spectra_cli.py` on the saved file with an explicit timeout.
 7. If the result is `syntax_error`, inspect the parser message, increment both `repair_loops` and `syntax_repair_loops`, repair only the syntax, and rerun validation.
 8. After the syntax-repair phase ends and the run moves to the next phase, save the stable repaired specification as `specs/01_after_syntax_repair.spectra` and append one transition record to `repair_log.jsonl`.
 9. Limit syntax-repair loops to at most 3 attempts and report the last parser error if repair still fails.
 10. If the result is `timeout`, report the timeout and do not continue.
-11. If the result is `realizable`, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
-12. If the result is `unrealizable`, request CLI diagnostics with `--counter-strategy` and save the diagnostic JSON.
-13. Analyze the counter-strategy and the natural-language description before changing the specification.
-14. Repair unrealizability only if the proposed change is consistent with the natural-language description.
-15. Prefer minimal repairs that preserve stated requirements: fix overly strong initialization, add environment assumptions only when implied by the description, or relax/reshape a guarantee only when the description supports the weaker form.
-16. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
-17. After the unrealizability-repair phase ends and the run moves to synthesis, save the stable repaired specification as `specs/02_after_unrealizable_repair.spectra` and append one transition record to `repair_log.jsonl`.
-18. After each unrealizability repair, increment `unrealizable_repair_loops`, save the current working file, rerun validation, and continue from the appropriate branch.
-19. Limit unrealizability-repair loops to at most 3 attempts.
-20. If a repaired specification becomes realizable, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
-21. After every successful synthesis, create a controller test plan from the natural-language description, generated Spectra, and synthesized controller metadata.
-22. Run the test plan with `controller_tests`.
-23. If all tests pass, report the passing test counts and test result file.
-24. If tests fail, inspect each failing test name, reason, and trace. Decide whether the test is actually justified by the natural-language description.
-25. If a failing test is too strong, underspecified, or not supported by the natural-language description, revise or remove that test and rerun the test plan without changing Spectra.
-26. If a failing test is justified by the natural-language description, minimally repair the generated Spectra, increment `test_repair_loops`, rerun CLI validation, rerun synthesis, create a fresh test plan, and rerun tests.
-27. After the test-repair phase ends and the tests are rerun or the run stops, save the stable repaired specification as `specs/03_after_test_repair.spectra` and append one transition record to `repair_log.jsonl`.
-28. Limit test-repair loops to at most 3 attempts.
-29. Save the final Spectra version as `final.spectra`. Always include the final ReSpect result fields in the response.
+11. If the result is `unrealizable`, request CLI diagnostics with `--counter-strategy` and save the diagnostic JSON.
+12. Analyze the counter-strategy and the natural-language description before changing the specification.
+13. Repair unrealizability only if the proposed change is consistent with the natural-language description.
+14. Prefer minimal repairs that preserve stated requirements: fix overly strong initialization, add environment assumptions only when implied by the description, or relax/reshape a guarantee only when the description supports the weaker form.
+15. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
+16. After each unrealizability repair, increment both `repair_loops` and `unrealizable_repair_loops`, save the current working file, rerun validation, and continue from the appropriate branch.
+17. Limit unrealizability-repair loops to at most 3 attempts.
+18. After the unrealizability-repair phase ends and the run moves to well-separation or stops, save the stable repaired specification as `specs/02_after_unrealizable_repair.spectra` and append one transition record to `repair_log.jsonl`.
+19. If the specification is `realizable`, run the well-separation check before synthesis and save the wrapper JSON as `diagnostics/well-separation-<n>.json`.
+20. If the well-separation result is `non_well_separated`, inspect the generated Spectra and the natural-language description before changing the specification.
+21. Repair non-well-separation only by changing environment assumptions or related modeling choices that are inconsistent with, or not justified by, the natural-language description. Do not delete stated requirements, add artificial assumptions, or weaken guarantees unless the natural-language description supports that change.
+22. After each well-separation repair, increment both `repair_loops` and `well_separation_repair_loops`, save the current working file, rerun validation, rerun well-separation when realizable, and continue from the appropriate branch.
+23. Limit well-separation-repair loops to at most 3 attempts. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
+24. After the well-separation-repair phase ends and the run moves to synthesis or stops, save the stable repaired specification as `specs/03_after_well_separation_repair.spectra` and append one transition record to `repair_log.jsonl`.
+25. If the well-separation result is `well_separated`, run synthesis. If synthesis succeeds, set `cli_status = synthesized` and continue to NL-guided controller tests.
+26. After every successful synthesis, create a controller test plan from the natural-language description, generated Spectra, and synthesized controller metadata.
+27. Run the test plan with `controller_tests`.
+28. If all tests pass, report the passing test counts and test result file.
+29. If tests fail, inspect each failing test name, reason, and trace. Decide whether the test is actually justified by the natural-language description.
+30. If a failing test is too strong, underspecified, or not supported by the natural-language description, revise or remove that test and rerun the test plan without changing Spectra.
+31. If a failing test is justified by the natural-language description, minimally repair the generated Spectra, increment both `repair_loops` and `test_repair_loops`, rerun CLI validation, rerun well-separation when realizable, rerun synthesis, create a fresh test plan, and rerun tests.
+32. After the test-repair phase ends and the tests are rerun or the run stops, save the stable repaired specification as `specs/04_after_test_repair.spectra` and append one transition record to `repair_log.jsonl`.
+33. Limit test-repair loops to at most 3 attempts.
+34. Save the final Spectra version as `final.spectra`. Always include the final ReSpect result fields in the response.
 
 ## Temporary File Handling
 
@@ -73,9 +78,11 @@ tmp/spectra-runs/<timestamp>-<slug>/
     00_initial.spectra
     01_after_syntax_repair.spectra
     02_after_unrealizable_repair.spectra
-    03_after_test_repair.spectra
+    03_after_well_separation_repair.spectra
+    04_after_test_repair.spectra
   diagnostics/
     unrealizable-<n>.json
+    well-separation-<n>.json
   tests/
     test-plan-<n>.rtest
     test-plan-<n>.json
@@ -85,7 +92,7 @@ tmp/spectra-runs/<timestamp>-<slug>/
 ```
 
 - Save only stable Spectra versions at phase boundaries: the initial draft, the specification that leaves each repair phase, and the final specification. Do not save every intermediate failed repair attempt inside a loop unless it is also the final state.
-- Omit phase-specific spec files and repair-log entries for phases that did not run. For example, if no test repair was attempted, do not create `specs/03_after_test_repair.spectra`.
+- Omit phase-specific spec files and repair-log entries for phases that did not run. For example, if no test repair was attempted, do not create `specs/04_after_test_repair.spectra`.
 - Keep `final.spectra` as a copy of the last stable Spectra version and report `spectra_file` as that path.
 - Append one JSON object per phase transition to `repair_log.jsonl`.
 - Use this `repair_log.jsonl` schema consistently for ReSpect runs:
@@ -102,6 +109,7 @@ tmp/spectra-runs/<timestamp>-<slug>/
   "repair_loops_total": 2,
   "syntax_repair_loops": 1,
   "unrealizable_repair_loops": 1,
+  "well_separation_repair_loops": 0,
   "test_repair_loops": 0,
   "broker_repair_loops": 0,
   "diagnostic_files": ["diagnostics/unrealizable-1.json"],
@@ -110,6 +118,7 @@ tmp/spectra-runs/<timestamp>-<slug>/
 ```
 
 - Save the JSON output of each counter-strategy wrapper call as `diagnostics/unrealizable-<n>.json`. The actual counter-strategy text is preserved inside that JSON object's `raw_output` field.
+- Save the JSON output of each well-separation wrapper call as `diagnostics/well-separation-<n>.json`. The actual CLI text is preserved inside that JSON object's `raw_output` field.
 - Save controller test DSL files as `tests/test-plan-<n>.rtest`.
 - Compile each DSL file to `tests/test-plan-<n>.json` before running the Java test runner.
 - Save DSL compiler diagnostics as `tests/dsl-diagnostics-<n>-<attempt>.json` when compilation fails or when a repair loop is used.
@@ -130,6 +139,14 @@ For counter-strategy diagnostics after an `unrealizable` result:
 ```bash
 python .agents/skills/respect/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy --timeout 120
 ```
+
+For well-separation after a `realizable` result and before synthesis:
+
+```bash
+python .agents/skills/respect/scripts/run_spectra_cli.py --input <path-to-file> --well-separation --timeout 120
+```
+
+The wrapper returns `status = well_separated` or `status = non_well_separated`. The underlying CLI returns exit code 0 for both outcomes, so use the normalized `status`, not the process exit code, to branch.
 
 Use JTLV text format only if the default counter-strategy output is not useful:
 
@@ -196,6 +213,15 @@ Use `--strict-files` only after the generated Spectra file and synthesized JIT c
   - `contradicts`: do not apply the edit.
 - Preserve all explicitly described inputs, outputs, initial conditions, safety requirements, liveness requirements, and update rules unless the description itself leaves room for the change.
 - Keep a concise repair log for each unrealizability loop.
+
+## Well-Separation Repair Rules
+
+- Treat `non_well_separated` as diagnostic evidence that the system may be able to force the environment to violate its own assumptions.
+- Inspect environment assumptions first, especially assumptions that mention system variables or constrain the environment based on system-controlled behavior.
+- Repair only when the natural-language description supports the change.
+- Prefer removing or reshaping unjustified environment assumptions over adding new assumptions.
+- Do not delete stated guarantees or weaken required behavior solely to make the well-separation check pass.
+- If the natural-language description genuinely requires a non-well-separated environment contract, stop and report `blocked_by_nl_conflict = true`.
 
 ## NL-Guided Controller Test Planning
 
@@ -302,11 +328,14 @@ cli_status: <syntax_error|unrealizable|realizable|synthesized|timeout|unknown>
 repair_loops: <number>
 syntax_repair_loops: <number>
 unrealizable_repair_loops: <number>
+well_separation_repair_loops: <number>
 test_repair_loops: <number>
 timeout_seconds: <number>
 used_counter_strategy: <true|false>
+well_separation_status: <well_separated|non_well_separated|not_checked|unknown>
 blocked_by_nl_conflict: <true|false>
 diagnostic_file: <path or none>
+well_separation_file: <path or none>
 test_plan_file: <path or none>
 test_result_file: <path or none>
 tests_total: <number>
