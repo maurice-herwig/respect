@@ -96,6 +96,16 @@ For larger input domains, use random sampling:
   python evaluation/evaluate_controller_distances.py --skill respect --model llama-3 --mode random --max-depth 10 --runs 1000 --seed 1
 ```
 
+To compare a persisted intermediate Spectra stage instead of the final
+reconstruction, pass the same `--spectra-stage` key used by the Buchi evaluator:
+
+```powershell
+python evaluation\evaluate_controller_distances.py `
+  --skill respect `
+  --model llama-3 `
+  --spectra-stage 02_after_unrealizable_repair
+```
+
 The script automatically synthesizes both controllers into:
 
 ```text

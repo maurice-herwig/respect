@@ -77,7 +77,17 @@ Each run directory stores:
 - `agent_stderr.txt`
 - `parsed_result.json`, if the agent prints a final JSON object
 - `respect.spectra`, if the agent reports a Spectra file
+- `skill_artifacts/specs/*.spectra`, stable intermediate Spectra files copied
+  from the skill artifact directory, when reported
+- `skill_artifacts/final.spectra`, the final Spectra version copied from the
+  skill artifact directory, when reported
+- `skill_artifacts/repair_log.jsonl`, the repair phase log, when reported
 - a row in `runs.jsonl`
+
+The `runs.jsonl` row records these persistent artifacts in
+`intermediate_spectra_files`, keyed by stage names such as `00_initial`,
+`01_after_syntax_repair`, `02_after_unrealizable_repair`,
+`03_after_test_repair`, and `final`.
 
 ## Cross-Broker Reconstruction
 

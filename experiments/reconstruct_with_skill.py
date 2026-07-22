@@ -166,6 +166,64 @@ def copy_reconstructed_spectra(parsed_result: dict[str, Any] | None, destination
     return str(destination)
 
 
+def copy_skill_artifacts(parsed_result: dict[str, Any] | None, run_dir: Path) -> dict[str, Any]:
+    """Persist stable skill artifacts from a temporary artifact_dir into run_dir."""
+    if not parsed_result:
+        return {
+            "artifact_dir": None,
+            "repair_log_file": None,
+            "intermediate_spectra_files": {},
+        }
+
+    source_artifact_dir = resolve_reported_path(parsed_result.get("artifact_dir"))
+    if source_artifact_dir is None or not source_artifact_dir.is_dir():
+        return {
+            "artifact_dir": None,
+            "repair_log_file": None,
+            "intermediate_spectra_files": {},
+        }
+
+    archived_dir = run_dir / "skill_artifacts"
+    archived_specs_dir = archived_dir / "specs"
+    intermediate_spectra_files: dict[str, str] = {}
+
+    source_specs_dir = source_artifact_dir / "specs"
+    if source_specs_dir.is_dir():
+        for source_spec in sorted(source_specs_dir.glob("*.spectra")):
+            destination = archived_specs_dir / source_spec.name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_spec, destination)
+            intermediate_spectra_files[source_spec.stem] = repo_relative_path(destination) or str(destination)
+
+    source_final = source_artifact_dir / "final.spectra"
+    if source_final.is_file():
+        destination = archived_dir / "final.spectra"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_final, destination)
+        intermediate_spectra_files["final"] = repo_relative_path(destination) or str(destination)
+
+    source_repair_log = source_artifact_dir / "repair_log.jsonl"
+    archived_repair_log = None
+    if source_repair_log.is_file():
+        destination = archived_dir / "repair_log.jsonl"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_repair_log, destination)
+        archived_repair_log = repo_relative_path(destination) or str(destination)
+
+    if not intermediate_spectra_files and archived_repair_log is None:
+        return {
+            "artifact_dir": None,
+            "repair_log_file": None,
+            "intermediate_spectra_files": {},
+        }
+
+    return {
+        "artifact_dir": repo_relative_path(archived_dir) or str(archived_dir),
+        "repair_log_file": archived_repair_log,
+        "intermediate_spectra_files": intermediate_spectra_files,
+    }
+
+
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     if not path.is_file():
@@ -287,6 +345,8 @@ def extract_key_value_result(text: str) -> dict[str, Any] | None:
         "tests_failed",
         "spectra_file",
         "controller_output_dir",
+        "artifact_dir",
+        "repair_log_file",
     }
     result: dict[str, Any] = {}
     for line in text.splitlines():
@@ -494,6 +554,11 @@ def process_description(
     finished_at = utc_now()
     duration_ms = int((time.perf_counter() - started) * 1000)
     copied_spectra_file = None
+    archived_skill_artifacts = {
+        "artifact_dir": None,
+        "repair_log_file": None,
+        "intermediate_spectra_files": {},
+    }
     if status == "success":
         copied_spectra_file = copy_reconstructed_spectra(parsed_result, reconstructed_spectra_file)
         if copied_spectra_file:
@@ -503,6 +568,19 @@ def process_description(
             LOGGER.info("Copied reconstructed Spectra file to %s", copied_spectra_file)
         elif not args.dry_run:
             LOGGER.warning("Agent run succeeded but no reported spectra_file could be copied for %s", record.get("description_id"))
+        archived_skill_artifacts = copy_skill_artifacts(parsed_result, run_dir)
+        if parsed_result is not None:
+            parsed_result["original_reported_artifact_dir"] = parsed_result.get("artifact_dir")
+            parsed_result["original_reported_repair_log_file"] = parsed_result.get("repair_log_file")
+            parsed_result["artifact_dir"] = archived_skill_artifacts["artifact_dir"]
+            parsed_result["repair_log_file"] = archived_skill_artifacts["repair_log_file"]
+            parsed_result["intermediate_spectra_files"] = archived_skill_artifacts["intermediate_spectra_files"]
+        if archived_skill_artifacts["intermediate_spectra_files"]:
+            LOGGER.info(
+                "Copied %s intermediate Spectra artifacts to %s",
+                len(archived_skill_artifacts["intermediate_spectra_files"]),
+                run_dir / "skill_artifacts",
+            )
     if parsed_result is not None:
         parsed_result_file.write_text(json.dumps(parsed_result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -547,6 +625,9 @@ def process_description(
         "reported_tests_passed": parsed_result.get("tests_passed") if parsed_result else None,
         "reported_tests_failed": parsed_result.get("tests_failed") if parsed_result else None,
         "reported_spectra_file": parsed_result.get("spectra_file") if parsed_result else None,
+        "reported_artifact_dir": parsed_result.get("artifact_dir") if parsed_result else None,
+        "reported_repair_log_file": parsed_result.get("repair_log_file") if parsed_result else None,
+        "intermediate_spectra_files": archived_skill_artifacts["intermediate_spectra_files"],
         "timeout_seconds": args.timeout,
         "run_started_at": started_at,
         "run_finished_at": finished_at,

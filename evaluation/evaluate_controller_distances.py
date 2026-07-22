@@ -33,7 +33,9 @@ from evaluation.buchi.evaluate_reconstruction_distances import (  # noqa: E402
     resolve_input_path,
     safe_path_part,
     select_matching_runs,
+    selected_generated_spectra_value,
     sha256_file,
+    stage_comparison_id,
 )
 from evaluation.signature_mapping import (  # noqa: E402
     DEFAULT_MAPPING_FILE,
@@ -461,7 +463,10 @@ def result_pair_key(record: dict[str, Any]) -> tuple[Any, ...] | None:
 
 def current_pair_key(record: dict[str, Any], args: argparse.Namespace, jar_path: Path, executor_jar: Path) -> tuple[Any, ...]:
     baseline_spectra = resolve_input_path(str(record["source_spectra_file"]))
-    generated_spectra = resolve_input_path(str(record["reconstructed_spectra_file"]))
+    generated_spectra_value = selected_generated_spectra_value(record, args.spectra_stage)
+    if not generated_spectra_value:
+        raise FileNotFoundError(f"No generated Spectra file recorded for stage {args.spectra_stage!r}.")
+    generated_spectra = resolve_input_path(generated_spectra_value)
     settings = {
         "jar_sha256": sha256_file(jar_path),
         "executor_jar_sha256": sha256_file(executor_jar),
@@ -473,6 +478,7 @@ def current_pair_key(record: dict[str, Any], args: argparse.Namespace, jar_path:
         "trace_batch_size": max(1, int(args.trace_batch_size)),
         "signature_mapping": args.signature_mapping,
         "mapping_model": args.mapping_model if args.signature_mapping == "llm" else None,
+        "spectra_stage": args.spectra_stage,
     }
     return (
         "controller_distance",
@@ -496,7 +502,8 @@ def load_pair_cache(path: Path) -> dict[tuple[Any, ...], dict[str, Any]]:
 def cached_record_for_run(cached: dict[str, Any], run_record: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     reused = copy.deepcopy(cached)
     reused["run"] = summarize_run(run_record, args.include_run_record)
-    reused["comparison_id"] = safe_path_part(str(run_record.get("run_id") or run_record.get("run_key") or run_record.get("dataset_id") or "run"))
+    reused["comparison_id"] = stage_comparison_id(run_record, args.spectra_stage)
+    reused["spectra_stage"] = args.spectra_stage
     reused["cache_reused"] = True
     reused["cache_source_comparison_id"] = cached.get("comparison_id")
     return reused
@@ -509,6 +516,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--runs-manifest", default=str(DEFAULT_RUNS_MANIFEST))
     parser.add_argument("--output-root", default=str(DEFAULT_OUTPUT_ROOT))
     parser.add_argument("--output-jsonl", default=None)
+    parser.add_argument(
+        "--spectra-stage",
+        default="final",
+        help=(
+            "Generated Spectra stage to evaluate. Use final for reconstructed_spectra_file, "
+            "or a key from intermediate_spectra_files such as 00_initial, "
+            "01_after_syntax_repair, 02_after_unrealizable_repair, or 03_after_test_repair."
+        ),
+    )
     parser.add_argument("--jar", default=str(DEFAULT_JAR))
     parser.add_argument("--executor-jar", default=str(DEFAULT_EXECUTOR_JAR))
     parser.add_argument("--mode", choices=("exhaustive", "random"), default="exhaustive")
@@ -558,7 +574,10 @@ def output_root(args: argparse.Namespace) -> Path:
     path = Path(args.output_root)
     if not path.is_absolute():
         path = REPO_ROOT / path
-    return path / safe_path_part(args.skill) / safe_path_part(args.model)
+    root = path / safe_path_part(args.skill) / safe_path_part(args.model)
+    if args.spectra_stage != "final":
+        root = root / safe_path_part(args.spectra_stage)
+    return root
 
 
 def resolve_repo_path(path_value: str | Path) -> Path:
@@ -604,13 +623,17 @@ def evaluate_one_run(
     artifacts_root: Path,
     progress=None,
 ) -> dict[str, Any]:
-    comparison_id = safe_path_part(str(record.get("run_id") or record.get("run_key") or record.get("dataset_id") or "run"))
+    comparison_id = stage_comparison_id(record, args.spectra_stage)
     pair_dir = artifacts_root / "comparisons" / comparison_id
     baseline_spectra = resolve_input_path(str(record["source_spectra_file"]))
-    generated_spectra = resolve_input_path(str(record["reconstructed_spectra_file"]))
+    generated_spectra_value = selected_generated_spectra_value(record, args.spectra_stage)
+    if not generated_spectra_value:
+        raise FileNotFoundError(f"No generated Spectra file recorded for stage {args.spectra_stage!r}.")
+    generated_spectra = resolve_input_path(generated_spectra_value)
     result: dict[str, Any] = {
         "status": "started",
         "comparison_id": comparison_id,
+        "spectra_stage": args.spectra_stage,
         "run": summarize_run(record, args.include_run_record),
         "baseline_signature": None,
         "generated_signature": None,
@@ -644,6 +667,7 @@ def evaluate_one_run(
                 "trace_batch_size": max(1, int(args.trace_batch_size)),
                 "signature_mapping": args.signature_mapping,
                 "mapping_model": args.mapping_model if args.signature_mapping == "llm" else None,
+                "spectra_stage": args.spectra_stage,
             },
         }
         result["baseline_signature"] = baseline_signature
@@ -854,6 +878,7 @@ def summarize_results(args: argparse.Namespace, total_matching_runs: int, select
     return {
         "skill": args.skill,
         "model": args.model,
+        "spectra_stage": args.spectra_stage,
         "mode": args.mode,
         "max_depth": args.max_depth,
         "max_paths": args.max_paths if args.mode == "exhaustive" else None,
@@ -901,6 +926,7 @@ def summarize_results(args: argparse.Namespace, total_matching_runs: int, select
 def print_text_summary(summary: dict[str, Any]) -> None:
     print(f"Skill: {summary['skill']}")
     print(f"Model: {summary['model']}")
+    print(f"Spectra stage: {summary['spectra_stage']}")
     print(f"Mode: {summary['mode']}, max_depth={summary['max_depth']}")
     print(f"Matching synthesized runs: {summary['matching_synthesized_runs']}")
     print(f"Selected runs: {summary['selected_runs']}")
@@ -1013,7 +1039,7 @@ def main() -> int:
     args = parse_args()
     runs_manifest = resolve_existing_path(args.runs_manifest)
     records = load_jsonl(runs_manifest)
-    matching, skipped = select_matching_runs(records, args.skill, args.model)
+    matching, skipped = select_matching_runs(records, args.skill, args.model, args.spectra_stage)
     total_matching_runs = len(matching)
     if args.limit is not None:
         matching = matching[: args.limit]

@@ -120,6 +120,22 @@ For a quick smoke test:
 python evaluation\buchi\evaluate_reconstruction_distances.py --skill respect --model llama-3 --limit 1
 ```
 
+To evaluate a persisted intermediate Spectra stage instead of the final
+reconstruction, pass a key from `intermediate_spectra_files`:
+
+```powershell
+python evaluation\buchi\evaluate_reconstruction_distances.py `
+  --skill respect `
+  --model llama-3 `
+  --spectra-stage 00_initial
+```
+
+Non-final stage results are written below:
+
+```text
+evaluation/buchi/distance_results/<skill>/<model>/<spectra-stage>/
+```
+
 To test the distance computation without the modified Spectra CLI, translate two
 Spot formulas over the same alphabet directly:
 

@@ -155,6 +155,23 @@ def summarize_run(record: dict[str, Any] | None, include_full_record: bool) -> d
     return {key: record.get(key) for key in keys if key in record}
 
 
+def selected_generated_spectra_value(record: dict[str, Any], spectra_stage: str) -> str | None:
+    if spectra_stage == "final":
+        return record.get("reconstructed_spectra_file")
+    intermediate = record.get("intermediate_spectra_files")
+    if not isinstance(intermediate, dict):
+        return None
+    value = intermediate.get(spectra_stage)
+    return str(value) if value else None
+
+
+def stage_comparison_id(record: dict[str, Any], spectra_stage: str) -> str:
+    base = safe_path_part(str(record.get("run_id") or record.get("run_key") or record.get("dataset_id") or "run"))
+    if spectra_stage == "final":
+        return base
+    return safe_path_part(f"{base}__{spectra_stage}")
+
+
 def build_export_command(jar_path: Path, input_path: Path, output_path: Path, max_states: int, use_jtlv: bool) -> list[str]:
     command = ["java", "-jar", str(jar_path), "-i", str(input_path)]
     if use_jtlv:
@@ -549,6 +566,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--runs-manifest", default=str(DEFAULT_RUNS_MANIFEST))
     parser.add_argument("--output-root", default=str(DEFAULT_OUTPUT_ROOT))
     parser.add_argument("--output-jsonl", default=None, help="Explicit JSONL result path.")
+    parser.add_argument(
+        "--spectra-stage",
+        default="final",
+        help=(
+            "Generated Spectra stage to evaluate. Use final for reconstructed_spectra_file, "
+            "or a key from intermediate_spectra_files such as 00_initial, "
+            "01_after_syntax_repair, 02_after_unrealizable_repair, or 03_after_test_repair."
+        ),
+    )
     parser.add_argument("--jar", default=str(DEFAULT_JAR), help="Path to the modified spectra-cli.jar.")
     parser.add_argument("--max-states", type=int, default=100_000)
     parser.add_argument("--timeout", type=float, default=120.0)
@@ -650,7 +676,10 @@ def output_root(args: argparse.Namespace) -> Path:
     path = Path(args.output_root)
     if not path.is_absolute():
         path = REPO_ROOT / path
-    return path / safe_path_part(args.skill) / safe_path_part(args.model)
+    root = path / safe_path_part(args.skill) / safe_path_part(args.model)
+    if args.spectra_stage != "final":
+        root = root / safe_path_part(args.spectra_stage)
+    return root
 
 
 def default_output_jsonl(args: argparse.Namespace) -> Path:
@@ -722,7 +751,10 @@ def result_pair_key(record: dict[str, Any]) -> tuple[Any, ...] | None:
 
 def current_pair_key(record: dict[str, Any], args: argparse.Namespace, jar_path: Path) -> tuple[Any, ...]:
     baseline_spectra = resolve_input_path(str(record["source_spectra_file"]))
-    generated_spectra = resolve_input_path(str(record["reconstructed_spectra_file"]))
+    generated_spectra_value = selected_generated_spectra_value(record, args.spectra_stage)
+    if not generated_spectra_value:
+        raise FileNotFoundError(f"No generated Spectra file recorded for stage {args.spectra_stage!r}.")
+    generated_spectra = resolve_input_path(generated_spectra_value)
     settings = {
         "jar_sha256": sha256_file(jar_path),
         "max_states": args.max_states,
@@ -740,6 +772,7 @@ def current_pair_key(record: dict[str, Any], args: argparse.Namespace, jar_path:
         "bounded_max_prefixes": args.bounded_max_prefixes if args.bounded_semantic_distance and args.bounded_mode == "exhaustive" else None,
         "signature_mapping": args.signature_mapping,
         "mapping_model": args.mapping_model if args.signature_mapping == "llm" else None,
+        "spectra_stage": args.spectra_stage,
     }
     return (
         "buchi_distance",
@@ -763,7 +796,8 @@ def load_pair_cache(path: Path) -> dict[tuple[Any, ...], dict[str, Any]]:
 def cached_record_for_run(cached: dict[str, Any], run_record: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     reused = copy.deepcopy(cached)
     reused["run"] = summarize_run(run_record, args.include_run_record)
-    reused["comparison_id"] = safe_path_part(str(run_record.get("run_id") or run_record.get("run_key") or run_record.get("dataset_id") or "run"))
+    reused["comparison_id"] = stage_comparison_id(run_record, args.spectra_stage)
+    reused["spectra_stage"] = args.spectra_stage
     reused["cache_reused"] = True
     reused["cache_source_comparison_id"] = cached.get("comparison_id")
     return reused
@@ -775,10 +809,11 @@ def timeout_result_for_run(
     args: argparse.Namespace,
     jar_path: Path,
 ) -> dict[str, Any]:
-    comparison_id = safe_path_part(str(record.get("run_id") or record.get("run_key") or record.get("dataset_id") or "run"))
+    comparison_id = stage_comparison_id(record, args.spectra_stage)
     result: dict[str, Any] = {
         "status": "run_timeout",
         "comparison_id": comparison_id,
+        "spectra_stage": args.spectra_stage,
         "run": summarize_run(record, args.include_run_record),
         "baseline_export": None,
         "generated_export": None,
@@ -805,10 +840,11 @@ def timeout_result_for_run(
     }
     try:
         baseline_spectra = resolve_input_path(str(record["source_spectra_file"]))
-        generated_spectra = resolve_input_path(str(record["reconstructed_spectra_file"]))
+        generated_spectra_value = selected_generated_spectra_value(record, args.spectra_stage)
+        generated_spectra = resolve_input_path(str(generated_spectra_value)) if generated_spectra_value else None
         result["cache_metadata"] = {
             "baseline_sha256": sha256_file(baseline_spectra) if baseline_spectra.is_file() else None,
-            "generated_sha256": sha256_file(generated_spectra) if generated_spectra.is_file() else None,
+            "generated_sha256": sha256_file(generated_spectra) if generated_spectra and generated_spectra.is_file() else None,
             "settings": {
                 "jar_sha256": sha256_file(jar_path) if jar_path.is_file() else None,
                 "max_states": args.max_states,
@@ -826,6 +862,7 @@ def timeout_result_for_run(
                 "bounded_max_prefixes": args.bounded_max_prefixes if args.bounded_semantic_distance and args.bounded_mode == "exhaustive" else None,
                 "signature_mapping": args.signature_mapping,
                 "mapping_model": args.mapping_model if args.signature_mapping == "llm" else None,
+                "spectra_stage": args.spectra_stage,
             },
         }
     except Exception as exc:
@@ -846,7 +883,8 @@ def evaluate_one_run_worker(
         queue.put(
             {
                 "status": "failed",
-                "comparison_id": safe_path_part(str(record.get("run_id") or record.get("run_key") or record.get("dataset_id") or "run")),
+                "comparison_id": stage_comparison_id(record, args.spectra_stage),
+                "spectra_stage": args.spectra_stage,
                 "run": summarize_run(record, args.include_run_record),
                 "distance": None,
                 "error": f"{type(exc).__name__}: {exc}",
@@ -887,7 +925,12 @@ def evaluate_one_run_with_timeout(
     return result
 
 
-def select_matching_runs(records: list[dict[str, Any]], skill: str, model: str) -> tuple[list[dict[str, Any]], Counter[str]]:
+def select_matching_runs(
+    records: list[dict[str, Any]],
+    skill: str,
+    model: str,
+    spectra_stage: str = "final",
+) -> tuple[list[dict[str, Any]], Counter[str]]:
     skipped: Counter[str] = Counter()
     selected: list[dict[str, Any]] = []
 
@@ -904,8 +947,11 @@ def select_matching_runs(records: list[dict[str, Any]], skill: str, model: str) 
         if record.get("reported_cli_status") != "synthesized":
             skipped[f"cli_status_{record.get('reported_cli_status') or 'missing'}"] += 1
             continue
-        if not record.get("reconstructed_spectra_file"):
-            skipped["missing_reconstructed_spectra_file"] += 1
+        if not selected_generated_spectra_value(record, spectra_stage):
+            if spectra_stage == "final":
+                skipped["missing_reconstructed_spectra_file"] += 1
+            else:
+                skipped[f"missing_spectra_stage_{spectra_stage}"] += 1
             continue
         if not record.get("source_spectra_file"):
             skipped["missing_source_spectra_file"] += 1
@@ -931,7 +977,7 @@ def evaluate_one_run(
     jar_path: Path,
     artifacts_root: Path,
 ) -> dict[str, Any]:
-    comparison_id = safe_path_part(str(record.get("run_id") or record.get("run_key") or record.get("dataset_id") or "run"))
+    comparison_id = stage_comparison_id(record, args.spectra_stage)
     pair_output_dir = artifacts_root / "hoa" / comparison_id
     baseline_hoa = pair_output_dir / "baseline.hoa"
     generated_hoa = pair_output_dir / "generated.hoa"
@@ -942,6 +988,7 @@ def evaluate_one_run(
     result: dict[str, Any] = {
         "status": "started",
         "comparison_id": comparison_id,
+        "spectra_stage": args.spectra_stage,
         "run": summarize_run(record, args.include_run_record),
         "baseline_export": None,
         "generated_export": None,
@@ -968,7 +1015,10 @@ def evaluate_one_run(
 
     try:
         baseline_spectra = resolve_input_path(str(record["source_spectra_file"]))
-        generated_spectra = resolve_input_path(str(record["reconstructed_spectra_file"]))
+        generated_spectra_value = selected_generated_spectra_value(record, args.spectra_stage)
+        if not generated_spectra_value:
+            raise FileNotFoundError(f"No generated Spectra file recorded for stage {args.spectra_stage!r}.")
+        generated_spectra = resolve_input_path(generated_spectra_value)
         if not baseline_spectra.is_file():
             raise FileNotFoundError(f"Baseline Spectra file not found: {baseline_spectra}")
         if not generated_spectra.is_file():
@@ -993,6 +1043,7 @@ def evaluate_one_run(
                 "bounded_max_prefixes": args.bounded_max_prefixes if args.bounded_semantic_distance and args.bounded_mode == "exhaustive" else None,
                 "signature_mapping": args.signature_mapping,
                 "mapping_model": args.mapping_model if args.signature_mapping == "llm" else None,
+                "spectra_stage": args.spectra_stage,
             },
         }
 
@@ -1209,6 +1260,7 @@ def summarize_results(
     summary: dict[str, Any] = {
         "skill": args.skill,
         "model": args.model,
+        "spectra_stage": args.spectra_stage,
         "matching_synthesized_runs": total_matching_runs,
         "selected_runs": selected_runs,
         "evaluated_runs": len(evaluated_records),
@@ -1259,6 +1311,7 @@ def summarize_results(
 def print_text_summary(summary: dict[str, Any]) -> None:
     print(f"Skill: {summary['skill']}")
     print(f"Model: {summary['model']}")
+    print(f"Spectra stage: {summary['spectra_stage']}")
     print(f"Matching synthesized runs: {summary['matching_synthesized_runs']}")
     print(f"Selected runs: {summary['selected_runs']}")
     print(f"Evaluated runs: {summary['evaluated_runs']}")
@@ -1344,7 +1397,7 @@ def main() -> int:
     args = parse_args()
     runs_manifest = resolve_existing_path(args.runs_manifest)
     records = load_jsonl(runs_manifest)
-    matching, skipped = select_matching_runs(records, args.skill, args.model)
+    matching, skipped = select_matching_runs(records, args.skill, args.model, args.spectra_stage)
     total_matching_runs = len(matching)
     if args.limit is not None:
         matching = matching[: args.limit]
@@ -1368,6 +1421,7 @@ def main() -> int:
                 "java_version_output": java_output,
                 "skill": args.skill,
                 "model": args.model,
+                "spectra_stage": args.spectra_stage,
                 "matching_synthesized_runs": total_matching_runs,
                 "selected_runs": len(matching),
                 "output_jsonl": str(output_jsonl),
@@ -1384,6 +1438,7 @@ def main() -> int:
                 "message": str(exc),
                 "skill": args.skill,
                 "model": args.model,
+                "spectra_stage": args.spectra_stage,
                 "matching_synthesized_runs": total_matching_runs,
                 "selected_runs": len(matching),
                 "output_jsonl": str(output_jsonl),
