@@ -5,7 +5,7 @@
 - Converting free-form reactive-system requirements into a first Spectra draft
 - Interpreting `spectra-cli.jar` results
 - Repairing parser errors without drifting away from the user's intent
-- Using counter-strategy diagnostics to repair unrealizable drafts
+- Using counter-strategy and unrealizable-core diagnostics to repair unrealizable drafts
 - Checking well-separation after realizability and before synthesis
 
 ## Drafting Guidance
@@ -71,6 +71,18 @@ Use these only after the normal check reports `Result: Specification is unrealiz
 
 Read the counter-strategy as an environment-winning behavior that demonstrates why the system cannot force its guarantees. It is diagnostic evidence, not a target behavior to copy.
 
+## Unrealizable-Core Diagnostics
+
+The wrapper exposes the unrealizable-core CLI stored under `assets/cli_with_unrealizable_core`:
+
+```bash
+python .agents/skills/respect/scripts/run_spectra_cli.py --input <path-to-file> --unrealizable-core --timeout 120
+```
+
+Use this only after the normal check reports `Result: Specification is unrealizable`.
+
+Read the unrealizable core as one locally minimal set of guarantee source lines that is still unrealizable. It localizes a conflict but does not prove that the reported guarantees should be deleted or weakened.
+
 ## Syntax-Repair Loop
 
 1. Save the draft as a `.spectra` file.
@@ -83,11 +95,12 @@ Read the counter-strategy as an environment-winning behavior that demonstrates w
 
 1. Run the CLI and confirm the specification is syntactically valid but unrealizable.
 2. Request a counter-strategy diagnostic.
-3. Identify a likely conflict between assumptions, guarantees, initial conditions, safety, liveness, or update rules.
-4. Compare any candidate repair against the natural-language description.
-5. Apply the candidate only when it is consistent with the description.
-6. Re-run the normal CLI check.
-7. Stop after 3 unrealizability-repair attempts or when all plausible repairs would contradict the description.
+3. Request an unrealizable-core diagnostic.
+4. Identify a likely conflict between assumptions, guarantees, initial conditions, safety, liveness, or update rules. Use the core to focus attention on the implicated guarantee lines, and use the counter-strategy to understand a concrete environment-winning behavior.
+5. Compare any candidate repair against the natural-language description.
+6. Apply the candidate only when it is consistent with the description.
+7. Re-run the normal CLI check.
+8. Stop after 3 unrealizability-repair attempts or when all plausible repairs would contradict the description.
 
 Common repair patterns:
 

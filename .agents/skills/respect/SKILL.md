@@ -1,6 +1,6 @@
 ---
 name: respect
-description: Primary ReSpect agent for the study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate with spectra-cli.jar, repair unrealizability with CLI counter-strategy diagnostics, check and repair well-separation before synthesis, and after successful synthesis create and run NL-guided controller tests with controller_tests. Repair generated Spectra only when CLI/test feedback indicates a problem and the repair is consistent with the natural-language description. Do not compare against source Spectra files or benchmark oracles.
+description: Primary ReSpect agent for the study. Generate Spectra specifications from natural-language requirements using the repository Spectra Xtext grammar at assets/grammar/Spectra.xtext as initial syntax guidance, validate with spectra-cli.jar, repair unrealizability with CLI counter-strategy and unrealizable-core diagnostics, check and repair well-separation before synthesis, and after successful synthesis create and run NL-guided controller tests with controller_tests. Repair generated Spectra only when CLI/test feedback indicates a problem and the repair is consistent with the natural-language description. Do not compare against source Spectra files or benchmark oracles.
 ---
 
 # ReSpect: Grammar-Guided CLI-Diagnosed Repair With NL-Guided Controller Tests
@@ -12,8 +12,8 @@ This skill implements the primary ReSpect reconstruction condition:
 - Input: natural-language requirements for a reactive system.
 - Output: a generated Spectra specification plus CLI validation, diagnosis, synthesis, test, and repair results.
 - Initial syntax reference: `assets/grammar/Spectra.xtext`.
-- Feedback sources: `spectra-cli.jar` realizability/synthesis/well-separation output, CLI counter-strategy diagnostics for unrealizable specifications, and NL-guided controller tests from `controller_tests`.
-- Allowed repair signal: parser output, realizability status, well-separation status, counter-strategy output, controller-test failures, failing traces, generated Spectra, and the natural-language description.
+- Feedback sources: `spectra-cli.jar` realizability/synthesis/well-separation output, CLI counter-strategy and unrealizable-core diagnostics for unrealizable specifications, and NL-guided controller tests from `controller_tests`.
+- Allowed repair signal: parser output, realizability status, well-separation status, counter-strategy output, unrealizable-core output, controller-test failures, failing traces, generated Spectra, and the natural-language description.
 - Not allowed: reading or comparing against the original/reference Spectra file, semantic equivalence checks against the benchmark, mutation checks, or oracle-based tests.
 
 The goal is to measure whether CLI diagnostics plus NL-guided bounded controller tests improve reconstruction while avoiding leakage from the original specification.
@@ -42,8 +42,8 @@ This decomposition is a drafting discipline only. Do not read benchmark or sourc
 8. After the syntax-repair phase ends and the run moves to the next phase, save the stable repaired specification as `specs/01_after_syntax_repair.spectra` and append one transition record to `repair_log.jsonl`.
 9. Limit syntax-repair loops to at most 3 attempts and report the last parser error if repair still fails.
 10. If the result is `timeout`, report the timeout and do not continue.
-11. If the result is `unrealizable`, request CLI diagnostics with `--counter-strategy` and save the diagnostic JSON.
-12. Analyze the counter-strategy and the natural-language description before changing the specification.
+11. If the result is `unrealizable`, request CLI diagnostics with `--counter-strategy` and save the diagnostic JSON, then request `--unrealizable-core` and save the core diagnostic JSON.
+12. Analyze the counter-strategy, the unrealizable core, and the natural-language description before changing the specification. Use the core only to localize guarantees participating in an unrealizability conflict; do not treat it as a deletion list.
 13. Repair unrealizability only if the proposed change is consistent with the natural-language description.
 14. Prefer minimal repairs that preserve stated requirements: fix overly strong initialization, add environment assumptions only when implied by the description, or relax/reshape a guarantee only when the description supports the weaker form.
 15. If every plausible repair would contradict the natural-language description, stop and report `blocked_by_nl_conflict = true`.
@@ -82,6 +82,7 @@ tmp/spectra-runs/<timestamp>-<slug>/
     04_after_test_repair.spectra
   diagnostics/
     unrealizable-<n>.json
+    unrealizable-core-<n>.json
     well-separation-<n>.json
   tests/
     test-plan-<n>.rtest
@@ -112,12 +113,13 @@ tmp/spectra-runs/<timestamp>-<slug>/
   "well_separation_repair_loops": 0,
   "test_repair_loops": 0,
   "broker_repair_loops": 0,
-  "diagnostic_files": ["diagnostics/unrealizable-1.json"],
+  "diagnostic_files": ["diagnostics/unrealizable-1.json", "diagnostics/unrealizable-core-1.json"],
   "notes": "Minimal NL-consistent repair summary."
 }
 ```
 
 - Save the JSON output of each counter-strategy wrapper call as `diagnostics/unrealizable-<n>.json`. The actual counter-strategy text is preserved inside that JSON object's `raw_output` field.
+- Save the JSON output of each unrealizable-core wrapper call as `diagnostics/unrealizable-core-<n>.json`. The reported `unrealizable_core_lines` identify source lines for guarantees in one locally minimal unrealizable core. Treat these lines as localization evidence, not as permission to remove or weaken the guarantees.
 - Save the JSON output of each well-separation wrapper call as `diagnostics/well-separation-<n>.json`. The actual CLI text is preserved inside that JSON object's `raw_output` field.
 - Save controller test DSL files as `tests/test-plan-<n>.rtest`.
 - Compile each DSL file to `tests/test-plan-<n>.json` before running the Java test runner.
@@ -138,6 +140,12 @@ For counter-strategy diagnostics after an `unrealizable` result:
 
 ```bash
 python .agents/skills/respect/scripts/run_spectra_cli.py --input <path-to-file> --counter-strategy --timeout 120
+```
+
+For unrealizable-core diagnostics after an `unrealizable` result:
+
+```bash
+python .agents/skills/respect/scripts/run_spectra_cli.py --input <path-to-file> --unrealizable-core --timeout 120
 ```
 
 For well-separation after a `realizable` result and before synthesis:
@@ -206,6 +214,7 @@ Use `--strict-files` only after the generated Spectra file and synthesized JIT c
 ## Unrealizability Repair Rules
 
 - Treat the counter-strategy as diagnostic evidence, not as permission to rewrite the task.
+- Treat the unrealizable core as diagnostic localization evidence, not as permission to delete, weaken, or ignore the reported guarantees.
 - State the suspected conflict before editing.
 - Check each proposed repair against the natural-language description:
   - `consistent`: apply the minimal edit and retry.
@@ -332,6 +341,10 @@ well_separation_repair_loops: <number>
 test_repair_loops: <number>
 timeout_seconds: <number>
 used_counter_strategy: <true|false>
+used_unrealizable_core: <true|false>
+unrealizable_core_file: <path or none>
+unrealizable_core_size: <number or none>
+unrealizable_core_lines: <JSON array of line numbers, or []>
 well_separation_status: <well_separated|non_well_separated|not_checked|unknown>
 blocked_by_nl_conflict: <true|false>
 diagnostic_file: <path or none>
@@ -349,7 +362,7 @@ repair_log_file: <path>
 
 ## Bundled Resources
 
-- `scripts/run_spectra_cli.py`: Run `spectra-cli.jar`, normalize the outcome, optionally request counter-strategy diagnostics, and preserve raw output.
+- `scripts/run_spectra_cli.py`: Run `spectra-cli.jar`, normalize the outcome, optionally request counter-strategy or unrealizable-core diagnostics, and preserve raw output.
 - `references/spectra-workflow.md`: Spectra examples, CLI result patterns, and drafting/repair guidance.
 - `assets/examples/LanguageFeatures/`: Compact `.spectra` syntax examples for less common Spectra language constructs.
 - `assets/grammar/Spectra.xtext`: Repository-level Xtext grammar for Spectra syntax. Read this before drafting generated specifications.

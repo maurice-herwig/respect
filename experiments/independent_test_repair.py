@@ -97,6 +97,11 @@ def normalize_result_value(value: str) -> Any:
         return stripped.lower() == "true"
     if re.fullmatch(r"-?\d+", stripped):
         return int(stripped)
+    if stripped.startswith(("[", "{")):
+        try:
+            return json.loads(stripped)
+        except json.JSONDecodeError:
+            pass
     return stripped
 
 

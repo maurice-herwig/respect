@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -16,7 +17,15 @@ def default_jar_path() -> Path:
     return Path(__file__).resolve().parents[4] / "spectra-cli.jar"
 
 
+def default_unrealizable_core_jar_path() -> Path:
+    return Path(__file__).resolve().parents[4] / "assets" / "cli_with_unrealizable_core" / "spectra-cli-with-un-core.jar"
+
+
 def detect_status(stdout: str, synthesize: bool) -> str:
+    if "Result: Found unrealizable core" in stdout:
+        return "unrealizable_core_found"
+    if "Error: Cannot compute unrealizable core for a realizable specification" in stdout:
+        return "no_unrealizable_core"
     if "Could not prepare game input from Spectra file" in stdout or "ErrorsInSpectraException" in stdout:
         return "syntax_error"
     if "Result: Specification is non-well-separated" in stdout:
@@ -32,6 +41,13 @@ def detect_status(stdout: str, synthesize: bool) -> str:
     return "unknown"
 
 
+def parse_unrealizable_core(stdout: str) -> tuple[int | None, list[int]]:
+    match = re.search(r"Result: Found unrealizable core with (\d+) guarantees, at lines <([^>]*)>", stdout)
+    if not match:
+        return None, []
+    return int(match.group(1)), [int(value) for value in re.findall(r"\d+", match.group(2))]
+
+
 def build_command(
     jar_path: Path,
     input_path: Path,
@@ -40,6 +56,7 @@ def build_command(
     counter_strategy: bool,
     counter_strategy_jtlv_format: bool,
     well_separation: bool,
+    unrealizable_core: bool,
 ) -> list[str]:
     command = ["java", "-jar", str(jar_path), "-i", str(input_path)]
     if synthesize:
@@ -52,6 +69,8 @@ def build_command(
         command.append("--counter-strategy")
     if well_separation:
         command.append("--well-separation")
+    if unrealizable_core:
+        command.append("--unrealizable-core")
     return command
 
 
@@ -59,6 +78,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run spectra-cli.jar and summarize the result.")
     parser.add_argument("--input", required=True, help="Path to the .spectra file to check")
     parser.add_argument("--jar", default=str(default_jar_path()), help="Path to spectra-cli.jar")
+    parser.add_argument(
+        "--unrealizable-core-jar",
+        default=str(default_unrealizable_core_jar_path()),
+        help="Path to the Spectra CLI JAR that supports --unrealizable-core",
+    )
     parser.add_argument("--output-dir", help="Output directory for synthesis artifacts")
     parser.add_argument("--synthesize", action="store_true", help="Run controller synthesis with -s")
     parser.add_argument(
@@ -77,6 +101,11 @@ def main() -> int:
         help="Check whether the specification is well-separated",
     )
     parser.add_argument(
+        "--unrealizable-core",
+        action="store_true",
+        help="Compute an unrealizable core for an unrealizable specification",
+    )
+    parser.add_argument(
         "--timeout",
         type=float,
         default=120.0,
@@ -85,12 +114,12 @@ def main() -> int:
     args = parser.parse_args()
 
     input_path = Path(args.input).resolve()
-    jar_path = Path(args.jar).resolve()
+    jar_path = Path(args.unrealizable_core_jar if args.unrealizable_core else args.jar).resolve()
     output_dir = Path(args.output_dir).resolve() if args.output_dir else None
     counter_strategy = args.counter_strategy or args.counter_strategy_jtlv_format
 
-    if sum(bool(flag) for flag in (args.synthesize, counter_strategy, args.well_separation)) > 1:
-        print(json.dumps({"status": "error", "message": "Cannot combine synthesis, counter-strategy diagnostics, and well-separation checks."}))
+    if sum(bool(flag) for flag in (args.synthesize, counter_strategy, args.well_separation, args.unrealizable_core)) > 1:
+        print(json.dumps({"status": "error", "message": "Cannot combine synthesis, counter-strategy diagnostics, well-separation checks, and unrealizable-core diagnostics."}))
         return 2
 
     if not input_path.is_file():
@@ -112,6 +141,7 @@ def main() -> int:
         args.counter_strategy,
         args.counter_strategy_jtlv_format,
         args.well_separation,
+        args.unrealizable_core,
     )
     try:
         completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=args.timeout)
@@ -129,6 +159,9 @@ def main() -> int:
             "counter_strategy": counter_strategy,
             "counter_strategy_format": "jtlv" if args.counter_strategy_jtlv_format else "default",
             "well_separation": args.well_separation,
+            "unrealizable_core": args.unrealizable_core,
+            "unrealizable_core_size": None,
+            "unrealizable_core_lines": [],
             "output_dir": str(output_dir) if output_dir else None,
             "timeout_seconds": args.timeout,
             "raw_output": combined_output,
@@ -139,6 +172,7 @@ def main() -> int:
     stdout = completed.stdout or ""
     stderr = completed.stderr or ""
     combined_output = stdout if not stderr else f"{stdout}\n{stderr}".strip()
+    unrealizable_core_size, unrealizable_core_lines = parse_unrealizable_core(combined_output)
 
     result = {
         "status": detect_status(combined_output, args.synthesize),
@@ -150,6 +184,9 @@ def main() -> int:
         "counter_strategy": counter_strategy,
         "counter_strategy_format": "jtlv" if args.counter_strategy_jtlv_format else "default",
         "well_separation": args.well_separation,
+        "unrealizable_core": args.unrealizable_core,
+        "unrealizable_core_size": unrealizable_core_size,
+        "unrealizable_core_lines": unrealizable_core_lines,
         "output_dir": str(output_dir) if output_dir else None,
         "timeout_seconds": args.timeout,
         "raw_output": combined_output,

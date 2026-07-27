@@ -291,12 +291,22 @@ def print_text_summary(summary: dict[str, Any]) -> None:
         f"({reconstruction['synthesized_after_repair']['percent_of_all']:.2f}% of all, "
         f"{reconstruction['synthesized_after_repair']['percent_of_repair_attempts']:.2f}% of repair attempts)"
     )
-    if reconstruction["counter_strategy_used"]["count"] or reconstruction["blocked_by_nl_conflict"]["count"]:
+    if (
+        reconstruction["counter_strategy_used"]["count"]
+        or reconstruction.get("unrealizable_core_used", {}).get("count")
+        or reconstruction["blocked_by_nl_conflict"]["count"]
+    ):
         print(
             "  counter_strategy_used: "
             f"{reconstruction['counter_strategy_used']['count']} "
             f"({reconstruction['counter_strategy_used']['percent']:.2f}%)"
         )
+        if "unrealizable_core_used" in reconstruction:
+            print(
+                "  unrealizable_core_used: "
+                f"{reconstruction['unrealizable_core_used']['count']} "
+                f"({reconstruction['unrealizable_core_used']['percent']:.2f}%)"
+            )
         print(
             "  blocked_by_nl_conflict: "
             f"{reconstruction['blocked_by_nl_conflict']['count']} "

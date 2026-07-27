@@ -1,6 +1,6 @@
 ---
 name: respect-spec-tester
-description: ReSpect specification agent for the independent-test condition. Generate and repair Spectra specifications from natural-language requirements plus a fixed env/sys signature, validate with spectra-cli.jar, repair syntax/unrealizability/well-separation, synthesize a controller, and consume independent controller-test feedback from a separate test-writer agent. Do not create controller tests yourself, do not read source Spectra files, and do not compare against benchmark oracles.
+description: ReSpect specification agent for the independent-test condition. Generate and repair Spectra specifications from natural-language requirements plus a fixed env/sys signature, validate with spectra-cli.jar, repair syntax/unrealizability/well-separation using counter-strategy and unrealizable-core diagnostics, synthesize a controller, and consume independent controller-test feedback from a separate test-writer agent. Do not create controller tests yourself, do not read source Spectra files, and do not compare against benchmark oracles.
 ---
 
 # ReSpect Spec Tester
@@ -11,7 +11,7 @@ This skill implements the specification side of the independent-test condition:
 
 - Input: natural-language requirements, fixed environment/system signature, and optionally feedback from independently generated controller tests.
 - Output: generated Spectra, CLI diagnostics, synthesis output, repair counts, and artifact paths.
-- Feedback sources: parser/realizability/well-separation/synthesis output from `spectra-cli.jar`, counter-strategy diagnostics, and independent test failures supplied by the orchestrator.
+- Feedback sources: parser/realizability/well-separation/synthesis output from `spectra-cli.jar`, counter-strategy diagnostics, unrealizable-core diagnostics, and independent test failures supplied by the orchestrator.
 - Not allowed: writing controller tests, reading the independent test-writer prompt or reasoning, reading source/reference Spectra files, benchmark oracles, mutation checks, equivalence checks, or distance results.
 
 The goal is to keep specification repair separate from test generation while preserving the ReSpect validation discipline.
@@ -26,7 +26,7 @@ The goal is to keep specification repair separate from test generation while pre
 6. Initialize or preserve counters: `repair_loops`, `syntax_repair_loops`, `unrealizable_repair_loops`, `well_separation_repair_loops`, and `independent_test_repair_loops`.
 7. Validate with `.agents/skills/respect/scripts/run_spectra_cli.py --input <file> --timeout 120`.
 8. Repair syntax errors for at most 3 syntax loops, then rerun validation.
-9. If unrealizable, request `--counter-strategy`, save `diagnostics/unrealizable-<n>.json`, repair only when consistent with the natural-language requirements, then rerun validation.
+9. If unrealizable, request `--counter-strategy`, save `diagnostics/unrealizable-<n>.json`, then request `--unrealizable-core` and save `diagnostics/unrealizable-core-<n>.json`. Analyze both diagnostics with the natural-language requirements. Use the core only to localize guarantees participating in an unrealizability conflict; do not treat it as a deletion list. Repair only when consistent with the natural-language requirements, then rerun validation.
 10. If realizable, run `--well-separation`, save `diagnostics/well-separation-<n>.json`, repair non-well-separation only when consistent with the natural-language requirements, then rerun validation.
 11. Synthesize only after the specification is both realizable and well-separated.
 12. Stop after synthesis and report the final fields. Do not generate `.rtest` files or run controller tests yourself.
@@ -58,6 +58,7 @@ Use the run directory supplied in the prompt:
     04_after_independent_test_repair.spectra
   diagnostics/
     unrealizable-<n>.json
+    unrealizable-core-<n>.json
     well-separation-<n>.json
   synthesis/
   final.spectra
@@ -77,6 +78,10 @@ well_separation_repair_loops: <number>
 independent_test_repair_loops: <number>
 timeout_seconds: <number>
 used_counter_strategy: <true|false>
+used_unrealizable_core: <true|false>
+unrealizable_core_file: <path or none>
+unrealizable_core_size: <number or none>
+unrealizable_core_lines: <JSON array of line numbers, or []>
 well_separation_status: <well_separated|non_well_separated|not_checked|unknown>
 blocked_by_nl_conflict: <true|false>
 test_feedback_decision: <none|rejected_invalid_test|repaired|blocked_by_nl_conflict>

@@ -159,6 +159,8 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
         and record["reported_repair_loops"] > 0
     )
     counter_strategy_used = sum(1 for record in filtered if record.get("reported_used_counter_strategy") is True)
+    unrealizable_core_used = sum(1 for record in filtered if record.get("reported_used_unrealizable_core") is True)
+    unrealizable_core_size_counts = reported_counter(filtered, "reported_unrealizable_core_size")
     well_separation_checked = sum(
         1
         for record in filtered
@@ -221,6 +223,15 @@ def summarize(records: list[dict[str, Any]], skill: str, model: str, include_dry
             "count": counter_strategy_used,
             "percent": percent(counter_strategy_used, total),
         },
+        "unrealizable_core_used": {
+            "count": unrealizable_core_used,
+            "percent": percent(unrealizable_core_used, total),
+        },
+        "unrealizable_core_size": sorted_distribution(
+            unrealizable_core_size_counts,
+            total,
+            "unrealizable_core_size",
+        ),
         "well_separation_checked": {
             "count": well_separation_checked,
             "percent": percent(well_separation_checked, total),
@@ -323,6 +334,14 @@ def print_text_summary(summary: dict[str, Any]) -> None:
             "Counter-strategy used: "
             f"{summary['counter_strategy_used']['count']} ({summary['counter_strategy_used']['percent']:.2f}%)"
         )
+        print(
+            "Unrealizable core used: "
+            f"{summary['unrealizable_core_used']['count']} ({summary['unrealizable_core_used']['percent']:.2f}%)"
+        )
+        if any(item["unrealizable_core_size"] != "missing" for item in summary["unrealizable_core_size"]):
+            print("Unrealizable core sizes:")
+            for item in summary["unrealizable_core_size"]:
+                print(f"  {item['unrealizable_core_size']}: {item['count']} ({item['percent']:.2f}%)")
         print(
             "Blocked by NL conflict: "
             f"{summary['blocked_by_nl_conflict']['count']} ({summary['blocked_by_nl_conflict']['percent']:.2f}%)"

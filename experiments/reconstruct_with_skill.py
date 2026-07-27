@@ -324,6 +324,11 @@ def normalize_result_value(value: str) -> Any:
         return stripped.lower() == "true"
     if re.fullmatch(r"-?\d+", stripped):
         return int(stripped)
+    if stripped.startswith(("[", "{")):
+        try:
+            return json.loads(stripped)
+        except json.JSONDecodeError:
+            pass
     return stripped
 
 
@@ -338,6 +343,10 @@ def extract_key_value_result(text: str) -> dict[str, Any] | None:
         "broker_repair_loops",
         "timeout_seconds",
         "used_counter_strategy",
+        "used_unrealizable_core",
+        "unrealizable_core_file",
+        "unrealizable_core_size",
+        "unrealizable_core_lines",
         "well_separation_status",
         "blocked_by_nl_conflict",
         "diagnostic_file",
@@ -465,6 +474,10 @@ def process_description(
                 "reported_test_repair_loops": None,
                 "reported_broker_repair_loops": None,
                 "reported_used_counter_strategy": None,
+                "reported_used_unrealizable_core": None,
+                "reported_unrealizable_core_file": None,
+                "reported_unrealizable_core_size": None,
+                "reported_unrealizable_core_lines": None,
                 "reported_well_separation_status": None,
                 "reported_blocked_by_nl_conflict": None,
                 "reported_diagnostic_file": None,
@@ -627,6 +640,10 @@ def process_description(
         "reported_test_repair_loops": parsed_result.get("test_repair_loops") if parsed_result else None,
         "reported_broker_repair_loops": parsed_result.get("broker_repair_loops") if parsed_result else None,
         "reported_used_counter_strategy": parsed_result.get("used_counter_strategy") if parsed_result else None,
+        "reported_used_unrealizable_core": parsed_result.get("used_unrealizable_core") if parsed_result else None,
+        "reported_unrealizable_core_file": parsed_result.get("unrealizable_core_file") if parsed_result else None,
+        "reported_unrealizable_core_size": parsed_result.get("unrealizable_core_size") if parsed_result else None,
+        "reported_unrealizable_core_lines": parsed_result.get("unrealizable_core_lines") if parsed_result else None,
         "reported_well_separation_status": parsed_result.get("well_separation_status") if parsed_result else None,
         "reported_blocked_by_nl_conflict": parsed_result.get("blocked_by_nl_conflict") if parsed_result else None,
         "reported_diagnostic_file": parsed_result.get("diagnostic_file") if parsed_result else None,
