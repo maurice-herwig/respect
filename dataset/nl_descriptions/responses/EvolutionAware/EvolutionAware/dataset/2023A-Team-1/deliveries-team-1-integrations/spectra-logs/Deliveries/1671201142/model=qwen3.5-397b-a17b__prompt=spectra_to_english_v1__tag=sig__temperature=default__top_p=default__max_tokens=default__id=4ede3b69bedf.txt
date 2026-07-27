@@ -1,0 +1,36 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+The system controls the movement of two robots, Robot 0 and Robot 1, within a grid environment where the horizontal dimension (`DimX`) and vertical dimension (`DimY`) both range from 0 to 5. The environment controls the vertical position of an elevator, while the elevator's horizontal position is fixed at 0.
+
+**Environment Assumptions**
+The environment manages the variable `elevatorY`. In every step, the elevator's vertical position may increase by one, decrease by one, or remain unchanged.
+
+**System Guarantees**
+The system manages the horizontal (`robotX0`, `robotX1`) and vertical (`robotY0`, `robotY1`) coordinates of both robots.
+
+*Initial Conditions*
+Upon system start, both Robot 0 and Robot 1 are initialized at vertical position 5.
+
+*Safety Requirements*
+1. **Movement Constraints:** In every step, each robot's horizontal and vertical coordinates may change by at most one unit. A robot may move one unit horizontally, one unit vertically, both simultaneously, or remain stationary.
+2. **Elevator Shaft Interaction:** Robots are restricted to changing their vertical position only when located at the elevator shaft (horizontal position 0). Specifically:
+   - If a robot's current horizontal position is not 0, its vertical position must remain constant in the next step.
+   - If a robot's vertical position changes in the next step, its horizontal position in the next step must be 0.

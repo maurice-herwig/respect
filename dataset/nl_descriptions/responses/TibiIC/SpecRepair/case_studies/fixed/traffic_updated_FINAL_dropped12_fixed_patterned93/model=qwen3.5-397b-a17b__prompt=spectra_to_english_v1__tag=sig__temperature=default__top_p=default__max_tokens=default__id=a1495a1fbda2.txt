@@ -1,0 +1,40 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+**System Overview**
+This specification defines a reactive traffic light control system. The system monitors environment inputs indicating the presence of cars on two roads (A and B) and an emergency signal. Based on these inputs, the system controls the green light status for both roads.
+
+**Environment Assumptions**
+The environment is expected to behave according to the following constraints:
+1.  **Emergency Signal:** The emergency signal is not permanently active; it must turn off infinitely often over time.
+2.  **Car A Behavior:**
+    *   If Car A is present and there is no emergency, Car A must remain present in the next time step.
+    *   If Car A is present, it must cease to be present in the next time step.
+3.  **Car B Behavior:**
+    *   If there is no emergency, Car B is present, and Light B is green, then Car B must cease to be present in the next time step.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+
+1.  **Emergency Safety:**
+    *   Whenever there is an emergency, Light B must not be green.
+    *   Whenever there is an emergency, both Light A and Light B must be red (not green).
+
+2.  **Response to Car A:**
+    *   Whenever Car A is present, the system must eventually set Light A to green.
+
+3.  **Response to Car B:**
+    *   Whenever Car B is present, the system must eventually set either Light A or Light B to green.
+
+4.  **Initial Condition:**
+    *   The system initializes its internal response tracking logic in a ready state, ensuring it is prepared to respond to car presence immediately.

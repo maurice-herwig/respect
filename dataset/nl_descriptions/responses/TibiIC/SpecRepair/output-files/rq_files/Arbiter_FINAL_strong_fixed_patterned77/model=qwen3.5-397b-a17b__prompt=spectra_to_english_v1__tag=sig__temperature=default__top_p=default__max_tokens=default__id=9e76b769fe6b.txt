@@ -1,0 +1,29 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+**System Overview**
+The Arbiter system manages two request-grant channels, represented by inputs `r1` and `r2` and outputs `g1` and `g2`, respectively. An additional environment input `a` acts as a control signal. The system must respond to requests while adhering to safety constraints regarding the control signal and mutual exclusion between grants.
+
+**Environment Assumptions**
+The environment is assumed to satisfy the following condition globally: whenever the system output `g2` is false, the environment input `a` must be true.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+
+1.  **Request Response for Channel 1:** The system must respond to requests on `r1` with grants on `g1`. Specifically, the system tracks the state of this interaction starting in an idle state. If `r1` is true while `g1` is false, the system enters a pending state. It remains in the pending state until `g1` becomes true, at which point it returns to the idle state. The system must infinitely often return to the idle state, ensuring that `g1` eventually becomes true whenever `r1` is asserted.
+
+2.  **Request Response for Channel 2:** Similarly, the system must respond to requests on `r2` with grants on `g2`. If `r2` is true while `g2` is false, the system enters a pending state for this channel. It must remain pending until `g2` becomes true, returning to the idle state thereafter. The system must infinitely often return to the idle state, ensuring that `g2` eventually becomes true whenever `r2` is asserted.
+
+3.  **Control Signal Safety:** Globally, if the environment input `a` is false, then both system outputs `g1` and `g2` must be false.
+
+4.  **Mutual Exclusion:** Globally, the system outputs `g1` and `g2` cannot both be true simultaneously. At least one of them must be false at all times.

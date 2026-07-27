@@ -1,0 +1,33 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- carA: boolean
+- carB: boolean
+- emergency: boolean
+
+System variables:
+- greenA: boolean
+- greenB: boolean
+
+**Requirements Description**
+
+This specification defines a traffic light control system for two lanes, A and B, managed by an environment that reports car presence and emergency status. The system controls the green light signals for each lane.
+
+**Environment Assumptions**
+The environment behaves according to the following constraints:
+1.  **Emergency Signal Frequency:** The emergency signal will not remain active indefinitely; it will be inactive (false) infinitely often.
+2.  **Car Presence Dynamics:**
+    *   **Departure:** If a car is present at lane A (or lane B) and the corresponding light (greenA or greenB) is active, the car will depart (become absent) in the next step.
+    *   **Waiting (Lane A):** If a car is present at lane A, light A is not green, and light B was not green in the previous step, the car will remain present in the next step.
+    *   **Waiting (Lane B):** If a car is present at lane B, light B is not green, and light B was not green in the previous step, the car will remain present in the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+1.  **Mutual Exclusion:** The system must never allow both greenA and greenB to be true simultaneously. At least one light must be false at all times.
+2.  **Emergency Response:** If the emergency signal is active, both greenA and greenB must be false (both lights red).
+3.  **Lane Response (Liveness):**
+    *   Whenever a car is present at lane A, the light greenA must eventually turn true.
+    *   Whenever a car is present at lane B, the light greenB must eventually turn true.
+    *   These response requirements ensure that if a car arrives and the light is not yet green, the system must eventually grant the green light.

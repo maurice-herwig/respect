@@ -1,0 +1,18 @@
+
+
+Specification name: Minepump
+
+Environment variables:
+- highwater: boolean
+- methane: boolean
+
+System variables:
+- pump: boolean
+
+The Minepump system controls the `pump` output based on the `highwater` and `methane` inputs provided by the environment. The environment is responsible for the values of `highwater` and `methane`, while the system is responsible for the value of `pump`.
+
+The environment must satisfy the following assumption globally: whenever the `pump` is currently true, either the `highwater` signal will be false in the next step, or the `pump` was false in the previous step.
+
+The system must satisfy the following guarantees globally:
+1. At every step, either `methane` is true or the `pump` will be true in the next step. This implies that if `methane` is false, the system must ensure the `pump` is true in the next step.
+2. At every step, either `methane` is false or the `pump` will be false in the next step. This implies that if `methane` is true, the system must ensure the `pump` is false in the next step.

@@ -1,0 +1,30 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**System Overview**
+This specification defines a reactive traffic control system. The environment provides inputs indicating the presence of a car, an emergency situation, and police activity. The system controls the green traffic light signal.
+
+**Environment Assumptions**
+The system operates under the following assumptions regarding the environment's behavior:
+1.  **Police Signal Frequency:** The police signal is false infinitely often.
+2.  **Car Presence Constraint:** At every time step, if the police signal was false in the previous step, then either the car will be present in the next step, or the emergency signal is currently true, or the green light is currently true.
+3.  **Car Movement Constraint:** At every time step, if the police signal is false, a car is present, and the green light is true, then the car must not be present in the next step (i.e., the car must move).
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Car-Green Response:** Whenever a car is present, the green light must be either currently on or must turn on eventually. The system must ensure that this response condition is satisfied infinitely often, meaning it cannot indefinitely delay turning the green light on when a car is present.
+2.  **Car Absence Frequency:** The system guarantees that the car signal is false infinitely often.
+
+**Initial and Temporal Conditions**
+*   **Initial State:** Initially, the system starts in a state where the car-green response requirement is considered satisfied.
+*   **Safety:** The response logic ensures that if a car is present without the green light being on, the system transitions to a pending state. It must remain in or return from this state only according to the response rules defined above.
+*   **Liveness:** The system must return to the satisfied state infinitely often, ensuring that requests for the green light triggered by the car are eventually fulfilled.

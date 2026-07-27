@@ -1,0 +1,43 @@
+
+
+Specification name: Module2
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevator: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**System Overview**
+This specification describes a reactive system controlling two robots (Robot 0 and Robot 1) moving on a grid. The grid dimensions are defined by constants DX and DY, both set to 5. The environment controls an elevator that moves vertically. The system must coordinate the robots' movements to avoid collisions while interacting with the elevator at the X=0 column.
+
+**Environment Assumptions**
+The environment controls the `elevator` variable, representing the elevator's vertical position. The following behaviors are assumed:
+1.  **Movement Speed:** In each step, the elevator position changes by at most 1 unit (it may move up by 1, down by 1, or remain stationary).
+2.  **Liveness:** The elevator visits floor 0 infinitely often and visits floor DY (5) infinitely often.
+
+**System Guarantees**
+The system controls the X and Y coordinates for both robots (`robotX0`, `robotY0`, `robotX1`, `robotY1`). The system must satisfy the following requirements:
+
+1.  **Initial Conditions:**
+    *   Both Robot 0 and Robot 1 start at the Y coordinate DY (5).
+
+2.  **Movement Constraints:**
+    *   **Horizontal Speed:** For each robot, the X coordinate changes by at most 1 unit per step.
+    *   **Manhattan Movement:** In any single step, a robot must either maintain its X coordinate or maintain its Y coordinate; it cannot change both simultaneously.
+    *   **Vertical Movement Restriction:** A robot is only permitted to change its Y coordinate if its current X coordinate is 0. If a robot's X coordinate is not 0, its Y coordinate must remain unchanged in the next step.
+
+3.  **Elevator Interaction:**
+    *   **Alignment:** If a robot's X coordinate in the next step is 0, its Y coordinate in the next step must exactly match the elevator's current position.
+
+4.  **Collision and Interference Avoidance:**
+    *   **Collision:** The two robots must never occupy the same cell; they cannot have identical X and Y coordinates simultaneously.
+    *   **Switching Prevention:** If both robots are on the same Y coordinate in the current step, they cannot swap X positions in the next step (i.e., Robot 0 cannot move to Robot 1's current X while Robot 1 moves to Robot 0's current X).

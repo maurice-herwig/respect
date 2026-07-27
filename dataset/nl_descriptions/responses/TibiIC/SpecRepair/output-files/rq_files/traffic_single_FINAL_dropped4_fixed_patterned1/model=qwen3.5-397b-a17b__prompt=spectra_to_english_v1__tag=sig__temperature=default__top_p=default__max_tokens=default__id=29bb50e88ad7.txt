@@ -1,0 +1,35 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines the behavior of a traffic control system interacting with an environment. The environment controls the inputs `car`, `emergency`, and `police`. The system controls the output `green`.
+
+**Environment Assumptions**
+The environment is assumed to satisfy the following constraints:
+1.  **Police Signal:** The `police` signal must be false infinitely often.
+2.  **Car Absence Behavior:** Whenever the `car` is absent, either the `car` becomes present in the next step, the `emergency` signal is currently active, or the `car` is currently absent.
+3.  **Car Presence Behavior:** Always, either the `car` is absent, or the `car` becomes absent in the next step. (Equivalently, if the `car` is present, it must be absent in the next step).
+
+**System Guarantees**
+The system must satisfy a response pattern relating the `car` input to the `green` output. The system maintains an internal state, initially set to **S0**. The system must adhere to the following safety and liveness rules:
+
+*   **Initial Condition:** The system starts in state **S0**.
+*   **Safety Requirements:**
+    *   **In State S0:**
+        *   If the `car` is absent, or if the `car` is present and the `green` light is on, the system remains in state **S0**.
+        *   If the `car` is present and the `green` light is off, the system transitions to state **S1**.
+    *   **In State S1:**
+        *   If the `green` light is on, the system transitions to state **S0**.
+        *   If the `green` light is off, the system remains in state **S1**.
+*   **Liveness Requirements:**
+    *   The system must be in state **S0** infinitely often.

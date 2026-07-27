@@ -1,0 +1,30 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Environment Assumptions**
+The environment must adhere to the following constraints regarding the inputs `car`, `emergency`, and `police`:
+1.  **Police Signal Liveness:** The `police` signal must be false infinitely often. It cannot remain active indefinitely.
+2.  **Car Presence Constraint:** At every step, at least one of the following conditions must hold: a car will be present in the next step (`next(car=true)`), an emergency is currently active (`emergency=true`), or the traffic light is currently green (`green=true`).
+3.  **Red Light Car Constraint:** At every step, if the traffic light is not green (`green=false`), then no car will be present in the next step (`next(car=false)`).
+
+**System Guarantees**
+The system controls the `green` output and maintains an internal status state to ensure responsiveness to cars. The internal state starts in the "satisfied" state (S0).
+
+1.  **Initial Condition:** The internal status is initially set to "satisfied" (S0).
+2.  **Safety and Transition Rules:** The internal status updates based on the presence of a car (`car`) and the state of the light (`green`) as follows:
+    *   If the status is "satisfied" (S0):
+        *   It remains "satisfied" (S0) if there is no car (`car=false`) or if there is a car and the light is green (`car=true` and `green=true`).
+        *   It transitions to "waiting" (S1) if there is a car and the light is not green (`car=true` and `green=false`).
+    *   If the status is "waiting" (S1):
+        *   It transitions back to "satisfied" (S0) if the light becomes green (`green=true`).
+        *   It remains "waiting" (S1) if the light is not green (`green=false`).
+3.  **Liveness Requirement:** The internal status must be "satisfied" (S0) infinitely often. Combined with the transition rules, this requires that whenever the system enters the "waiting" state (due to a car being present while the light is not green), the light must eventually turn green to return to the "satisfied" state.

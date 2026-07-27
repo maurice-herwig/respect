@@ -1,0 +1,29 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The Arbiter specification defines a reactive system that interacts with an environment through boolean signals. The environment controls inputs `a`, `r1`, and `r2`, while the system controls outputs `g1` and `g2`.
+
+**Environment Assumptions**
+The environment is assumed to satisfy the following constraint:
+- Whenever `r1` is true, `a` must also be true.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+
+1.  **Response to `r1`:** The system maintains a tracking mechanism for the request `r1` with a response condition defined as `r2` is false or `g1` is true. Initially, this tracker is in an idle state. If `r1` is true while the response condition is not met, the tracker transitions to a pending state. While in the pending state, the system must ensure the response condition eventually becomes true to return the tracker to the idle state. The tracker is required to visit the idle state infinitely often.
+
+2.  **Response to `r2`:** The system maintains a tracking mechanism for the request `r2` with a response condition defined as `g2` is false or `g2` is true. Initially, this tracker is in an idle state. As the response condition is always satisfied, the tracker remains in the idle state and satisfies the requirement to visit the idle state infinitely often.
+
+3.  **Safety Condition on `a`:** Globally, if `a` is false, then either `r2` was true in the previous step, or both `g1` and `g2` are false.
+
+4.  **Safety Condition on `g1` and `g2`:** Globally, it must hold that either `g1` is true, `g1` is false, or `g2` is false.

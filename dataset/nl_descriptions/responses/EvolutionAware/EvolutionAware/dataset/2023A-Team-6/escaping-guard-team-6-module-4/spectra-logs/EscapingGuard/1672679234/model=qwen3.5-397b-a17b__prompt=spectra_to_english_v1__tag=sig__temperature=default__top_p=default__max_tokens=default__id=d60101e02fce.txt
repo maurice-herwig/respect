@@ -1,0 +1,20 @@
+
+
+Specification name: EscapingGuard
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- guardX: Dim
+- guardY: Dim
+
+System variables:
+- robotX: Dim
+- robotY: Dim
+
+The system controls a robot operating on a two-dimensional grid alongside a guard controlled by the environment. Both the robot and the guard positions are defined by X and Y coordinates ranging from 0 to 7. The interaction proceeds in a repeating three-turn cycle, tracked internally by a turn counter that starts at 0 and cycles through 1, 2, and back to 0.
+
+The environment manages the guard's position. At all times, the guard's coordinates may change by at most one unit per turn in each dimension. During turns 0 and 1 of the cycle, the guard must remain stationary. On turn 2, the guard is required to move closer to the robot along specific axes if the distance is sufficient. Specifically, on turn 2, if the robot's X coordinate is at least two units greater than the guard's X coordinate, the guard's X coordinate must increase by one. If the robot's Y coordinate is at least two units greater than the guard's Y coordinate, the guard's Y coordinate must increase by one. Conversely, if the robot's X coordinate is less than the guard's X coordinate, the guard's X coordinate must decrease by one. If the robot's Y coordinate is less than the guard's Y coordinate, the guard's Y coordinate must decrease by one.
+
+The system controls the robot's position. The primary requirement is that the robot must never collide with the guard. The guard occupies a 2x2 area defined by its top-left corner coordinates. The robot must never occupy the top-left, top-right, bottom-left, or bottom-right cell of this 2x2 area. Initially, the turn counter is set to 0.

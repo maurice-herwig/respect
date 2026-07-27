@@ -1,0 +1,26 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The TrafficE2 specification defines the behavior of a traffic light system interacting with an environment consisting of cars, police, and emergency signals. The system controls the green light status, while the environment controls the presence of cars, police, and emergency conditions.
+
+**Environment Assumptions**
+The environment is subject to the following constraints regarding car behavior:
+1.  If a car appears after being absent in the previous step, either the green light must be currently on, or the car must remain present in the next step.
+2.  If there is no police presence, a car that is present while the green light is on must leave in the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Response to Cars:** The system must ensure that if a car is present while the green light is off, the green light eventually turns on. The system tracks car requests starting from an idle state where no requests are pending.
+2.  **Liveness:** The system must clear pending car requests infinitely often. This ensures that the system does not indefinitely ignore a present car when the light is off.
+
+**Initial Conditions**
+Initially, the system starts in an idle state regarding car requests.

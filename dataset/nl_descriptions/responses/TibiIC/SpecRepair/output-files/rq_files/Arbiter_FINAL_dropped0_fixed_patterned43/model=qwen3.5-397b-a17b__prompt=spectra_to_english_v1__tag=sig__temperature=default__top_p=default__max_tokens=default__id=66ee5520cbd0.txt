@@ -1,0 +1,32 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The Arbiter system manages two request-grant pairs (`r1`/`g1` and `r2`/`g2`) subject to an environmental control signal `a`. The environment controls the input variables `a`, `r1`, and `r2`, while the system controls the output variables `g1` and `g2`.
+
+**Environment Assumptions**
+The environment guarantees that signal `a` is true whenever request `r1` is false. Conversely, if `a` is false, `r1` must be true.
+
+**System Guarantees**
+The system must satisfy the following behavioral requirements:
+
+1.  **Request Response:**
+    *   For the first pair, if request `r1` is active while grant `g1` is inactive, the system must eventually activate `g1`.
+    *   For the second pair, if request `r2` is active while grant `g2` is inactive, the system must eventually activate `g2`.
+    *   The system must infinitely often return to an idle state where no request is pending acknowledgment.
+
+2.  **Grant Constraints:**
+    *   If `r1` was false in the previous step, the system must not assert both `g1` and `g2` simultaneously in the current step; at least one grant must be false.
+    *   If `a` is false in the current step and `r1` was false in the previous step, the system must ensure both `g1` and `g2` are false in the current step.
+
+**Initial Conditions**
+The system initializes in an idle state, ready to process requests without any pending obligations from prior steps.

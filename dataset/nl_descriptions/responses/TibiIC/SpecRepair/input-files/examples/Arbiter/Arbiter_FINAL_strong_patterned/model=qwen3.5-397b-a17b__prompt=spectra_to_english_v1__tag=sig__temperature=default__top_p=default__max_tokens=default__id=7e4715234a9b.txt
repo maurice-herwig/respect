@@ -1,0 +1,29 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+**Assumptions on the Environment**
+The environment always maintains the signal `a` as true.
+
+**Guarantees from the System**
+The system must satisfy the following requirements regarding the grant signals `g1` and `g2` in response to the request signals `r1` and `r2`:
+
+1.  **Request Response Property:** For both channel 1 (`r1`, `g1`) and channel 2 (`r2`, `g2`), the system manages the interaction using an internal state machine that initializes to an idle state.
+    *   **Initial Condition:** The system starts in the idle state.
+    *   **Safety and Next-State Rules:**
+        *   While in the idle state: If the request signal is false, or if both the request and grant signals are true, the system remains in the idle state. If the request signal is true and the grant signal is false, the system transitions to a pending state.
+        *   While in the pending state: If the grant signal is false, the system remains in the pending state. If the grant signal becomes true, the system returns to the idle state.
+    *   **Liveness Requirement:** The system must return to the idle state infinitely often. This ensures that if the system enters the pending state due to an unserved request, it must eventually set the corresponding grant signal to true.
+
+2.  **Abort Condition:** If signal `a` is false, both `g1` and `g2` must be false.
+
+3.  **Mutual Exclusion:** Signals `g1` and `g2` must never be true simultaneously. At any point in time, at least one of these signals must be false.

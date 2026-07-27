@@ -1,0 +1,27 @@
+
+
+Specification name: Cinderella
+
+Environment variables:
+- unitsToFill: Int(0..A)[N]
+
+System variables:
+- buckets: Int(0..B)[N]
+- firstToEmpty: Int(0..(N - 1))
+
+The system operates with constants where N equals 5, C equals 2, B equals 9, and A equals 5. The environment provides an array of input values representing units to fill, while the system manages an array of bucket values and a pointer indicating the first position to empty.
+
+**Environment Assumptions**
+At every step of the interaction, the sum of all elements in the `unitsToFill` array must equal 5.
+
+**Initial Conditions**
+Initially, every element in the `buckets` array must be 0.
+
+**Transition Requirements**
+In each transition to the next state, the system updates the `buckets` array based on a specific window of indices determined by the `firstToEmpty` variable. This window consists of 2 contiguous indices starting at `firstToEmpty` and wrapping around modulo 5 (specifically, indices `firstToEmpty` and `(firstToEmpty + 1) modulo 5`).
+
+For every index `i` within this window, the system must ensure that the value of `buckets[i]` in the next state equals the value of `unitsToFill[i]` in the next state.
+
+For every index `i` outside this window, the system must ensure that the value of `buckets[i]` in the next state equals the current value of `buckets[i]` plus the value of `unitsToFill[i]` in the next state.
+
+The system controls the `firstToEmpty` variable, ensuring it remains within the range 0 to 4, and must ensure all `buckets` values remain within the range 0 to 9.

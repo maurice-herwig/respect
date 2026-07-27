@@ -1,0 +1,34 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification describes a reactive system that controls a traffic light signal `green` based on environment inputs `car`, `emergency`, and `police`.
+
+**Environment Assumptions**
+The environment must satisfy the following conditions:
+1.  **Police Signal:** The `police` signal must be false infinitely often.
+2.  **Emergency Condition:** Globally, if `emergency` is true, then at least one of the following must hold: `car` is true in the next state, `emergency` is true, or `green` is true.
+3.  **Car Movement:** Globally, `car` must be false in the next state.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+
+1.  **Response Requirement:** The system must ensure that whenever `car` is true, `green` eventually becomes true.
+2.  **Internal State Logic:** To enforce the response requirement, the system maintains an internal state variable that is initially set to `S0`. The system updates this state according to the following rules:
+    *   **From State S0:**
+        *   If `car` is false, or if both `car` and `green` are true, the system remains in state `S0`.
+        *   If `car` is true and `green` is false, the system transitions to state `S1`.
+    *   **From State S1:**
+        *   If `green` is true, the system transitions to state `S0`.
+        *   If `green` is false, the system remains in state `S1`.
+3.  **Liveness Requirement:** The system must be in state `S0` infinitely often.

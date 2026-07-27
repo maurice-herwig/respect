@@ -1,0 +1,33 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines a reactive traffic light system. The environment controls the inputs `car`, `emergency`, and `police`, while the system controls the output `green`.
+
+**Environment Assumptions**
+The environment is assumed to adhere to the following constraints:
+1.  **Car Persistence:** Always, if the `car` variable is true and the `emergency` variable is false, then the `car` variable must remain true in the next state.
+2.  **Car Departure Condition:** Always, if the `car` variable is false in the next state, then at least one of the following must hold: the `car` variable is false in the current state, the `car` variable is false in the next state, or the `green` variable is false.
+
+**System Guarantees**
+The system must satisfy the following behavior, modeled by an internal state machine with states Ready (S0) and Waiting (S1):
+
+1.  **Initial Condition:** The system starts in the Ready state.
+2.  **Safety and State Transitions:**
+    *   While in the Ready state:
+        *   If the `car` variable is false, or if both `car` is true and `green` is true, the system remains in the Ready state.
+        *   If the `car` variable is true and the `green` variable is false, the system transitions to the Waiting state.
+    *   While in the Waiting state:
+        *   If the `green` variable becomes true, the system transitions back to the Ready state.
+        *   If the `green` variable is false, the system remains in the Waiting state.
+3.  **Liveness:** The system must infinitely often return to the Ready state. Consequently, if the system enters the Waiting state (which occurs when a car is present without a green light), the system must eventually set the `green` variable to true to return to the Ready state.

@@ -1,0 +1,30 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- p0X: DimX
+- p0Y: DimY
+- p1X: DimX
+- p1Y: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+The system models two robots operating within a 5x5 grid, interacting with two dynamic package locations. The system controls the X and Y coordinates for both Robot 0 and Robot 1. The environment controls the X and Y coordinates for Package 0 and Package 1.
+
+A robot is considered to be at its package location when its X and Y coordinates exactly match the corresponding package's X and Y coordinates. A robot is considered to be at the corner when both its X and Y coordinates equal 5.
+
+The specification tracks delivery interactions using two counters, `r0Count` and `r1Count`, each ranging from 0 to 3. Both counters initialize to 0. `r0Count` increments whenever Robot 0 is at Package 0 and resets to 0 whenever Robot 0 is at the corner. Similarly, `r1Count` increments whenever Robot 1 is at Package 1 and resets to 0 whenever Robot 1 is at the corner. The counters stop incrementing upon reaching 3.
+
+The environment must satisfy the following constraints regarding package movement:
+1. If a robot is not at its corresponding package location, or if its associated counter has reached 3, the package location must remain stationary. Specifically, both the X and Y coordinates of the package must remain unchanged in the next step.
+2. If a robot is at its corresponding package location and its associated counter is less than 3, the package's Y-coordinate must change in the next step and must not equal 5.

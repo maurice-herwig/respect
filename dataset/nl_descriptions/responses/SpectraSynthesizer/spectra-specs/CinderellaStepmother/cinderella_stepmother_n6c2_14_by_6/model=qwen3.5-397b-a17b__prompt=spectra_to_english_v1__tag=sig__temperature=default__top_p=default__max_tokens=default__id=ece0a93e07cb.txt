@@ -1,0 +1,30 @@
+
+
+Specification name: Cinderella
+
+Environment variables:
+- waterFills: Int(0..ADDED_WATER_UNITS)[N]
+
+System variables:
+- buckets: Int(0..B)[N]
+- bucketToEmpty: Int(0..(N - 1))
+
+**Requirements Description**
+
+This specification defines a reactive system managing water levels across six buckets (indices 0 to 5). The environment controls the amount of water added to each bucket at every step, while the system controls the recorded water levels and selects a bucket index to empty.
+
+**Environment Behavior**
+At every step, the environment provides the `waterFills` input, which specifies the units of water added to each of the six buckets. The total amount of water added across all buckets must always equal exactly 6 units. Each individual bucket's added water must be between 0 and 6 units.
+
+**System Behavior**
+The system controls the `buckets` array, representing the current water level in each bucket (ranging from 0 to 14 units), and the `bucketToEmpty` integer (ranging from 0 to 5), representing the system's choice of action for the step.
+
+*Initial Condition*
+Initially, all buckets must contain 0 units of water.
+
+*Next-State Rules*
+At each step, the system updates the water levels for the next state based on the selected `bucketToEmpty` index and the new water added (`waterFills`). For each bucket `i`:
+1.  **Reset Condition:** If the selected `bucketToEmpty` index is equal to `i` or immediately precedes `i` (where index 5 precedes index 0), the bucket is considered emptied of its previous content. Its water level for the next step becomes exactly the amount of newly added water (`next(waterFills[i])`).
+2.  **Accumulation Condition:** Otherwise, the bucket retains its previous content. Its water level for the next step becomes the sum of its current level and the newly added water (`buckets[i] + next(waterFills[i])`).
+
+Effectively, by choosing a specific `bucketToEmpty` index `k`, the system resets the water levels of bucket `k` and bucket `(k + 1) mod 6` to the new water amounts, while all other buckets accumulate the new water on top of their existing levels. The system must ensure that water levels remain within the defined range of 0 to 14 units.

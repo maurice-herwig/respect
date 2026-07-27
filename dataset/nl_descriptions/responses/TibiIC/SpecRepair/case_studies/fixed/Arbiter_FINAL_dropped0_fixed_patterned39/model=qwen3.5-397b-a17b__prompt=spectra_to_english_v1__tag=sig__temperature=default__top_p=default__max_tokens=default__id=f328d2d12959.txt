@@ -1,0 +1,29 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The Arbiter system manages two request-grant pairs controlled by an environment signal. The environment provides the boolean inputs `a`, `r1`, and `r2`. The system controls the boolean outputs `g1` and `g2`.
+
+**Environment Assumptions**
+The environment must adhere to the following constraint regarding signal `a`:
+*   The signal `a` cannot be false for two consecutive steps. If `a` was false in the previous step, it must be true in the current step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+
+1.  **Request Response:**
+    *   Whenever the request `r1` is true, the grant `g1` must eventually become true.
+    *   Whenever the request `r2` is true, the grant `g2` must eventually become true.
+2.  **Disable Condition:**
+    *   At any time, if the signal `a` is false, then both `g1` and `g2` must be false.
+3.  **Mutual Exclusion:**
+    *   At any time, `g1` and `g2` cannot both be true simultaneously. At least one of the two grants must be false.

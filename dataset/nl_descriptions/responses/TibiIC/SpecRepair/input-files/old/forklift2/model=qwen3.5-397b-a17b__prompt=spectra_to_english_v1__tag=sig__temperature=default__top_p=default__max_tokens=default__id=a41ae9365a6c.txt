@@ -1,0 +1,29 @@
+
+
+Specification name: ForkLift2
+
+Environment variables:
+- fardistance: boolean
+
+System variables:
+- liftcommand: boolean
+- dropcommand: boolean
+- gocommand: boolean
+- idlecommand: boolean
+
+The ForkLift2 specification defines a reactive system where the environment controls the boolean input `fardistance`, and the system controls the boolean outputs `liftcommand`, `dropcommand`, `gocommand`, and `idlecommand`. The behavior is governed by assumptions restricting the environment and guarantees required from the system.
+
+**Environment Assumptions**
+The environment must update the `fardistance` variable in the next step according to the following rules:
+1. If the system issues a `dropcommand` set to true while `fardistance` is true, then `fardistance` must remain true in the next step.
+2. If the system issues an `idlecommand` set to true while `fardistance` is false, then `fardistance` must remain false in the next step.
+3. If the system issues a `gocommand` set to true, then `fardistance` must become false in the next step.
+4. If `fardistance` is false and the `liftcommand` is false, then `fardistance` must remain false in the next step.
+5. If `fardistance` is false and the `liftcommand` is true, then `fardistance` must become true in the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1. **Initial Condition:** At the start of execution, the `liftcommand` must be true.
+2. **Safety and Next-State Requirements:**
+   - Always, if `fardistance` is true, the system must ensure that `dropcommand` is false in the next step.
+   - Always, if `fardistance` is false, the system must ensure that `gocommand` is false in the next step.

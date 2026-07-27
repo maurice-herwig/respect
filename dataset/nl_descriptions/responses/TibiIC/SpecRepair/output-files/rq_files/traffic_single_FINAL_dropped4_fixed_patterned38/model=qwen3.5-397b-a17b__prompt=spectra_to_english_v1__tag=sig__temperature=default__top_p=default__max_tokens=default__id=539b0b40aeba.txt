@@ -1,0 +1,31 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Environment Assumptions**
+
+The environment controls the `car`, `emergency`, and `police` signals subject to the following constraints:
+
+1.  **Police Signal Liveness:** The `police` signal must be false infinitely often throughout the system operation.
+2.  **Car Behavior After Red Light:** If the `green` light was false in the previous step, then one of the following must hold: either the `car` signal will be true in the next step, the `emergency` signal is true in the current step, or the `car` signal is false in the current step.
+3.  **Car Signal Stability:** The `car` signal cannot be active in two consecutive steps. Specifically, it is always the case that either `car` is false currently or `car` will be false in the next step.
+
+**System Guarantees**
+
+The system controls the `green` light and must satisfy the following response requirement regarding car presence:
+
+1.  **Initial Condition:** The system begins in an internal state S0.
+2.  **Safety and State Transitions:** The system maintains an internal state (S0 or S1) governed by the relationship between `car` and `green`:
+    *   If the system is in state S0, it remains in S0 if either no car is present (`car=false`) or if a car is present and the light is green (`car=true` and `green=true`).
+    *   If the system is in state S0 and a car is present without the light being green (`car=true` and `green=false`), the system transitions to state S1.
+    *   If the system is in state S1, it remains in S1 as long as the light is not green (`green=false`).
+    *   If the system is in state S1 and the light turns green (`green=true`), the system transitions back to state S0.
+3.  **Liveness Requirement:** The system must return to state S0 infinitely often. This ensures that whenever a car is present, the `green` light eventually turns true to clear the pending state.

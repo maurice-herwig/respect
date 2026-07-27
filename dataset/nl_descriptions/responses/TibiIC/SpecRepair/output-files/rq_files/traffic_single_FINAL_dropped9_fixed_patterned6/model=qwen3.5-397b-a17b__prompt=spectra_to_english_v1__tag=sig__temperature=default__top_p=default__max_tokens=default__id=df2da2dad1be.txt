@@ -1,0 +1,25 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Environment Assumptions**
+The environment must satisfy the following constraints regarding the input signals:
+1.  **Police Presence:** The police signal is not permanently active; it must be false infinitely often.
+2.  **Car and Police Transition:** At any step, if the police signal will be true in the next step, then either the car signal is false in the current step or the car signal will be true in the next step.
+3.  **Traffic and Light Status:** At any step, at least one of the following conditions must hold: the police signal is true, the car signal is false, the car signal will be false in the next step, or the green light is false.
+
+**System Guarantees**
+The system must control the green light to satisfy the following response behavior:
+1.  **Initial State:** The system begins in a Satisfied state.
+2.  **State Transitions:**
+    *   While in the Satisfied state: If a car is present and the green light is off, the system transitions to a Pending state. Otherwise, it remains in the Satisfied state.
+    *   While in the Pending state: If the green light turns on, the system transitions back to the Satisfied state. Otherwise, it remains in the Pending state.
+3.  **Liveness:** The system must enter the Satisfied state infinitely often.

@@ -1,0 +1,36 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+- deliveriesX: DimX [2]
+- deliveriesY: DimY [2]
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+This specification defines the behavior of a reactive system controlling two robots, Robot 0 and Robot 1, operating within a grid environment. The system manages the positions of the robots, while the environment controls the vertical position of an elevator and provides delivery coordinate data.
+
+**Environment Assumptions**
+The environment controls the `elevatorY` variable. It is assumed that the elevator's Y-coordinate changes gradually; in any step, the value may remain the same, increase by one, or decrease by one.
+
+**System Guarantees**
+The system controls the X and Y coordinates for both Robot 0 (`robotX0`, `robotY0`) and Robot 1 (`robotX1`, `robotY1`). The system must satisfy the following requirements:
+
+*   **Initial Conditions:** Upon initialization, both Robot 0 and Robot 1 must be located at Y-coordinate 5. The initial X-coordinates for both robots are unconstrained.
+*   **Movement Safety:** The movement of both robots is restricted to adjacent grid cells. In every step, the X and Y coordinates for each robot may only change by at most one unit. Specifically, each coordinate must either remain stationary, increase by one, or decrease by one.
+*   **Elevator Interaction:** The system defines the elevator shaft location at X-coordinate 0. Robots are constrained in how they change floors (Y-coordinate) relative to this shaft:
+    *   If a robot's current X-coordinate is not 0, its Y-coordinate must remain unchanged in the next step.
+    *   If a robot's Y-coordinate changes in the next step, its X-coordinate in the next step must be 0.
+    *   These constraints apply identically to both Robot 0 and Robot 1.

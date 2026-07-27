@@ -1,0 +1,35 @@
+
+
+Specification name: EscapingGuard
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- guardX: Dim
+- guardY: Dim
+
+System variables:
+- robotX: Dim
+- robotY: Dim
+
+**Requirements Description**
+
+This specification defines a reactive system involving a robot and a guard operating on a grid. The grid coordinates are integers ranging from 0 to 7 (where D=7). The environment controls the guard's position, while the system controls the robot's position.
+
+**Internal Cycle Monitor**
+An internal monitoring variable, `turnNum`, cycles through values 0, 1, and 2 repeatedly to govern the timing of movements. Initially, `turnNum` is 0. At each step, `turnNum` advances from 0 to 1, from 1 to 2, and from 2 back to 0.
+
+**Environment Assumptions**
+The environment must adhere to the following constraints regarding the guard's movement:
+1.  **Movement Limit:** In every step, the guard's X and Y coordinates must change by at most 1 (i.e., the coordinate may increase by 1, decrease by 1, or remain the same).
+2.  **Stationary Turns:** When `turnNum` is 0 or 1, the guard must not move; both `guardX` and `guardY` must remain unchanged in the next state.
+3.  **Movement Direction on Turn 2:** When `turnNum` is 2, the guard's movement is constrained by the robot's position:
+    *   If the robot's X coordinate is greater than the guard's X coordinate plus 1, the guard's X coordinate must increase by 1 in the next state.
+    *   If the robot's Y coordinate is greater than the guard's Y coordinate plus 1, the guard's Y coordinate must increase by 1 in the next state.
+    *   If the robot's X coordinate is less than the guard's X coordinate, the guard's X coordinate must decrease by 1 in the next state.
+    *   If the robot's X coordinate is less than the guard's Y coordinate, the guard's Y coordinate must decrease by 1 in the next state.
+
+**System Guarantees**
+The system must ensure the following safety property regarding the robot's position relative to the guard:
+*   **Collision Avoidance:** At all times, the robot must not occupy any of the four cells forming the 2x2 square defined by the guard's top-left corner. Specifically, the robot's coordinates `(robotX, robotY)` must never equal `(guardX, guardY)`, `(guardX + 1, guardY)`, `(guardX, guardY + 1)`, or `(guardX + 1, guardY + 1)`.

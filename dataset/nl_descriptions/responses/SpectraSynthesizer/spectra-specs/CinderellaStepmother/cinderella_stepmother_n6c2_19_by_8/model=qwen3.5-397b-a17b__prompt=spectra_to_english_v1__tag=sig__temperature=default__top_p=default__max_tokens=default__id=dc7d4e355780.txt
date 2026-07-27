@@ -1,0 +1,31 @@
+
+
+Specification name: Cinderella
+
+Environment variables:
+- waterFills: Int(0..ADDED_WATER_UNITS)[N]
+
+System variables:
+- buckets: Int(0..B)[N]
+- bucketToEmpty: Int(0..(N - 1))
+
+**Requirements Description**
+
+This specification defines a reactive system managing water levels in six buckets (`N` = 6) based on environmental input. The system constants are defined as follows: `C` = 2, `B` = 19, and `ADDED_WATER_UNITS` = 8.
+
+**Environment Assumptions**
+The environment controls the `waterFills` array, which specifies the amount of water added to each of the six buckets at every step. Each element in `waterFills` must be an integer between 0 and 8. At every step, the sum of water units across all six buckets in `waterFills` must exactly equal 8.
+
+**System Guarantees**
+The system controls the `buckets` array, representing the current water level in each bucket (restricted to integers between 0 and 19), and the `bucketToEmpty` index (an integer between 0 and 5).
+
+*Initial Conditions*
+Initially, the water level in every bucket must be 0.
+
+*Safety and Transition Requirements*
+At every step, the system selects a `bucketToEmpty` index. This index determines how the water levels in the `buckets` array update for the next step based on the `waterFills` provided for that next step. The update logic divides the buckets into two groups based on the `bucketToEmpty` index and the constant `C` = 2:
+
+1.  **Emptying Window:** For the bucket at index `bucketToEmpty` and the immediately following index (wrapping around from index 5 back to 0), the water level in the next step is reset to equal the water fill amount for that bucket in the next step. Effectively, any previously accumulated water is discarded for these two buckets.
+2.  **Accumulation Zone:** For all other buckets (the remaining four indices), the water level in the next step is calculated by adding the next step's water fill amount to the current water level. These buckets accumulate water over time.
+
+The system must ensure that the `buckets` values always remain within their defined domain of 0 to 19 while satisfying these update rules.

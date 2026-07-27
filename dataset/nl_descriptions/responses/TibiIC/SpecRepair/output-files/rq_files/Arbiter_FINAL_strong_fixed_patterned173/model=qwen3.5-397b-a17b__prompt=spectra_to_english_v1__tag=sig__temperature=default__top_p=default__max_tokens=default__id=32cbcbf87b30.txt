@@ -1,0 +1,29 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The Arbiter system controls two boolean output signals, `g1` and `g2`, in response to three boolean input signals from the environment: `a`, `r1`, and `r2`. The system behavior is defined by the following assumptions on the environment and guarantees on the system.
+
+**Environment Assumptions**
+The environment is assumed to satisfy the condition that whenever the request `r1` is false, the signal `a` must be true.
+
+**System Guarantees**
+**Initial Conditions:** The system initializes its internal request-tracking states to their initial idle states.
+
+**Response Requirements:**
+The system employs a request-response pattern for both request lines to ensure liveness.
+1. For the first request line: Whenever `r1` is true, the system must ensure that eventually either `a` becomes false or `g1` becomes true. The system tracks this obligation internally to guarantee it is not indefinitely postponed.
+2. For the second request line: Whenever `r2` is true, the system must ensure that eventually either `a` becomes false or `g2` becomes true. Similarly, the system tracks this obligation to ensure eventual satisfaction.
+
+**Safety Constraints:**
+1. Whenever `a` is false, it must be the case that either `a` is false or both `g1` and `g2` are false.
+2. At all times, at least one of the signals `a`, `g1`, or `g2` must be false. This means that `a`, `g1`, and `g2` cannot all be true simultaneously.

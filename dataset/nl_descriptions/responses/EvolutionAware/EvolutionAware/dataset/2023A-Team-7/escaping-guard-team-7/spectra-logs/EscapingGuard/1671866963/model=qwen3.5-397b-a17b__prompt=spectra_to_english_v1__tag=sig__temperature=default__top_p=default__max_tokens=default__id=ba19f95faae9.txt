@@ -1,0 +1,31 @@
+
+
+Specification name: EscapingGuard
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- guardX: Dim
+- guardY: Dim
+
+System variables:
+- robotX: Dim
+- robotY: Dim
+
+**Requirements Description**
+
+The system controls the movement of a robot on a two-dimensional grid, interacting with an environment that controls a guard. Both entities operate within coordinates defined by the domain `Dim`, which ranges from 0 to D (where D is 7). The system outputs the robot's horizontal and vertical positions (`robotX`, `robotY`), while the environment inputs the guard's horizontal and vertical positions (`guardX`, `guardY`).
+
+**Initial Conditions**
+Upon initialization, the robot is placed at the start position coordinates (D, 0). The guard is placed at the top-left corner coordinates (0, 0).
+
+**Movement Safety Requirements**
+Both the robot and the guard are constrained to move at a limited speed. At every step, each coordinate for both the robot and the guard must change by at most 1. Specifically, the next value for any position coordinate must be either the current value, one less than the current value, or one greater than the current value, ensuring movement is restricted to adjacent cells (including diagonals) or remaining stationary.
+
+**Turn-Taking Protocol**
+The interaction follows a repeating four-step cycle governed by an internal turn counter:
+1.  **Guard's Turn:** In the first step of each cycle, the robot must remain stationary. During this step, the guard is permitted to move according to the movement safety requirements.
+2.  **Robot's Turn:** In the subsequent three steps of each cycle, the guard must remain stationary. During these steps, the robot is permitted to move according to the movement safety requirements.
+
+This protocol ensures that for every four steps of operation, the guard moves once and the robot moves three times, alternating strictly without simultaneous movement.

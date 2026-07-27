@@ -1,0 +1,25 @@
+
+
+Specification name: Forklift
+
+Environment variables:
+- obstacle: {BLOCKED, CLEAR}
+
+System variables:
+- move: {STOP, FWD, BWD}
+
+The Forklift specification describes a reactive system where the environment controls the `obstacle` status and the system controls the `move` action. The behavior is defined by assumptions on the environment and guarantees required from the system.
+
+**Environment Assumptions**
+The environment is assumed to adhere to the following constraints:
+1.  **Stability during Stop:** Whenever the system sets `move` to `STOP`, the `obstacle` variable must retain its current value in the immediately following step.
+2.  **Response Pattern:** The environment must satisfy a response pattern triggered by the system moving backward (`move=BWD`) and responding to the obstacle being clear (`obstacle=CLEAR`). This pattern relies on an internal boolean condition named `responded`:
+    *   Initially, `responded` is true.
+    *   At every step, `responded` will be true in the next step if and only if either the `obstacle` is currently `CLEAR`, or `responded` was already true and the system did not move `BWD`.
+    *   The condition `responded` must be true infinitely often.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Stop Requirement:** The system must ensure that the `move` variable is always `STOP`.
+2.  **Safety Constraint:** Always, if the `obstacle` is `BLOCKED`, the system must not set `move` to `FWD`.
+3.  **Liveness Requirement:** The system must ensure that the `move` variable is set to `FWD` infinitely often.

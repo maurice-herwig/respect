@@ -1,0 +1,28 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+The TrafficE2 specification defines a reactive traffic light controller for two lanes, A and B, with an emergency input. The environment controls the presence of cars on each lane (`cara`, `carb`) and the emergency status (`emergency`). The system controls the green light signals for each lane (`greena`, `greenb`).
+
+**Environment Assumptions**
+The environment must adhere to the following constraints regarding car presence:
+1.  **Car A Persistence:** If Car A is present (`cara` is true), no emergency is active (`emergency` is false), and the green light for A is not active (`greena` is false), then Car A must remain present in the next step (`cara` remains true). Car A may only disappear if an emergency occurs or the green light turns on.
+2.  **Car B Persistence:** If Car B is present (`carb` is true), no emergency is active (`emergency` is false), and the green light for B is not active (`greenb` is false), then Car B must remain present in the next step (`carb` remains true). Car B may only disappear if an emergency occurs or the green light turns on.
+3.  **Car B Departure:** If Car B is present (`carb` is true) and the green light for B is active (`greenb` is true), then Car B must become absent in the next step (`carb` becomes false).
+
+**System Guarantees**
+The system must satisfy the following response requirements from the initial state onwards:
+1.  **Response to Car A:** Whenever Car A is present (`cara` is true), the system must eventually enable the green light for A (`greena` becomes true).
+2.  **Response to Car B:** Whenever Car B is present (`carb` is true), the system must eventually enable the green light for B (`greenb` becomes true).
+
+**Initial Conditions**
+Initially, the system starts in a state where it is ready to track and respond to car presence requests immediately.

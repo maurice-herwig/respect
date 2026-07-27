@@ -1,0 +1,32 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The TrafficE2 specification defines a reactive system controlling a traffic light (`green`) based on environmental inputs regarding vehicle presence (`car`), emergency situations (`emergency`), and police activity (`police`). The environment controls the inputs `car`, `emergency`, and `police`, while the system controls the output `green`.
+
+**Environment Assumptions**
+The specification imposes two constraints on the environment's behavior:
+1.  **Car Idle Condition:** Always, if there is no car present, then either a car arrives in the next step, the light is currently green, or there remains no car.
+2.  **Car Movement Condition:** Always, at least one of the following holds: police are present, there is no car, the car departs in the next step, or the light is not green. This implies that if the light is green and police are not present, a car present now must depart in the next step.
+
+**System Guarantees**
+The system must satisfy the `green_often` guarantee, which ensures the traffic light responds to car presence using an internal monitoring state machine with states `S0` and `S1`.
+
+*   **Initial Condition:** The internal monitoring state starts in state `S0`.
+*   **Safety Requirements:** The system updates its internal state and output according to the following rules:
+    *   If the internal state is `S0`:
+        *   If there is no car, or if there is a car and the light is green, the state remains `S0`.
+        *   If there is a car and the light is not green, the state transitions to `S1`.
+    *   If the internal state is `S1`:
+        *   If the light becomes green, the state transitions to `S0`.
+        *   If the light is not green, the state remains `S1`.
+*   **Liveness Requirements:** The system must visit internal state `S0` infinitely often.
+*   **Behavioral Meaning:** Collectively, these requirements ensure that whenever a car is present while the light is not green, the light must eventually become green.

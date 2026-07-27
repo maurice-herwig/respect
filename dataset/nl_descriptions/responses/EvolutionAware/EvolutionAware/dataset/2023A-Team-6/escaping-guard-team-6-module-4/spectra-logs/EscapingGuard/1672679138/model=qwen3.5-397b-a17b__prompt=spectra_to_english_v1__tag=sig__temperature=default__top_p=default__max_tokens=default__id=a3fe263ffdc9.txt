@@ -1,0 +1,38 @@
+
+
+Specification name: EscapingGuard
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- guardX: Dim
+- guardY: Dim
+
+System variables:
+- robotX: Dim
+- robotY: Dim
+
+**Requirements Description**
+
+This specification defines a reactive system where a robot navigates a grid while avoiding a guard. The grid coordinates range from 0 to 7 inclusive (where D=7). The environment controls the guard's position, and the system controls the robot's position.
+
+**Safety Guarantee**
+The system must ensure that the robot never touches the guard. The guard occupies a 2x2 area defined by its top-left corner at coordinates `(guardX, guardY)`. Specifically, the robot's position `(robotX, robotY)` must never equal any of the following four coordinates:
+1. `(guardX, guardY)`
+2. `(guardX + 1, guardY)`
+3. `(guardX, guardY + 1)`
+4. `(guardX + 1, guardY + 1)`
+
+This condition must hold at all times.
+
+**Turn Management**
+An internal turn counter cycles continuously through the values 0, 1, and 2, starting at 0. The sequence repeats indefinitely: 0, 1, 2, 0, 1, 2, and so on. This counter dictates the timing of the guard's movements.
+
+**Environment Assumptions**
+The behavior of the guard is constrained by the following assumptions:
+1.  **Stationary Phase:** During turns 0 and 1, the guard remains stationary. Both `guardX` and `guardY` must remain unchanged in the next state.
+2.  **Movement Phase:** During turn 2, if the robot's X coordinate is strictly greater than the guard's X coordinate plus 1, the guard's X coordinate must increase by 1 in the next state.
+
+**System Responsibilities**
+The system must control `robotX` and `robotY` to satisfy the safety guarantee regarding the guard's position, relying on the environment to adhere to the stated movement assumptions and turn progression.

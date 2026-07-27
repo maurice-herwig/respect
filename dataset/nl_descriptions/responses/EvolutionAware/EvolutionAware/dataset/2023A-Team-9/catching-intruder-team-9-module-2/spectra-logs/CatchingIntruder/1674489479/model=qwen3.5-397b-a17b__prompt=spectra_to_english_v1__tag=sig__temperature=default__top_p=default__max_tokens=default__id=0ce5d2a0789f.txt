@@ -1,0 +1,34 @@
+
+
+The **CatchingIntruder** specification describes a reactive system involving two robots and an intruder operating on a grid. The grid coordinates are integers ranging from 0 to 7.
+
+Specification name: CatchingIntruder
+
+Named domains:
+- Dim: Int(0..D)
+- four: Int(0..4)
+
+Environment variables:
+- intruderX: Dim
+- intruderY: Dim
+- dontMove: four
+
+System variables:
+- robotX0: Dim
+- robotY0: Dim
+- robotX1: Dim
+- robotY1: Dim
+
+**Environment Assumptions**
+The environment controls the intruder's position and a movement counter. The following constraints restrict the environment's behavior:
+
+*   **Initial Conditions:** At the start of the system, the intruder's Y-coordinate (`intruderY`) is 7, and the counter (`dontMove`) is 0.
+*   **Obstacle Avoidance:** The intruder is never located at coordinates (2,1), (3,1), (4,1), or (5,1).
+*   **Movement Rules:**
+    *   Whenever the `dontMove` counter is not 4, the intruder must perform a valid grid move. This consists of either changing the X-coordinate by at most 1 while keeping Y constant, changing the Y-coordinate by at most 1 while keeping X constant, or remaining in the same position.
+    *   If the intruder changes its X-coordinate while keeping its Y-coordinate constant, the `dontMove` counter resets to 0 in the next step.
+    *   If the intruder remains in the exact same position (both X and Y unchanged), the `dontMove` counter increments by 1 in the next step.
+*   **Reset Condition:** If the `dontMove` counter reaches 4, the intruder must move to the bottom row (`intruderY` becomes 7) in the next step. Additionally, the intruder cannot remain in the exact same position (both X and Y unchanged) during this transition.
+
+**System Guarantees**
+The system controls the coordinates of two robots (`robotX0`, `robotY0`, `robotX1`, `robotY1`). No specific behavioral guarantees are defined for these variables in this specification.

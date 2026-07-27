@@ -1,0 +1,16 @@
+
+
+Specification name: Minepump
+
+Environment variables:
+- highwater: boolean
+- methane: boolean
+
+System variables:
+- pump: boolean
+
+The Minepump specification describes a reactive system where the environment provides input signals and the system controls a pump output. The environment controls the boolean inputs `highwater` and `methane`. The system controls the boolean output `pump`.
+
+The specification operates under one assumption regarding the system's history. It is assumed that at all times, if the pump is off (false), then either the pump is currently off or it was off in the previous step.
+
+The system must satisfy two global guarantees that define the pump's behavior in the next step based on the current methane level. First, at every step, if methane is not detected (false), the pump must be on (true) in the next step. Second, at every step, if methane is detected (true), the pump must be off (false) in the next step. These requirements ensure that the pump's state in the subsequent step is strictly determined by the presence or absence of methane in the current step.

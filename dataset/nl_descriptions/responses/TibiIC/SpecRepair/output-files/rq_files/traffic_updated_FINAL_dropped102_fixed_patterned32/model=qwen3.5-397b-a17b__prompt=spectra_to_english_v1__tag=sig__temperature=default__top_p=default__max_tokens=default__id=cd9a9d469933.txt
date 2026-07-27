@@ -1,0 +1,35 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+**System Overview**
+The system controls two traffic light outputs, `greena` and `greenb`, based on inputs from the environment indicating car presence (`cara`, `carb`) and an `emergency` signal. The environment controls the input variables, while the system controls the output variables.
+
+**Environment Assumptions**
+The system operates under the following assumptions regarding the environment's behavior:
+*   At all times, if `emergency` is false and `emergency` is true, then `cara` must be true in the next step.
+*   At all times, if `emergency` is true, then either `carb` must be true in the next step, or `emergency` is true, or `greenb` is true, or `carb` is false.
+*   At all times, if `emergency` is true and `emergency` is false, then either `cara` is false, or `cara` will be false in the next step, or `greena` is false.
+*   At all times, if `emergency` is true, then either `emergency` is true, or `carb` is false, or `carb` will be false in the next step, or `greenb` is false.
+
+**System Guarantees**
+The system must satisfy the following safety and liveness requirements:
+
+*Safety Requirements*
+*   At all times, either `emergency` is false, or `emergency` is true, or `greenb` is false.
+*   At all times, either `emergency` is false, or `emergency` is true, or both `greena` and `greenb` are false.
+
+*Response Requirements*
+The system must respond to car presence signals according to the following patterns, which utilize an internal state mechanism initialized to a default state:
+
+*   **Car A Response:** Whenever `cara` is true, the system must eventually ensure that either `greenb` is false or `greena` is true. Internally, if `cara` is true without the required light condition being met, the system enters a pending state. It remains in this pending state until the condition (`greenb` is false or `greena` is true) becomes true, at which point it returns to the default state. The system must return to the default state infinitely often.
+*   **Car B Response:** Whenever `carb` is true, the system must eventually ensure that `greenb` is true. Internally, if `carb` is true while `greenb` is not true, the system enters a pending state. It remains in this pending state until `greenb` becomes true, at which point it returns to the default state. The system must return to the default state infinitely often.

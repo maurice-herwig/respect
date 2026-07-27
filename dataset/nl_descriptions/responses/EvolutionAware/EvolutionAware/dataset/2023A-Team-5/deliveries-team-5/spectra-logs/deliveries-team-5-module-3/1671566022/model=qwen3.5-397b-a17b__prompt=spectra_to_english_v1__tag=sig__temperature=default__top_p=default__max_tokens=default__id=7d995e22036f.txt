@@ -1,0 +1,40 @@
+
+
+Specification name: Module3
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- targetX0: DimX
+- targetY0: DimY
+- targetX1: DimX
+- targetY1: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+The system controls two robots, Robot 0 and Robot 1, operating within a grid where the dimensions DX and DY are both defined as 5. The environment provides target coordinates for each robot, while the system controls the robots' positions.
+
+**Environment Assumptions**
+The environment must adhere to the following constraints regarding target locations:
+1.  The target X coordinates (`targetX0` and `targetX1`) must never be 0.
+2.  The target Y coordinates (`targetY0` and `targetY1`) must never be equal to DY (5).
+3.  Whenever Robot 0 is at its target location, the environment must change the value of `targetY0` in the next time step.
+4.  Whenever Robot 1 is at its target location, the environment must change the value of `targetY1` in the next time step.
+
+**System Guarantees**
+The system must satisfy the following behavioral requirements:
+1.  **Liveness:** Robot 0 must reach its target location (where `robotX0` equals `targetX0` and `robotY0` equals `targetY0`) infinitely often. Similarly, Robot 1 must reach its target location (where `robotX1` equals `targetX1` and `robotY1` equals `targetY1`) infinitely often.
+2.  **Package Counters:** The system maintains internal counters, `packages0` and `packages1`, for Robot 0 and Robot 1 respectively. Both counters are initialized to 0 and range from 0 to 3.
+    *   A counter increments when the corresponding robot is at its target location.
+    *   A counter resets to 0 when the corresponding robot's Y coordinate equals DY (5).
+    *   If a counter reaches 3, it remains at 3.
+3.  **Safety:** If `packages0` reaches 3, Robot 0 must not be at its target location. If `packages1` reaches 3, Robot 1 must not be at its target location.

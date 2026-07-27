@@ -1,0 +1,36 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+**Requirements Description**
+
+This specification defines an arbiter system that manages two request-grant pairs (`r1`/`g1` and `r2`/`g2`) under the control of an enable signal `a`.
+
+**Environment Assumptions**
+The environment must adhere to the following constraints regarding the enable signal `a`:
+1.  If the system output `g1` is true in the current step, the environment must ensure `a` is true in the current step.
+2.  If the system output `g2` was true in the previous step, the environment must ensure `a` is true in the current step.
+
+**System Guarantees**
+The system must satisfy the following behaviors:
+
+1.  **Request Response:**
+    For both request-grant pairs (`r1`/`g1` and `r2`/`g2`), the system operates according to a response pattern:
+    *   **Initial Condition:** The system starts in an idle state.
+    *   **Safety Behavior:** If a request (e.g., `r1`) is true while the corresponding grant (e.g., `g1`) is false, the system transitions to a pending state. It remains in the pending state as long as the grant remains false. If the grant becomes true, the system returns to the idle state. If the request is false, the system remains or returns to the idle state.
+    *   **Liveness Requirement:** The system must infinitely often return to the idle state. Consequently, whenever a request becomes true, the corresponding grant must eventually become true to allow the system to leave the pending state.
+
+2.  **Enable Control:**
+    Globally, if the enable signal `a` is false, both grants `g1` and `g2` must be false.
+
+3.  **Mutual Exclusion:**
+    Globally, the grants `g1` and `g2` must never be true simultaneously. At least one of them must be false at any given time.

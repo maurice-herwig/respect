@@ -1,0 +1,30 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- carA: boolean
+- carB: boolean
+- emergency: boolean
+
+System variables:
+- greenA: boolean
+- greenB: boolean
+
+This specification describes a traffic light controller for two lanes, A and B, managed by system outputs `greenA` and `greenB`. The system reacts to environment inputs indicating the presence of cars (`carA`, `carB`) and an emergency status (`emergency`).
+
+**Environment Assumptions**
+The environment is expected to behave according to the following constraints:
+1.  **Emergency Signal:** The emergency signal is not permanently active; it must return to false infinitely often.
+2.  **Car A Behavior:** If a car is present in lane A (`carA` is true) and the light is not green (`greenA` is false), the car remains present in the next moment. If a car is present in lane A and the light is green, the car leaves (becomes false) in the next moment.
+3.  **Car B Behavior:** If a car is present in lane B (`carB` is true), the light is not green (`greenB` is false), and there is no emergency (`emergency` is false), the car remains present in the next moment. If a car is present in lane B and the light is green, the car leaves (becomes false) in the next moment.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Initial State:** The response logic for each lane initializes in a ready state.
+2.  **Mutual Exclusion:** The lights for lane A and lane B must never be green simultaneously. At least one light must be red at all times.
+3.  **Emergency Safety:** Whenever the emergency signal is active (`emergency` is true), both light A and light B must be red (not green).
+4.  **Response to Traffic:**
+    *   If a car is present in lane A (`carA` is true), the light for lane A (`greenA`) must eventually turn green.
+    *   If a car is present in lane B (`carB` is true), the light for lane B (`greenB`) must eventually turn green.
+    *   This ensures that if a car arrives while the light is not green, the system guarantees the light will turn green eventually to allow the car to proceed.

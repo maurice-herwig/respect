@@ -1,0 +1,31 @@
+
+
+Specification name: Cinderella
+
+Environment variables:
+- waterFills: Int(0..ADDED_WATER_UNITS)[N]
+
+System variables:
+- buckets: Int(0..B)[N]
+- bucketToEmpty: Int(0..(N - 1))
+
+**System Overview**
+The system manages a set of 6 buckets (indices 0 to 5) that hold water. The environment controls the amount of water added to each bucket at every step, while the system controls the current water level in each bucket and selects a specific bucket index to empty. The maximum capacity of any bucket is 11 units. The system operates with a window size of 2 buckets for emptying.
+
+**Environment Behavior**
+The environment provides the input `waterFills`, an array of 6 integers. Each element represents the units of water added to the corresponding bucket in the current step. Each value must be between 0 and 5. At every step, the total amount of water added across all 6 buckets must sum exactly to 5 units.
+
+**System Behavior**
+The system maintains the state variable `buckets`, an array of 6 integers representing the current water level in each bucket (0 to 11 units), and `bucketToEmpty`, an integer index (0 to 5) selected by the system.
+
+*Initial Condition:*
+Initially, all buckets are empty (water level is 0).
+
+*Step-wise Update Rules:*
+At each step, the system selects a `bucketToEmpty` index. This selection determines which buckets are emptied and which accumulate water. The system identifies a sequence of 2 consecutive buckets starting at `bucketToEmpty` and wrapping around from index 5 to 0 if necessary.
+
+For each bucket `i`:
+1.  **Emptying Condition:** If bucket `i` is within the selected sequence of 2 buckets (specifically, if `i` equals `bucketToEmpty` or the next index in the circular order), the bucket is emptied. Its water level in the next step becomes exactly equal to the water added to it in that step (discarding any previous content).
+2.  **Accumulation Condition:** If bucket `i` is not within the selected sequence, it retains its water. Its water level in the next step becomes the sum of its current level and the water added to it in that step.
+
+The system must ensure that bucket water levels never exceed 11 units.

@@ -1,0 +1,26 @@
+
+
+Specification name: Patrolling
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+
+Environment variables:
+- goalsX: DimX[num_targets]
+- goalsY: DimY[num_targets]
+
+System variables:
+- robotX: DimX
+- robotY: DimY
+
+The system controls a robot navigating a two-dimensional grid where coordinates range from 0 to 4 in both the X and Y dimensions. The environment provides the fixed locations of three target goals, while the system determines the robot's position.
+
+**Environment Assumptions**
+1.  **Static Goals:** The coordinates for all goals (`goalsX` and `goalsY`) remain constant throughout operation and do not change from one step to the next.
+2.  **Valid Goal Placement:** No goal location coincides with any of the five predefined static obstacle locations. The static obstacles are fixed at coordinates (1,1), (3,3), (2,1), (0,3), and (3,4).
+
+**System Guarantees**
+1.  **Movement Constraints:** In each step, the robot's X coordinate (`robotX`) and Y coordinate (`robotY`) may change by at most 1 unit or remain unchanged. Specifically, the next value for each coordinate must be equal to the current value, the current value plus 1, or the current value minus 1.
+2.  **Obstacle Avoidance:** The robot must never occupy the same coordinates as any of the five static obstacles.
+3.  **Patrolling Requirement:** The robot must visit the location of every goal infinitely often. For each of the three goals, the robot's position (`robotX`, `robotY`) must eventually match the goal's position (`goalsX[i]`, `goalsY[i]`) repeatedly over time.

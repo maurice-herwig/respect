@@ -1,0 +1,29 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- carA: boolean
+- carB: boolean
+- emergency: boolean
+
+System variables:
+- greenA: boolean
+- greenB: boolean
+
+The system controls traffic lights for two lanes, A and B, based on car presence sensors and an emergency signal. The environment provides inputs indicating whether a car is present on lane A (`carA`), whether a car is present on lane B (`carB`), and whether an emergency mode is active (`emergency`). The system controls the outputs `greenA` and `greenB`, indicating whether the light for the respective lane is green.
+
+**Environment Assumptions**
+The environment behaves according to the following constraints:
+1.  **Emergency Signal:** The emergency signal is not permanently active; it returns to false infinitely often.
+2.  **Car Presence Persistence:** If a car is detected on a lane (e.g., `carA` is true) and the corresponding light is not green (e.g., `greenA` is false), the car remains detected in the next step.
+3.  **Car Movement:** If a car is detected on a lane (e.g., `carA` is true), the corresponding light is green (e.g., `greenA` is true), and the other lane has no car detected (e.g., `carB` is false), then the car departs (e.g., `carA` becomes false) in the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Mutual Exclusion:** The lights for lane A and lane B must never be green at the same time. At any moment, at least one of the lights must be not green.
+2.  **Emergency Response:** Whenever the emergency signal is active (`emergency` is true), both lights must be red (both `greenA` and `greenB` must be false).
+3.  **Request Response:** Whenever a car is detected on a lane (e.g., `carA` is true), the corresponding green light (e.g., `greenA`) must eventually turn on. This ensures that every car presence request is eventually granted a green light.
+
+**Initial Conditions**
+The internal logic tracking the response to car presence initializes in a ready state, prepared to detect new car arrivals.

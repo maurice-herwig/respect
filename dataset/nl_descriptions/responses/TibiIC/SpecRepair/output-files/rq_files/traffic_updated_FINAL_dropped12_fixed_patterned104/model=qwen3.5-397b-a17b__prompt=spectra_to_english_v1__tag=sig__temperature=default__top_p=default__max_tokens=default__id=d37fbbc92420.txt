@@ -1,0 +1,18 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+The system controls two traffic lights, Light A and Light B, based on the presence of Car A and Car B and an emergency signal. The environment provides inputs indicating whether Car A is present (`cara`), whether Car B is present (`carb`), and whether an emergency mode is active (`emergency`). The system controls the outputs `greena` and `greenb`, indicating whether Light A or Light B is green, respectively.
+
+The environment is assumed to behave according to several constraints. First, the emergency mode is not permanent; the emergency signal must be false infinitely often. Regarding Car A, the environment must ensure that if Car A is present and no emergency is active, Car A remains present in the next step. Additionally, the environment must ensure that if Car A is present, it is not present in the next step. Regarding Car B, the specification includes an assumption that always, if an emergency is active, then either an emergency is active or Light B is green. Furthermore, if no emergency is active, Car B is present, and Light B is green, then Car B must not be present in the next step.
+
+The system must satisfy several guarantees. Regarding safety during emergencies, if an emergency is active, Light B must not be green. Additionally, if an emergency is active, both Light A and Light B must not be green. Regarding responsiveness, the system uses a response pattern for each lane. The system initializes in a state ready to respond to requests. Whenever Car A is present, Light A must eventually turn green. Similarly, whenever Car B is present, Light B must eventually turn green. The system must infinitely often return to its ready state, ensuring that requests for green lights are not pending indefinitely.

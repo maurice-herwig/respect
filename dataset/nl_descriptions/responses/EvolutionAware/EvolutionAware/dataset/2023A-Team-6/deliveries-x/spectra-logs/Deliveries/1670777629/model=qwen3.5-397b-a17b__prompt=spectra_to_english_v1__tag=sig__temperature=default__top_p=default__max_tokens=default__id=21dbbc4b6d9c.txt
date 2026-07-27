@@ -1,0 +1,135 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- package0X: DimX
+- package0Y: DimY
+- package1X: DimX
+- package1Y: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+The system manages the movement of two robots on a two-dimensional grid. The environment specifies the target coordinates for two packages, while the system controls the coordinates of the two robots. The grid dimensions DX and DY are both defined as 5, meaning all coordinate values are integers between 0 and 5 inclusive.
+
+Robot 0 is considered to be at Package 0 when its X and Y coordinates (`robotX0`, `robotY0`) match the package's X and Y coordinates (`package0X`, `package0Y`). Similarly, Robot 1 is at Package 1 when its coordinates match those of Package 1.
+
+The system must satisfy the following liveness guarantees:
+- Robot 0 must reach the location of Package 0 infinitely often.
+- Additionally, the system guarantees that Robot 0 reaches the location of Package 0 infinitely often (as specified by the second guarantee requirement).
+
+(Note: The second bullet point above is awkward. I should smooth this out while remaining faithful.)
+
+*Revision:*
+The system must satisfy liveness requirements ensuring that specific conditions occur infinitely often. The specification requires that Robot 0 reaches the location of Package 0 infinitely often. This requirement is stated twice within the guarantees, enforcing that Robot 0 must infinitely often arrive at the coordinates specified by the environment for Package 0.
+
+*Wait, saying "stated twice" might be meta.*
+*Better:*
+"The system guarantees that Robot 0 reaches the location of Package 0 infinitely often."
+(This covers both guarantees without highlighting the redundancy explicitly as an error, just stating the requirement).
+
+*Wait, I need to be careful about the "Fixed Interface" instruction.*
+"Include the following exact interface in the English requirements description."
+I will place it at the top.
+
+*Final Polish on Prose:*
+The system controls the positions of two robots, Robot 0 and Robot 1, on a grid defined by dimensions DX and DY, both set to 5. The environment provides the target positions for two packages, Package 0 and Package 1. All position variables are integers ranging from 0 to 5.
+
+A robot is considered to be at its corresponding package location when its X and Y coordinates match the package's X and Y coordinates. The system guarantees that Robot 0 reaches the location of Package 0 infinitely often. This liveness condition ensures that Robot 0 repeatedly arrives at the target coordinates specified by the environment for Package 0.
+
+*Wait, I need to check if I should mention Robot 1 variables at all in the prose.*
+Yes, they are in the interface. "The system controls... Robot 1".
+"Do not add behavior that is not stated". I am not adding behavior, just acknowledging the variable exists.
+"Do not add meta-comments about... unspecified behavior". I will not say "Robot 1 has no guarantees". I will just not mention guarantees for Robot 1.
+
+*Final check on the Interface Block:*
+I must ensure the spacing matches the prompt's "Additional fixed-interface requirement" exactly.
+Prompt:
+```
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- package0X: DimX
+- package0Y: DimY
+- package1X: DimX
+- package1Y: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+```
+I will copy this exactly.
+
+*One final check on the Guarantee:*
+The spec has:
+`gar robot0getspackage: alwEv robot0atpackage;`
+`gar robot1getspackage: alwEv robot0atpackage;`
+If I only say "Robot 0 reaches Package 0 infinitely often", I am accurate.
+I will write: "The system guarantees that Robot 0 reaches the location of Package 0 infinitely often."
+
+*Wait, I should check if I need to mention the define `robot0atpackage`.*
+I can explain it in English: "Robot 0 is at Package 0 when..."
+This is good.
+
+*Final Plan:*
+1. Interface Block.
+2. Prose describing variables, domains, and guarantees.
+3. Ensure no Spectra code syntax in prose.
+4. Ensure faithfulness to the `robot0atpackage` repetition in guarantees (by stating the requirement clearly).
+
+*Wait, one detail:* "Do not copy the Spectra code into the answer."
+The Interface Block is technically text derived from the spec, but the instruction says "Include the following exact interface". I will treat this as an exception to the "no code" rule for this specific block.
+
+*Wait, I need to make sure I don't miss the `Coord` type in the prose if relevant.*
+It's defined but not used in variables. I'll leave it out of the prose description of behavior, as it's not used in guarantees or variables. The Interface Block lists it, so it's preserved there.
+
+*Wait, one more thing:* The prompt says "Write the description the way a human would naturally describe the intended reactive-system behavior."
+If a human saw `robot1getspackage` guaranteeing `robot0atpackage`, they might assume it's a typo. But I must be faithful.
+I will phrase it: "The system guarantees that Robot 0 reaches the location of Package 0 infinitely often."
+This is the behavior. I won't mention the guarantee names to avoid confusion about Robot 1.
+
+*Wait, I need to check if I should mention the `env` and `sys` keywords in the prose.*
+"Environment-controlled inputs" and "System-controlled outputs".
+I will use these terms.
+
+*Ready.*
+</think>
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- package0X: DimX
+- package0Y: DimY
+- package1X: DimX
+- package1Y: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+The system controls the coordinates of two robots, Robot 0 and Robot 1, operating on a grid. The environment controls the target coordinates for two packages, Package 0 and Package 1. All coordinate values are integers bounded by the dimensions DX and DY, which are both defined as 5. Consequently, all X and Y variables range from 0 to 5.
+
+Robot 0 is considered to be at Package 0 when its coordinates (`robotX0`, `robotY0`) exactly match the coordinates of Package 0 (`package0X`, `package0Y`). The system guarantees that Robot 0 reaches the location of Package 0 infinitely often. This liveness requirement ensures that Robot 0 repeatedly arrives at the target position specified by the environment for Package 0.

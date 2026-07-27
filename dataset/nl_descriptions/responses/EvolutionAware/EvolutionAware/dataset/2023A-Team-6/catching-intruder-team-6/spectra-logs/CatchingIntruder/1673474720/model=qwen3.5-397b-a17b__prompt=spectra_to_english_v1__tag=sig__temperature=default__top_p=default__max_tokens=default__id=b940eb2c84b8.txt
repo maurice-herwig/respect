@@ -1,0 +1,31 @@
+
+
+Specification name: CatchingIntruder
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- intruderX: Dim
+- intruderY: Dim
+
+System variables:
+- robotX0: Dim
+- robotY0: Dim
+- robotX1: Dim
+- robotY1: Dim
+
+**Requirements Description**
+
+This specification defines a reactive system that controls the movement of two robots on a two-dimensional grid while monitoring the movement of an intruder. The grid coordinates are defined by the domain `Dim`, which ranges from 0 to 7 (where D=7).
+
+**Environment Assumptions**
+The environment controls the intruder's position (`intruderX`, `intruderY`). The following assumptions restrict the intruder's behavior at every step of the system execution:
+1.  **Step Size:** Each coordinate of the intruder changes by at most 1 between the current state and the next state.
+2.  **Movement Direction:** The intruder does not move diagonally. At least one coordinate (`intruderX` or `intruderY`) must remain unchanged between the current state and the next state.
+
+**System Guarantees**
+The system controls the positions of two robots (`robotX0`, `robotY0` for the first robot and `robotX1`, `robotY1` for the second). The system must satisfy the following guarantees at every step:
+1.  **Step Size:** For each robot coordinate, the value in the next state differs from the current value by at most 1.
+2.  **Movement Direction:** Neither robot moves diagonally. For each robot, at least one of its coordinates (X or Y) must remain unchanged between the current state and the next state.
+3.  **Obstacle Avoidance:** The robots must avoid specific obstacle locations on the grid. Specifically, if a robot's Y coordinate is 1, its X coordinate must not be 2, 3, 4, or 5. This constraint applies to both robot 0 and robot 1 continuously throughout the system execution.

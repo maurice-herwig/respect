@@ -1,0 +1,23 @@
+
+
+Specification name: Elevator
+
+Environment variables:
+- floor: {LOWER,MIDDLE,UPPER,NONE}
+
+System variables:
+- doorMot: boolean
+- elevMot: {FWD, BWD, STOP}
+
+The Elevator system operates through an ongoing interaction between the environment and the system. The environment controls the `floor` sensor, indicating the current position as LOWER, MIDDLE, UPPER, or NONE. The system controls the `doorMot` boolean signal and the `elevMot` motor command, which can be set to FWD, BWD, or STOP.
+
+The environment is assumed to satisfy the following condition: whenever the elevator motor is set to STOP, the floor sensor must not report NONE. This ensures that the elevator position is known whenever the motor is not moving.
+
+The system must satisfy the following guarantees regarding its behavior:
+
+1.  **Initial Condition:** Upon startup, the elevator motor must be initialized to the STOP state.
+2.  **Liveness Requirement:** Throughout operation, the elevator motor must be set to FWD infinitely often.
+3.  **Conditional Direction Change:** Infinitely often, if the floor is at the LOWER position, the elevator motor must be set to FWD.
+4.  **Conditional Direction Change:** Infinitely often, if the floor is at the UPPER position, the elevator motor must be set to BWD.
+
+The `doorMot` variable is controlled by the system but is not subject to specific constraints in this specification.

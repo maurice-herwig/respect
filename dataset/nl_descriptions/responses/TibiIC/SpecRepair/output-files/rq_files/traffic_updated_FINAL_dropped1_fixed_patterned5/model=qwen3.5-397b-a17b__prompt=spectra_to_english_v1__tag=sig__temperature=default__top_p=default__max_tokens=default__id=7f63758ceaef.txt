@@ -1,0 +1,33 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+**Requirements Description**
+
+This specification defines a reactive traffic light control system interacting with an environment that provides car detection signals and an emergency status.
+
+**Environment Assumptions**
+The environment adheres to the following constraints:
+1.  **Emergency Frequency:** The emergency signal is not permanently active; it must turn off infinitely often.
+2.  **Car A Behavior During Emergency:** When the `emergency` signal is active, the environment ensures that either the `emergency` signal remains active, `cara` is true in the next step, or `greena` is true.
+3.  **Car B Behavior During Emergency:** When the `emergency` signal is active, the environment ensures that either `carb` is true in the next step, `greenb` is true, or `carb` is false.
+4.  **Car A Movement During Emergency:** When the `emergency` signal is active, the environment ensures that either the `emergency` signal remains active, `cara` is false, `cara` is false in the next step, or `greena` is false.
+5.  **Car B Movement During Emergency:** When the `emergency` signal is active, the environment ensures that either `carb` is false, `carb` is false in the next step, or `greenb` is false.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+
+1.  **Initial Condition:** The system initializes its internal request tracking mechanism to a ready state, indicating no pending car requests.
+2.  **Safety - Mutual Exclusion:** The system never turns both `greena` and `greenb` true simultaneously; at least one light must be false at all times.
+3.  **Safety - Emergency Response:** If the `emergency` signal is true, the system must ensure both `greena` and `greenb` are false (both lights red).
+4.  **Liveness - Car A Response:** The system ensures that whenever `cara` is true, `greena` eventually becomes true. The system tracks this request internally and must not remain indefinitely in a state where `cara` is detected but `greena` has not yet turned green.
+5.  **Liveness - Car B Response:** The system ensures that whenever `carb` is true, `greenb` eventually becomes true. Similarly, the system must not remain indefinitely in a state where `carb` is detected but `greenb` has not yet turned green.

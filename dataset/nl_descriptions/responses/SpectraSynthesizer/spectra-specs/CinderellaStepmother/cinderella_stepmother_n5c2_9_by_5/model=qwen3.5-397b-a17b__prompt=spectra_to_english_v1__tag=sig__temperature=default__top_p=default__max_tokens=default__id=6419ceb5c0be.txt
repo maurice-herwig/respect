@@ -1,0 +1,34 @@
+
+
+Specification name: Cinderella
+
+Environment variables:
+- waterFills: Int(0..ADDED_WATER_UNITS)[N]
+
+System variables:
+- buckets: Int(0..B)[N]
+- bucketToEmpty: Int(0..(N - 1))
+
+**Requirements Description**
+
+This specification describes a reactive system managing water levels in a set of buckets. The system interacts with an environment that provides water fill amounts.
+
+**Constants**
+The system operates with the following fixed parameters:
+- `N` is 5 (the number of buckets).
+- `C` is 2 (the size of the emptying window).
+- `B` is 9 (the maximum capacity of a bucket).
+- `ADDED_WATER_UNITS` is 5 (the total water units added per step).
+
+**Environment Assumptions**
+The environment controls the `waterFills` array, which specifies the amount of water added to each of the `N` buckets at every step. It is assumed that the sum of all elements in `waterFills` always equals `ADDED_WATER_UNITS` (5 units total distributed across the buckets).
+
+**System Guarantees**
+The system controls the `buckets` array, representing the current water level in each bucket, and the `bucketToEmpty` index.
+
+1.  **Initial Condition:** Initially, the water level in all buckets must be 0.
+2.  **Transition Behavior:** At every step, the system updates the water levels for the next state based on the `bucketToEmpty` index selected by the system and the new water fills provided by the environment. For each bucket index `i`:
+    *   **Emptying Condition:** If index `i` falls within a specific range relative to `bucketToEmpty` (specifically, if `bucketToEmpty` is less than or equal to `i` and within `C` positions prior to `i`, or if the index wraps around the array bounds), the bucket is considered to be emptied. In this case, the bucket's level in the next state becomes exactly equal to the new water fill amount for that bucket (`next(waterFills[i])`). The previous water content is discarded.
+    *   **Accumulation Condition:** If index `i` does not meet the emptying condition, the bucket accumulates water. In this case, the bucket's level in the next state becomes the current level plus the new water fill amount (`buckets[i] + next(waterFills[i])`).
+
+The system must ensure that bucket levels remain within the range 0 to `B` (9) throughout operation.

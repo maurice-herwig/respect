@@ -1,0 +1,35 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines the behavior of a traffic control system interacting with an environment. The environment provides inputs indicating the presence of a car, an emergency condition, and a police signal. The system controls the traffic light output.
+
+**Environment Assumptions**
+The environment is assumed to behave according to the following constraints:
+1.  **Police Signal Activity:** The police signal is not permanently active. It must be false infinitely often (there is no point in time after which the police signal remains true forever).
+2.  **Car Presence Condition:** At every step, at least one of the following must hold: a car will be present in the next step, an emergency is currently active, or the traffic light is currently green.
+3.  **Car Movement Restriction:** Whenever the police signal is inactive (false), no car will be present in the next step.
+
+**System Guarantees**
+The system must satisfy the following guarantees whenever the environment satisfies the assumptions:
+
+1.  **Response to Car Presence:** The system must enforce a response relationship between the `car` input and the `green` output. This is managed through an internal state mechanism with two states, S0 and S1.
+    *   **Initial Condition:** The system starts in state S0.
+    *   **Safety Requirements:** The state transitions are governed by the values of `car` and `green`:
+        *   If the system is in state S0:
+            *   It remains in state S0 if no car is present, or if a car is present and the light is already green.
+            *   It transitions to state S1 if a car is present and the light is not green.
+        *   If the system is in state S1:
+            *   It transitions back to state S0 if the light becomes green.
+            *   It remains in state S1 if the light is not green.
+    *   **Liveness Requirements:** The system must return to state S0 infinitely often. This ensures that if the system enters state S1 (indicating a car is waiting while the light is not green), the light must eventually turn green to allow a return to state S0.

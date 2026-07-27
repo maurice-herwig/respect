@@ -1,0 +1,37 @@
+
+
+Specification name: EscapingGuard
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- guardX: Dim
+- guardY: Dim
+
+System variables:
+- robotX: Dim
+- robotY: Dim
+
+**System Overview**
+The system controls a robot moving on a two-dimensional grid, while the environment controls a guard moving on the same grid. Both coordinates range from 0 to 7. The interaction proceeds in cycles governed by an internal turn counter that repeats the sequence 1, 2, 3.
+
+**Initial Conditions**
+At the start of operation, the robot is positioned at coordinates (7, 0). The guard is positioned at coordinates (0, 0). The interaction turn counter begins at 1.
+
+**Movement Constraints**
+Both the robot and the guard are subject to movement limits. In any single step, the X and Y coordinates of either entity may change by at most 1 unit. This allows each entity to move to an adjacent cell or remain stationary.
+
+**Turn-Based Restrictions**
+The system operates on a three-turn cycle. During the third turn of every cycle, neither the robot nor the guard is permitted to change their position. Both must remain fixed at their current coordinates when the turn counter equals 3.
+
+**Safety Requirements**
+The system must ensure the robot avoids collisions with both the guard and static obstacles at all times:
+1.  **Guard Avoidance:** The robot must never occupy the 2x2 square region defined by the guard's current position. Specifically, it is forbidden for the robot's X coordinate to be equal to the guard's X coordinate or the guard's X coordinate plus 1, while simultaneously having the robot's Y coordinate equal to the guard's Y coordinate or the guard's Y coordinate plus 1.
+2.  **Obstacle Avoidance:** There are static obstacles located at X coordinate 2 for Y coordinates 2, 3, 4, and 5. The robot must never occupy any of these four positions.
+
+**Environment Assumptions**
+The specification assumes the environment adheres to the following behaviors regarding the guard:
+1.  The guard starts at position (0, 0).
+2.  The guard obeys the movement constraint of changing coordinates by at most 1 unit per step.
+3.  The guard remains stationary during the third turn of every cycle.

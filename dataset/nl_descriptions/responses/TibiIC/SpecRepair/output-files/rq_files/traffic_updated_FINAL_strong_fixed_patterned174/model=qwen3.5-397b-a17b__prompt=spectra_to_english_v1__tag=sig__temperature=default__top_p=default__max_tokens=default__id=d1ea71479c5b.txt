@@ -1,0 +1,32 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- carA: boolean
+- carB: boolean
+- emergency: boolean
+
+System variables:
+- greenA: boolean
+- greenB: boolean
+
+This specification defines a reactive traffic light controller for two lanes, A and B, managed under potential emergency conditions. The environment provides inputs regarding car presence and emergency status, while the system controls the green light signals for each lane.
+
+**Environment Assumptions**
+The environment is assumed to adhere to the following behavioral constraints:
+1.  **Emergency Signal Liveness:** The emergency signal cannot remain active forever; it must be false infinitely often.
+2.  **Car A Waiting Behavior:** If carA is true and greenA is false, carA remains true in the next step.
+3.  **Car B Waiting Behavior:** If carB is true, greenB is false, and greenA was false in the previous step, then carB remains true in the next step.
+4.  **Car A Movement:** If carA is true and greenA becomes true, carA becomes false in the next step.
+5.  **Car B Movement:** If carB is true and greenB becomes true, carB becomes false in the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+1.  **Mutual Exclusion:** At all times, at least one of greenA or greenB must be false. The system must never set both lights to green simultaneously.
+2.  **Emergency Safety:** Whenever emergency is true, both greenA and greenB must be false.
+3.  **Lane A Responsiveness:** Whenever carA is true, greenA must eventually become true. If carA is present while greenA is false, the system is required to eventually set greenA to true.
+4.  **Lane B Responsiveness:** Whenever carB is true, greenB must eventually become true. If carB is present while greenB is false, the system is required to eventually set greenB to true.
+
+**Initial Conditions**
+The system initializes its internal request tracking state to indicate no pending requests for either lane.

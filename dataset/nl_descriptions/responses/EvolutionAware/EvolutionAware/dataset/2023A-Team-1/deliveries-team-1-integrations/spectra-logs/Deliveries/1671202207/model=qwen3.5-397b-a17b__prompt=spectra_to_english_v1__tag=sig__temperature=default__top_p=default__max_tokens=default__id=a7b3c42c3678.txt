@@ -1,0 +1,40 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+- deliveriesX: DimX [2]
+- deliveriesY: DimY [2]
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+This specification defines the behavior of a delivery system involving two robots operating within a grid environment coordinated with an elevator. The environment controls the vertical position of the elevator and provides mock delivery data, while the system controls the horizontal and vertical positions of the two robots.
+
+**Environment Assumptions**
+The environment manages the elevator's vertical position, `elevatorY`. The elevator moves continuously such that its Y-coordinate changes by at most one unit per step (it may move up, down, or stay stationary). Additionally, the elevator is assumed to visit the bottom floor (Y=0) and the top floor (Y=5) infinitely often.
+
+**System Guarantees**
+The system controls the positions of Robot 0 (`robotX0`, `robotY0`) and Robot 1 (`robotX1`, `robotY1`).
+
+*Initial Conditions*
+Upon system start, both Robot 0 and Robot 1 must be located at the top floor (Y=5). Their initial X-coordinates are unconstrained.
+
+*Safety Requirements*
+1.  **Movement Constraints:** Both robots must move smoothly. In any step, the X and Y coordinates of each robot may change by at most one unit (increment, decrement, or remain unchanged).
+2.  **Elevator Interaction:** The elevator shaft is located at X=0. To change its vertical position (Y-coordinate), a robot must be positioned at the elevator shaft (X=0) and aligned with the elevator's current floor (`elevatorY`). During such a vertical move, the robot must remain at X=0.
+3.  **Shaft Alignment:** If Robot 0 is located at the elevator shaft (X=0), its vertical position must match the elevator's current vertical position (`elevatorY`).
+
+*Liveness Requirements*
+Both robots must operate continuously between the bottom and top floors. Specifically, Robot 0 must visit the bottom floor (Y=0) infinitely often and the top floor (Y=5) infinitely often. Similarly, Robot 1 must visit the bottom floor (Y=0) infinitely often and the top floor (Y=5) infinitely often.

@@ -1,0 +1,23 @@
+
+
+Specification name: Minepump
+
+Environment variables:
+- highwater: boolean
+- methane: boolean
+
+System variables:
+- pump: boolean
+
+The Minepump system manages a pump based on environmental conditions. The environment provides inputs indicating the water level (`highwater`) and the presence of methane gas (`methane`). The system controls the output variable `pump`.
+
+**Environment Assumptions**
+The environment adheres to the following constraint regarding the water level:
+*   Always, if the water level is high (`highwater` is true), then either the water level becomes low in the next step (`highwater` becomes false), or the pump is currently off (`pump` is false). This implies that if the pump is running while the water level is high, the environment guarantees the water level will drop in the subsequent step.
+
+**System Guarantees**
+The system must satisfy the following requirements regarding the pump control:
+*   Always, either methane is currently detected (`methane` is true), or the pump must be turned on in the next step (`pump` becomes true). Effectively, if methane is not detected, the system must ensure the pump is on in the next step.
+*   Always, either methane is currently not detected (`methane` is false), or the pump must be turned off in the next step (`pump` becomes false). Effectively, if methane is detected, the system must ensure the pump is off in the next step.
+
+Combined, these guarantees dictate that the state of the pump in the next step is determined by the current presence of methane: the pump is turned on if methane is absent and turned off if methane is present.

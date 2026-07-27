@@ -1,0 +1,27 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The system acts as an arbiter that manages two grant signals, `g1` and `g2`, based on environment requests `r1` and `r2` and a control signal `a`.
+
+**Assumptions on the Environment**
+The environment must adhere to the following constraint regarding the signal `a`: at every step, if the grant `g1` was false in the immediately preceding step, then the signal `a` must be true in the current step.
+
+**Guarantees from the System**
+The system must satisfy the following requirements:
+
+1.  **Request Response:** Whenever the request `r1` is true, the system must eventually set the grant `g1` to true. Similarly, whenever the request `r2` is true, the system must eventually set the grant `g2` to true. The system tracks these requests internally and ensures a response occurs even if the request signal changes state, provided the request triggered a pending obligation.
+2.  **Disable Condition:** Whenever the control signal `a` is false, both grants `g1` and `g2` must be false.
+3.  **Mutual Exclusion:** The grants `g1` and `g2` must never be true simultaneously. At least one of the two grants must be false at all times.
+
+**Initial Conditions**
+The system initializes its internal request-tracking logic in a state indicating no pending obligations, ready to respond to new requests.

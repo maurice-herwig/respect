@@ -1,0 +1,35 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- carA: boolean
+- carB: boolean
+- emergency: boolean
+
+System variables:
+- greenA: boolean
+- greenB: boolean
+
+**System Overview**
+The TrafficE2 specification defines a reactive traffic light controller for two lanes, A and B. The system controls the green light signals for each lane based on the presence of cars and an emergency signal provided by the environment.
+
+**Environment Assumptions**
+The environment must adhere to the following behavioral constraints:
+*   **Emergency Signal Liveness:** The emergency signal cannot remain active indefinitely; it must become false infinitely often over time.
+*   **Car Behavior at Red Light:** If a car is present in a lane (carA or carB is true) while its corresponding light is red (greenA or greenB is false), the car must remain present in the next time step.
+*   **Car Behavior During Emergency Transition:** If a car is present and its light is green, and the emergency signal becomes active in the next time step, the car must become absent in the next time step. This applies independently to both Lane A and Lane B.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+
+*   **Safety Requirements:**
+    *   **Mutual Exclusion:** The system must never turn on both green lights simultaneously. At least one of greenA or greenB must be false at all times.
+    *   **Emergency Response:** If the emergency signal is active (true), both green lights (greenA and greenB) must be off (false).
+
+*   **Liveness Requirements:**
+    *   **Response to Car A:** Starting from the initial state, whenever Car A is present (carA is true), the system must eventually turn on Green A (greenA becomes true).
+    *   **Response to Car B:** Starting from the initial state, whenever Car B is present (carB is true), the system must eventually turn on Green B (greenB becomes true).
+
+*   **Initial Conditions:**
+    *   The response requirements for both lanes are active immediately from the start of system operation.

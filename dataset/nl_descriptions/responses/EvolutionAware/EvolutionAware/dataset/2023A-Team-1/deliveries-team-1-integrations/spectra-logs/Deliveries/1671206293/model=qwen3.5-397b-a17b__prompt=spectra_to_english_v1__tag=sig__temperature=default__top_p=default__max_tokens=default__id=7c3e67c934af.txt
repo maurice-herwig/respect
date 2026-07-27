@@ -1,0 +1,47 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+- deliveriesX: DimX [2]
+- deliveriesY: DimY [2]
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+This specification defines the behavior of a delivery system involving two robots operating on a two-dimensional grid. The grid coordinates for both axes range from 0 to 5. The system controls the positions of Robot 0 and Robot 1, while the environment provides the target delivery locations for two packages.
+
+**Environment Assumptions**
+The environment must ensure that the X-coordinate for both delivery locations is never 5. Specifically, the first delivery location's X-coordinate (`deliveriesX[0]`) and the second delivery location's X-coordinate (`deliveriesX[1]`) must always differ from 5.
+
+**System Guarantees**
+The system must control the robots to satisfy the following liveness and safety requirements:
+
+1.  **Delivery Liveness:**
+    *   Robot 0 must infinitely often reach the position specified by the first delivery location (`deliveriesX[0]`, `deliveriesY[0]`).
+    *   Robot 1 must infinitely often reach the position specified by the second delivery location (`deliveriesX[1]`, `deliveriesY[1]`).
+
+2.  **Return Liveness:**
+    *   Robot 0 must infinitely often return to the position (5, 5).
+    *   Robot 1 must infinitely often return to the position (5, 5).
+
+3.  **Delivery Counters:**
+    The system maintains two counters, `packagesDeliveredByRobot0` and `packagesDeliveredByRobot1`, each ranging from 0 to 4.
+    *   **Initialization:** Both counters start at 0.
+    *   **Increment:** The counter for Robot 0 increments when Robot 0 is at its assigned delivery location. The counter for Robot 1 increments when Robot 1 is at its assigned delivery location.
+    *   **Reset:** The counter for Robot 0 resets to 0 when Robot 0 is at position (5, 5). The counter for Robot 1 resets to 0 when Robot 1 is at position (5, 5).
+    *   **Overflow:** If a counter reaches its maximum value, it remains at that value.
+
+4.  **Safety Constraint:**
+    The system must ensure that the delivery counter for Robot 0 (`packagesDeliveredByRobot0`) always remains strictly less than 4.

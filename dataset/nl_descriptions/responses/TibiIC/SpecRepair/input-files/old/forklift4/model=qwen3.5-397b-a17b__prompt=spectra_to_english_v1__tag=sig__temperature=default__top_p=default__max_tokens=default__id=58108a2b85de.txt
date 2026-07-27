@@ -1,0 +1,27 @@
+
+
+Specification name: ForkLift4
+
+Environment variables:
+- fardistance: boolean
+
+System variables:
+- liftcommand: boolean
+- dropcommand: boolean
+- gocommand: boolean
+- idlecommand: boolean
+
+The system controls four command outputs while the environment controls the distance status input. The behavior of the system and environment is constrained by the following requirements.
+
+**Environment Assumptions**
+The environment adheres to the following rules regarding the `fardistance` variable:
+- Whenever the system issues an `idlecommand`, the value of `fardistance` remains unchanged in the next step.
+- Whenever the system issues a `gocommand`, the environment ensures `fardistance` becomes false in the next step.
+- If `fardistance` is true and the system does not issue a `liftcommand`, the environment ensures `fardistance` becomes false in the next step.
+- If `fardistance` is false and the system issues a `liftcommand`, the environment ensures `fardistance` becomes true in the next step.
+
+**System Guarantees**
+The system must satisfy the following conditions:
+- Initially, `liftcommand` is true.
+- At all times, if `fardistance` is true, the system must ensure `dropcommand` is false in the next step.
+- At all times, if `fardistance` is false, the system must ensure `gocommand` is false in the next step.

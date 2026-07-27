@@ -1,0 +1,24 @@
+
+
+Specification name: SymmetryExample
+
+Environment variables:
+- request: boolean[N]
+
+System variables:
+- grant: boolean[N]
+
+**Requirements Description**
+
+The system manages a set of eight request and grant signals, indexed from 0 to 7 (where N=8). The environment controls the `request` array, and the system controls the `grant` array. The indices are divided into two groups: high-priority indices 0 to 3 (where K=4) and low-priority indices 4 to 7.
+
+**Environment Assumptions**
+1.  **Request Persistence:** For any index, if the request is true and the corresponding grant is false, the request must remain true in the next time step.
+2.  **Eventual Release:** For every index, it must infinitely often be the case that the request and grant are not simultaneously true. This implies that once a request is granted, the environment must eventually lower the request signal.
+3.  **High-Priority Idle Periods:** Infinitely often, all requests from indices 0 to 3 must be false simultaneously.
+
+**System Guarantees**
+1.  **Mutual Exclusion:** At any time, at most one grant signal may be true across all indices.
+2.  **Grant Persistence:** For any index, if the request is true and the grant is true, the grant must remain true in the next time step.
+3.  **Eventual Grant:** For every index, it must infinitely often be the case that the request is not true while the grant is false. Effectively, every persistent request must eventually be granted.
+4.  **Priority Protection:** For any low-priority index (4 to 7), if the grant signal transitions from false to true, then no high-priority request (indices 0 to 3) may be waiting (true while ungranted) at that moment.

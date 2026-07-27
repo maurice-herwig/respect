@@ -1,0 +1,44 @@
+
+
+Specification name: Module2
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevator: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+This specification describes a reactive system controlling two robots (Robot 0 and Robot 1) operating within a grid environment managed by an elevator. The constants DX and DY are both defined as 5, setting the grid boundaries from 0 to 5 for both dimensions.
+
+**Environment Assumptions**
+The environment controls the `elevator` variable. The elevator behavior is restricted by the following assumptions:
+1.  **Movement Rate:** In each step, the elevator position may change by at most 1 unit (it may move up, move down, or remain stationary).
+2.  **Liveness:** The elevator must visit floor 0 infinitely often and must visit floor 5 (DY) infinitely often.
+
+**System Guarantees**
+The system controls the X and Y coordinates for both Robot 0 (`robotX0`, `robotY0`) and Robot 1 (`robotX1`, `robotY1`). The system must satisfy the following requirements:
+
+1.  **Initial Conditions:**
+    *   Robot 0 starts at X coordinate 1 and Y coordinate 5.
+    *   Robot 1 starts at X coordinate 3 and Y coordinate 5.
+
+2.  **Safety Requirements:**
+    *   **Robot Movement:** For both robots, the X coordinate may change by at most 1 unit per step.
+    *   **Y-Coordinate Restriction:** A robot's Y coordinate cannot change unless its X coordinate is 0. If a robot is not at X=0, its Y coordinate must remain constant.
+    *   **Single-Axis Movement:** A robot cannot change both its X and Y coordinates in the same step; at least one coordinate must remain unchanged during any transition.
+    *   **Elevator Coupling:** If a robot's X coordinate is 0, its Y coordinate must exactly match the current `elevator` position.
+    *   **Collision Avoidance:** The two robots must never occupy the same position (i.e., they cannot have the same X and Y coordinates simultaneously).
+    *   **Swap Prevention:** If both robots are on the same Y row, they cannot swap X positions in a single step (e.g., Robot 0 cannot move to Robot 1's current X position while Robot 1 moves to Robot 0's current X position).
+
+3.  **Liveness Requirements:**
+    *   Robot 1 must visit the position X=4, Y=0 infinitely often.

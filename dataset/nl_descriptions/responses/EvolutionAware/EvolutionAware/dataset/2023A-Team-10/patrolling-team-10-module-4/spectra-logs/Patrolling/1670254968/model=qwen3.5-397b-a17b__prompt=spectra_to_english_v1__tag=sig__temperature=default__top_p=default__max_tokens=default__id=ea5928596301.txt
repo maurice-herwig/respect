@@ -1,0 +1,29 @@
+
+
+Specification name: Patrolling
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Dim: Int(0..4)
+
+Environment variables:
+- movingObstacleX: DimX
+- movingObstacleY: DimY
+- lowBattery: boolean
+
+System variables:
+- robot: Dim[2]
+
+The system controls a robot navigating a two-dimensional grid. The robot's position is represented by the variable `robot`, where `robot[0]` corresponds to the X-coordinate and `robot[1]` corresponds to the Y-coordinate. The environment controls the position of a moving obstacle via `movingObstacleX` and `movingObstacleY`, and signals battery status via `lowBattery`.
+
+**Environment Assumptions**
+The environment always maintains the moving obstacle's X-coordinate at 3 (`movingObstacleX = 3`).
+
+**System Guarantees**
+The system must satisfy the following requirements:
+
+1.  **Collision Avoidance (Moving Obstacle):** The robot must never occupy the same location as the moving obstacle. That is, it is never the case that `robot[0]` equals `movingObstacleX` and `robot[1]` equals `movingObstacleY` simultaneously.
+2.  **Collision Avoidance (Static Obstacles):** The robot must never occupy any of the following static obstacle locations: (1,1), (3,3), (2,1), (0,3), or (3,4).
+3.  **Charging Response:** Whenever the `lowBattery` signal becomes true, the robot must reach the charging station located at position (4,0) within 4 steps.
+4.  **Movement Constraints:** In every step, each coordinate of the robot's position must change by at most 1. Specifically, for both `robot[0]` and `robot[1]`, the value in the next state must be either equal to the current value, exactly 1 greater than the current value, or exactly 1 less than the current value.

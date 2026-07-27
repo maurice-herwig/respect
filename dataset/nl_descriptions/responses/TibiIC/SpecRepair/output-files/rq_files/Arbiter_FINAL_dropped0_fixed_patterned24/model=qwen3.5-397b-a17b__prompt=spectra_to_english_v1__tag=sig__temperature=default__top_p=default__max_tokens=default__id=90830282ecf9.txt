@@ -1,0 +1,30 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The system functions as an arbiter that manages two request signals, `r1` and `r2`, and issues corresponding grant signals, `g1` and `g2`. The operation is influenced by an environment-controlled signal `a`.
+
+**Environment Assumptions**
+The environment must satisfy specific constraints regarding signal `a` relative to request `r1`. First, whenever request `r1` is true, signal `a` must also be true. Second, whenever request `r1` was false in the immediately preceding step, signal `a` must be true in the current step.
+
+**System Guarantees**
+The system must adhere to the following behavioral requirements:
+
+1.  **Request-Response Protocol:** For both request channels, the system must ensure that every request is eventually granted. Specifically, for `r1` and `g1`, and similarly for `r2` and `g2`:
+    *   Initially, the system starts in an idle state.
+    *   If a request (`r1` or `r2`) is true while the corresponding grant (`g1` or `g2`) is false, the system enters a pending state.
+    *   While in the pending state, the system must eventually assert the corresponding grant signal to return to the idle state.
+    *   The system is required to return to the idle state infinitely often, ensuring that no request remains pending forever.
+
+2.  **Disable Condition:** Globally, if signal `a` is false, both grant signals `g1` and `g2` must be false. This ensures that no grants are issued when the system is disabled.
+
+3.  **Mutual Exclusion:** Globally, the grant signals `g1` and `g2` must never be true simultaneously. At least one of the two grants must be false at all times.

@@ -1,0 +1,27 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The variables listed above define the interface of the reactive system. The environment variables are inputs controlled by the environment, while the system variables are outputs controlled by the system.
+
+**Environment Assumptions**
+The environment is assumed to behave according to the following constraints:
+1.  **Police Presence:** Infinitely often, the police variable is false. This means police presence is not permanent.
+2.  **Car and Light Status:** At every step, at least one of the following conditions holds: a car will be present in the next step, an emergency is currently active, or the green light is currently on.
+3.  **Car Movement during No Emergency:** At every step, if no emergency is active, then no car will be present in the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Response to Car Presence:** The system must ensure that the green light responds to car presence according to a specific response pattern. Initially, the monitoring logic starts in a satisfied state.
+    *   If a car is present and the green light is off, the logic enters a pending state.
+    *   While in the pending state, if the green light remains off, the logic stays in the pending state.
+    *   If the green light turns on, the logic returns to the satisfied state.
+    *   The system must ensure that the logic returns to the satisfied state infinitely often. Effectively, if the system ever encounters a situation where a car is present while the green light is off, the green light must eventually turn on.

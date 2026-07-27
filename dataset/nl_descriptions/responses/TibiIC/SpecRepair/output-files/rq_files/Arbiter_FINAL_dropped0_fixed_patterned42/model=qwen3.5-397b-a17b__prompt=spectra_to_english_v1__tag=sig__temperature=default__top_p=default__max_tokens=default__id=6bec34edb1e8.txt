@@ -1,0 +1,29 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+**Requirements Description**
+
+The Arbiter system controls two grant outputs, `g1` and `g2`, based on two request inputs, `r1` and `r2`, and an enable input `a`.
+
+**Assumptions on the Environment**
+The environment is assumed to adhere to the following constraints:
+1.  Whenever the request `r1` is true, the enable signal `a` must be true.
+2.  Whenever the grant `g2` is true, the enable signal `a` must be true.
+
+**Guarantees from the System**
+The system must satisfy the following safety and liveness requirements:
+
+1.  **Response to Request 1 (Liveness):** The system must ensure that request `r1` is eventually serviced by grant `g1`. The response logic initializes in an idle state. If `r1` is true while `g1` is false, the system enters a pending state and must eventually set `g1` to true to return to the idle state. The system must return to the idle state infinitely often.
+2.  **Response to Request 2 (Liveness):** Similarly, the system must ensure that request `r2` is eventually serviced by grant `g2`. If `r2` is true while `g2` is false, the system must eventually set `g2` to true.
+3.  **Enable Constraint (Safety):** Whenever the enable signal `a` is false, both grant signals `g1` and `g2` must be false. Grants are only permitted when `a` is true.
+4.  **Mutual Exclusion (Safety):** The system must ensure that `g1` and `g2` are never true simultaneously. At any point in time, at least one of the grants must be false.

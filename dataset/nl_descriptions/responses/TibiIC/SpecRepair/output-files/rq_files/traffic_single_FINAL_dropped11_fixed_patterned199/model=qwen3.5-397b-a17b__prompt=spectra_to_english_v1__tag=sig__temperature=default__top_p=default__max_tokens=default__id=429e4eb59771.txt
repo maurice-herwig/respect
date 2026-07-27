@@ -1,0 +1,28 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines the behavior of a traffic light system interacting with an environment consisting of car presence, emergency signals, and police presence. The environment controls the inputs `car`, `emergency`, and `police`. The system controls the output `green`, representing the traffic light state.
+
+**Environment Assumptions**
+The environment is assumed to satisfy the following constraints:
+1.  **Police Presence:** It is always the case that eventually the police signal is false. In other words, the police variable is false infinitely often.
+2.  **Car Persistence at Red Light:** Globally, if a car is present, there is no emergency, and the light is not green, then a car must remain present in the next step. This ensures cars do not disappear while waiting at a red light unless an emergency occurs or the light turns green.
+3.  **Condition When No Car:** Globally, if there is no car, then either police is present, there is no car, or the light is not green.
+
+**System Guarantees**
+The system must satisfy the following guarantees whenever the environment satisfies the assumptions:
+1.  **Response to Cars:** The system must maintain a response condition regarding the car presence and the green light.
+    *   **Initial Condition:** The response condition starts in a satisfied state.
+    *   **Safety and Next-State:** If the condition is satisfied and either there is no car or there is a car with the light green, the condition remains satisfied. If the condition is satisfied but a car is present while the light is not green, the condition becomes pending. If the condition is pending, it remains pending unless the light turns green, at which point it returns to satisfied.
+    *   **Liveness:** The system must ensure that the response condition is satisfied infinitely often. Consequently, whenever a car is present while the light is not green, the system must eventually turn the light green.

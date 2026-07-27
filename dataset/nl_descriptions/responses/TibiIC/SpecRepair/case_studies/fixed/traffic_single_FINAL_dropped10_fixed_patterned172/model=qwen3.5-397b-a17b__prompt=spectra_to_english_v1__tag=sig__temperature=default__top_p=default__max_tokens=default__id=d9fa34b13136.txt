@@ -1,0 +1,33 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines a reactive traffic control system interacting with an environment. The environment controls the presence of a car, emergency conditions, and police presence. The system controls the green traffic light.
+
+**Environment Assumptions**
+The environment must satisfy the following constraints:
+1.  **Police Absence:** Police must be absent infinitely often.
+2.  **Car Behavior When Absent:** Whenever the car is absent, either a car appears in the next step, an emergency is active, or the car is absent.
+3.  **Car Movement:** Always, either police are present, the car is absent, or the car will be absent in the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Car Absence:** The system guarantees that the car is absent infinitely often.
+2.  **Green Light Response:** The system guarantees a specific response pattern to the car signal using an internal state machine that begins in state S0.
+    *   **Initial Condition:** The internal state is initially S0.
+    *   **State Transitions:**
+        *   If the system is in state S0 and a car is present while the green light is off, the system transitions to state S1.
+        *   If the system is in state S0 and either no car is present or the green light is on, the system remains in state S0.
+        *   If the system is in state S1 and the green light is on, the system transitions to state S0.
+        *   If the system is in state S1 and the green light is off, the system remains in state S1.
+    *   **Liveness:** The system must enter state S0 infinitely often.

@@ -1,0 +1,30 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+The system controls traffic lights `greena` and `greenb` based on environment inputs `cara`, `carb`, and `emergency`.
+
+**Environment Assumptions**
+The environment is assumed to behave according to the following constraints:
+1.  Whenever `emergency` is true, either `cara` will be true in the next step, `emergency` remains true, or `greena` is true.
+2.  Whenever `emergency` is true, either `carb` will be true in the next step, `emergency` remains true, `greenb` is true, or `carb` is false.
+3.  Whenever `emergency` is true, either `emergency` remains true, `cara` will be false in the next step, or `greena` is false.
+4.  Whenever `emergency` is true, `greenb` must be false.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Safety Constraint:** The system ensures that `greena` and `greenb` are never both true at the same time.
+2.  **Emergency Status:** The system guarantees that the `emergency` signal is always false.
+3.  **Response Requirements:** The system must respond to car presence signals for both car A and car B using a specific response protocol. For each pair (`cara`, `greena`) and (`carb`, `greenb`):
+    *   **Initial Condition:** The response protocol initializes in a ready state.
+    *   **State Transitions:** If the car signal is true while the corresponding green light is false, the protocol transitions to a waiting state. If the protocol is in the waiting state, it remains there unless the corresponding green light becomes true, in which case it returns to the ready state. If the car signal is false or the light is already true while in the ready state, the protocol remains in the ready state.
+    *   **Liveness:** The system must ensure the ready state is visited infinitely often. This guarantees that whenever a car signal is true, the corresponding green light will eventually become true.

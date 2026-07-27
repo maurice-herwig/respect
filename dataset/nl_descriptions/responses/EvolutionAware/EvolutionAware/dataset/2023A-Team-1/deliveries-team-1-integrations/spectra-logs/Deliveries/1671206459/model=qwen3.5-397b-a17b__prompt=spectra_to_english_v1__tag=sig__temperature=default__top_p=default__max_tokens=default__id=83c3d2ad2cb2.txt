@@ -1,0 +1,38 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+- deliveriesX: DimX [2]
+- deliveriesY: DimY [2]
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+This specification defines a reactive system controlling two delivery robots, Robot 0 and Robot 1, operating within a two-dimensional grid. The system controls the X and Y coordinates for both robots. The environment provides the target delivery locations for both robots as arrays of coordinates, as well as a mock elevator position variable.
+
+**Environment Assumptions**
+The environment must ensure that the X-coordinate for both delivery locations is never equal to 5. This constraint applies always throughout the system operation.
+
+**System Guarantees**
+The system must satisfy the following liveness and safety requirements:
+
+*Liveness Requirements*
+1.  **Delivery:** Robot 0 must infinitely often reach its assigned delivery location defined by `deliveriesX[0]` and `deliveriesY[0]`. Similarly, Robot 1 must infinitely often reach its assigned delivery location defined by `deliveriesX[1]` and `deliveriesY[1]`.
+2.  **Return to Corner:** Robot 0 must infinitely often reach the coordinate (5, 5). Similarly, Robot 1 must infinitely often reach the coordinate (5, 5).
+
+*Safety and State Requirements*
+The system maintains two counters to track package deliveries, one for each robot. Both counters initialize to 0 and have a defined range of 0 to 4.
+*   **Robot 0 Counter:** This counter increments whenever Robot 0 is at its assigned delivery location. It resets to 0 whenever Robot 0 is at coordinate (5, 5). The value of this counter must always remain strictly less than 4.
+*   **Robot 1 Counter:** This counter increments whenever Robot 1 is at its assigned delivery location. It resets to 0 whenever Robot 1 is at coordinate (5, 5).

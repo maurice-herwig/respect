@@ -1,0 +1,22 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The system controls the traffic light signal via the `green` variable based on inputs from the environment regarding car presence, emergency status, and police activity.
+
+**Environment Assumptions**
+The environment must adhere to the following constraints regarding the `car` and `police` variables:
+1.  If the `police` variable was false in the previous step, then in the current step, either the `car` variable will be true in the next step, the `green` variable is true, or the `car` variable is false. This ensures that if the police signal was previously inactive and the traffic light is red, a present car must remain present in the next step.
+2.  At every step, either the `police` variable is true, the `car` variable is false, the `car` variable will be false in the next step, or the `green` variable is false. This ensures that if the police signal is inactive, a car is present, and the traffic light is green, the car must become absent in the next step.
+
+**System Guarantees**
+The system must satisfy the following behavior regarding the `green` variable:
+1.  Whenever the `car` variable is true, the `green` variable must eventually become true. Specifically, if a car is present while the light is not green, the system must ensure the light turns green eventually.

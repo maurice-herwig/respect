@@ -1,0 +1,37 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The system acts as an arbiter that manages two grant signals, `g1` and `g2`, in response to two request signals, `r1` and `r2`, subject to an enable signal `a`.
+
+**Assumptions on the Environment**
+The environment must satisfy the following condition:
+- Always, if `g1` is false, then `a` must be true.
+
+**Guarantees Required from the System**
+The system must satisfy the following requirements:
+
+1.  **Response Protocol for `r1` and `g1`:**
+    The system maintains an internal state for this pair, initially set to a ready condition.
+    -   **Safety and Next-State:** While in the ready condition, if `r1` is true and `g1` is false, the system transitions to a waiting condition. If `r1` is false or `g1` is true while in the ready condition, the system remains in the ready condition. While in the waiting condition, the system remains waiting if `g1` is false, and transitions back to the ready condition if `g1` becomes true.
+    -   **Liveness:** The system must infinitely often return to the ready condition.
+
+2.  **Response Protocol for `r2` and `g2`:**
+    The system maintains a separate internal state for this pair, initially set to a ready condition.
+    -   **Safety and Next-State:** While in the ready condition, if `r2` is true and `g2` is false, the system transitions to a waiting condition. If `r2` is false or `g2` is true while in the ready condition, the system remains in the ready condition. While in the waiting condition, the system remains waiting if `g2` is false, and transitions back to the ready condition if `g2` becomes true.
+    -   **Liveness:** The system must infinitely often return to the ready condition.
+
+3.  **Enable Safety:**
+    Always, if `a` is false, then both `g1` and `g2` must be false.
+
+4.  **Mutual Exclusion:**
+    Always, at least one of `g1` or `g2` must be false (they cannot both be true simultaneously).

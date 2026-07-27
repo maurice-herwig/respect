@@ -1,0 +1,32 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines a reactive system controlling a traffic light signal (`green`) based on environment inputs indicating the presence of a car (`car`), an emergency situation (`emergency`), and a police signal (`police`).
+
+**Environment Assumptions**
+The environment is assumed to satisfy the following conditions:
+1.  **Police Signal Activity:** The police signal must be inactive infinitely often. It is always the case that eventually the police signal becomes false.
+2.  **Car Behavior When Light is Green:** Always, if the traffic light is green, then either the traffic light is green or the car is not present.
+3.  **Car Movement:** Always, either the police signal is active, or the car will be absent in the next time step, or the traffic light is not green. Equivalently, if the police signal is inactive and the traffic light is green, the car must be absent in the next time step.
+
+**System Guarantees**
+The system must satisfy the following guarantees:
+1.  **Response to Car:** The system must ensure that the traffic light turns green in response to the presence of a car. This is enforced by a response pattern with two internal states, S0 and S1.
+    *   **Initial Condition:** Initially, the internal state is S0.
+    *   **Safety and Next-State Rules:**
+        *   If the system is in state S0, and either the car is absent or both the car is present and the light is green, the system remains in state S0.
+        *   If the system is in state S0, and the car is present while the light is not green, the system transitions to state S1.
+        *   If the system is in state S1, and the light is green, the system transitions to state S0.
+        *   If the system is in state S1, and the light is not green, the system remains in state S1.
+    *   **Liveness Requirement:** The system must visit state S0 infinitely often. This ensures that whenever the car is present while the light is not green (triggering a transition to S1), the light must eventually become green (returning the system to S0).

@@ -1,0 +1,38 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+- deliveriesX: DimX [2]
+- deliveriesY: DimY [2]
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+**Overview**
+The system controls the movement of two robots, Robot 0 and Robot 1, within a grid where X and Y coordinates range from 0 to 5. The environment provides target delivery locations for two packages. The system must ensure both robots repeatedly visit their assigned delivery locations and a specific return corner.
+
+**Environment Assumptions**
+The environment guarantees that the Y-coordinate for both delivery locations is never 5. Specifically, `deliveriesY[0]` and `deliveriesY[1]` will always be less than 5.
+
+**System Guarantees**
+*Liveness Requirements*
+- **Package Delivery:** Robot 0 must infinitely often reach the coordinates specified by `deliveriesX[0]` and `deliveriesY[0]`. Similarly, Robot 1 must infinitely often reach the coordinates specified by `deliveriesX[1]` and `deliveriesY[1]`.
+- **Return to Corner:** Robot 0 must infinitely often reach the coordinates (5, 5). Robot 1 must infinitely often reach the coordinates (5, 5).
+
+*State Tracking Requirements*
+- The system maintains a count of packages delivered by each robot, constrained between 0 and 3.
+- **Robot 0 Counter:** Initializes to 0. It increments when Robot 0 is located at (`deliveriesX[0]`, `deliveriesY[0]`). It resets to 0 when Robot 0 is located at (5, 5).
+- **Robot 1 Counter:** Initializes to 0. It increments when Robot 1 is located at (`deliveriesX[1]`, `deliveriesY[1]`). It resets to 0 when Robot 1 is located at (5, 5).
+- The system must ensure neither counter exceeds 3.

@@ -1,0 +1,26 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines the behavior of a reactive system controlling the `green` signal based on environment inputs `car`, `emergency`, and `police`.
+
+**Environment Assumptions**
+The environment is assumed to adhere to the following constraints:
+1.  **Police Signal Liveness:** The `police` variable must be false infinitely often; it cannot remain true permanently.
+2.  **Emergency Safety:** Whenever `emergency` is false, it must be the case that either `green` is true or `car` is false.
+3.  **Car Movement Safety:** Whenever `police` is false and `green` is true, the `car` variable must be false in the immediate next step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Initial Condition:** The system's response logic initializes in a base state.
+2.  **Response Liveness:** The system must return to the base state infinitely often. To satisfy this, whenever `car` is true, the system must eventually set `green` to true. Specifically, if `car` is true while `green` is false, the system must eventually change `green` to true to return to the base state.

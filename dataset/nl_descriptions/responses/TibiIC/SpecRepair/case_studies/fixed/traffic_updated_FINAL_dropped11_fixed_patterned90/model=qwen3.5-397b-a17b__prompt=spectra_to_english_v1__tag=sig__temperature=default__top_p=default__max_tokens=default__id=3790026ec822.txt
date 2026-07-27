@@ -1,0 +1,30 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+This specification defines a reactive traffic light controller for two lanes, A and B. The system controls the green light signals for each lane based on car presence detection and an emergency input provided by the environment.
+
+**Environment Assumptions**
+The environment behaves according to the following constraints:
+1.  **Emergency Signal Liveness:** The emergency signal is not permanently active; it turns off infinitely often.
+2.  **Car Behavior During Emergency:** When the emergency signal is active, the environment constrains the car presence signals (`cara` and `carb`) as follows:
+    *   For lane A: Either the emergency signal remains active, or car A becomes present in the next step, or light A is green, or car A is absent.
+    *   For lane B: Either the emergency signal remains active, or car B becomes present in the next step, or light B is green.
+    *   For lane A movement: Either the emergency signal remains active, or car A becomes absent in the next step, or light A is red.
+    *   For lane B movement: Either the emergency signal remains active, or car B is absent, or car B becomes absent in the next step, or light B is red.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+1.  **Mutual Exclusion:** The system ensures that both green lights are never on simultaneously. At least one light must be red at all times.
+2.  **Response to Car A:** Whenever car A is present, the system ensures that light A eventually turns green. This response relationship is maintained continuously; if a request occurs without an immediate response, the system must eventually provide the green light to satisfy the request.
+3.  **Response to Car B:** Whenever car B is present, the system ensures that light B eventually turns green, maintaining the same response relationship as lane A.
+4.  **Emergency Safety:** Whenever the emergency signal is active, the system ensures that both lights are red (both `greena` and `greenb` are false).

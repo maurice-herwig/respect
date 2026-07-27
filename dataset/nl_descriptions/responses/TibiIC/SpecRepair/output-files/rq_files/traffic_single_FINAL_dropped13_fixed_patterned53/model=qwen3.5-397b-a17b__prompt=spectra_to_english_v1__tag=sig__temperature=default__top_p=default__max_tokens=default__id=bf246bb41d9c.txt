@@ -1,0 +1,32 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines the behavior of a traffic light control system. The environment provides inputs indicating the presence of a car, an emergency situation, and police activity. The system controls the green light signal.
+
+**Environment Assumptions**
+The environment must satisfy the following constraints:
+1.  **Police Signal Activity:** The police signal must be inactive (false) infinitely often.
+2.  **Car Behavior at Red Light:** If a car is present and the green light is currently inactive, the car must remain present in the next time step.
+3.  **Car Behavior with Police:** If the police signal is inactive, the car must be absent in the next time step.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+
+1.  **Initial Condition:** The system's response logic initializes in a ready state.
+2.  **Safety and State Transitions:**
+    *   While in the ready state, the system remains in the ready state if no car is present or if both the car is present and the green light is active.
+    *   While in the ready state, if a car is present and the green light is inactive, the system transitions to a waiting state.
+    *   While in the waiting state, the system remains in the waiting state if the green light is inactive.
+    *   While in the waiting state, if the green light becomes active, the system transitions back to the ready state.
+3.  **Liveness:** The system must return to the ready state infinitely often. This ensures that whenever a car is present, the green light must eventually become active.

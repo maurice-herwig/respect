@@ -1,0 +1,17 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The TrafficE2 system manages a traffic light signal based on inputs from the environment. The environment controls three boolean inputs: `car`, indicating the presence of a vehicle; `emergency`, indicating an emergency status; and `police`, indicating police presence. The system controls one boolean output: `green`, representing the state of the traffic light.
+
+The environment must adhere to specific behavioral assumptions. First, regarding police presence: if `police` is true, then either no car is currently present (`car` is false), or an emergency is active (`emergency` is true), or the car remains present in the next step (`car` is true in the next state). Effectively, if police are present and a car is currently detected without an emergency, the car must remain detected in the subsequent step. Second, regarding the green light: at all times, either no car is currently present, or no car will be present in the next step, or the green light is off. This implies that if the green light is on, a car cannot be present in both the current and the next step.
+
+The system must satisfy specific guarantees regarding responsiveness and safety. The system initializes in a ready state where no car request is pending. The core requirement is that the system must respond to car presence by turning on the green light. Specifically, whenever a car is present, the green light must eventually become true. The system tracks this requirement using an internal state machine: if a car is detected while the green light is off, the system enters a pending state. The system must infinitely often return to the ready state, which is only possible if the green light turns on to satisfy the pending request. This ensures that every instance of a car being present is eventually met with the green light being activated.

@@ -1,0 +1,29 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+This specification describes a reactive traffic light control system. The environment provides inputs indicating the presence of cars on road A (`cara`) and road B (`carb`), as well as an `emergency` signal. The system controls the green light signals for road A (`greena`) and road B (`greenb`).
+
+**Environment Assumptions**
+The environment is assumed to behave according to the following constraints:
+1.  **Car A Idling:** At all times, if the emergency signal is simultaneously true and false, then the next value of `cara` must be true.
+2.  **Car B Idling:** At all times, if the emergency signal is true, then either the next value of `carb` is true, or the emergency signal is true, or `greenb` is true, or `carb` is false.
+3.  **Car A Movement:** At all times, if the emergency signal is simultaneously false and true, then either `cara` is false, or the next value of `cara` is false, or `greena` is false.
+4.  **Car B Movement:** At all times, if the emergency signal is true, then either the emergency signal is true, or `carb` is false, or the next value of `carb` is false, or `greenb` is false.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+
+1.  **Light Status Constraint:** At all times, either the emergency signal is false, or the emergency signal is true, or `greenb` is false.
+2.  **Car A Response:** The system must implement a response property regarding Car A. Initially, the system is in an idle state regarding this requirement. Whenever `cara` is true while the response condition is not met, the system enters a pending state. The response condition is defined as either `greenb` being false or `greena` being true. If the system is in the pending state, it must transition back to the idle state once the response condition becomes true. The system must not remain in the pending state indefinitely; it must return to the idle state infinitely often.
+3.  **Car B Response:** The system must implement a response property regarding Car B. Initially, the system is in an idle state regarding this requirement. Whenever `carb` is true while the response condition is not met, the system enters a pending state. The response condition is defined as `greenb` being true. If the system is in the pending state, it must transition back to the idle state once `greenb` becomes true. The system must not remain in the pending state indefinitely; it must return to the idle state infinitely often.
+4.  **Emergency Light Status:** At all times, either the emergency signal is false, or the emergency signal is true, or both `greena` and `greenb` are false.

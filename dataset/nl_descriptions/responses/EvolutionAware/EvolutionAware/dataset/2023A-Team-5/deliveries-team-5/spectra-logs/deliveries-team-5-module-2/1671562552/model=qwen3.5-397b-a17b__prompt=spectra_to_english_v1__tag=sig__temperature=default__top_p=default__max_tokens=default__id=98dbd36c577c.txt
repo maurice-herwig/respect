@@ -1,0 +1,32 @@
+
+
+Specification name: Module2
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevator: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+This specification defines the behavior of a system controlling two robots (robot 0 and robot 1) interacting with an environment-controlled elevator. The constants DX and DY are both defined as 5. Consequently, the X coordinates for the robots range from 0 to 5, and the Y coordinates for the robots and the elevator position range from 0 to 5.
+
+**Environment Assumptions**
+The environment controls the `elevator` variable. The elevator position must change gradually; specifically, between any two consecutive steps, the elevator position may decrease by at most 1, stay the same, or increase by at most 1. Additionally, the environment must ensure that the elevator visits floor 0 infinitely often and visits floor 5 infinitely often over the course of operation.
+
+**System Guarantees**
+The system controls the X and Y coordinates for both robot 0 (`robotX0`, `robotY0`) and robot 1 (`robotX1`, `robotY1`). The system must adhere to the following coordination rules regarding the elevator:
+
+1.  For robot 0, in every step, if the next value of `robotX0` is 0, then the next value of `robotY0` must equal the current value of `elevator`.
+2.  For robot 1, in every step, if the next value of `robotX1` is 0, then the next value of `robotY1` must equal the current value of `elevator`.
+
+These requirements ensure that whenever either robot is positioned at X coordinate 0 in the next state, its Y coordinate is aligned with the elevator's current position.

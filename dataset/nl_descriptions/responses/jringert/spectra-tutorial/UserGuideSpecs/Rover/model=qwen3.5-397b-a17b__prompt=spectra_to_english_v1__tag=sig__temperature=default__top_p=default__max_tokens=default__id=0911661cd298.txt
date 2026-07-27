@@ -1,0 +1,22 @@
+
+
+Specification name: Rover
+
+Environment variables:
+- gravityDetected: boolean
+- found: boolean
+
+System variables:
+- speed: Int(0..7)
+- mode: {SEEK, MEASURE, IDLE}
+
+The Rover system controls its movement speed and operational mode based on environmental gravity sensors and direction finding status.
+
+**Environment Assumptions**
+The environment controls the inputs `gravityDetected` and `found`. Initially, `gravityDetected` is false. Once `gravityDetected` becomes true, it remains true permanently. Additionally, `gravityDetected` must eventually become true. The environment must also ensure that the internal monitored condition `expectFinding` is false infinitely often.
+
+**System Guarantees**
+The system controls the outputs `speed` and `mode`. Initially, the system starts in `IDLE` mode. Regarding safety, whenever `gravityDetected` is false, the system must ensure that in the next step, `speed` is 0 and `mode` is `IDLE`. Furthermore, whenever the system sets `mode` to `SEEK` in the next step, it must set `speed` to a non-zero value in that same step. Regarding liveness, the system must infinitely often operate in a mode other than `IDLE`.
+
+**Internal Monitored Condition**
+The specification tracks a boolean condition `expectFinding` to indicate whether the system is awaiting a direction discovery. Initially, `expectFinding` is false. In each subsequent step, `expectFinding` becomes true if `mode` is `SEEK`, or remains true if it was already true and `found` is false.

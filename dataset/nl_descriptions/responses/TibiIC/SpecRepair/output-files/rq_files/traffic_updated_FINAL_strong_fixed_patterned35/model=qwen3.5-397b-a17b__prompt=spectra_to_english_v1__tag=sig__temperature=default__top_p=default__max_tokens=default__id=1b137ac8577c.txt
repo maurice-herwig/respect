@@ -1,0 +1,35 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- carA: boolean
+- carB: boolean
+- emergency: boolean
+
+System variables:
+- greenA: boolean
+- greenB: boolean
+
+**System Overview**
+This specification defines a reactive traffic light control system. The environment provides inputs indicating the presence of cars at intersection A (`carA`) and intersection B (`carB`), as well as an `emergency` signal. The system controls the traffic lights `greenA` and `greenB`.
+
+**Environment Assumptions**
+The environment must adhere to the following behavioral constraints:
+1.  **Emergency Signal:** The `emergency` signal cannot remain active forever; it must turn off infinitely often.
+2.  **Car A Behavior:** 
+    *   If `carA` is present and `greenA` is not active, `carA` must remain present in the next step.
+    *   If `carA` is present and `greenA` is active, `carA` must become absent in the next step.
+3.  **Car B Behavior:** 
+    *   If `carB` is present and `greenB` is not active, `carB` must remain present in the next step.
+    *   If `carB` is present, `greenB` is active, and `greenA` is active, `carB` must become absent in the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+1.  **Light Safety:** Light A and Light B must never be green simultaneously. At any time, either `greenA` is false or `greenB` is false.
+2.  **Emergency Response:** If the `emergency` signal is active, both `greenA` and `greenB` must be false (both lights red).
+3.  **Car A Response:** Whenever `carA` is present, `greenA` must eventually become true.
+4.  **Car B Response:** Whenever `carB` is present, `greenB` must eventually become true.
+
+**Initial Conditions**
+The system initializes in a state ready to respond to car presence signals, ensuring the response guarantees are active from the start.

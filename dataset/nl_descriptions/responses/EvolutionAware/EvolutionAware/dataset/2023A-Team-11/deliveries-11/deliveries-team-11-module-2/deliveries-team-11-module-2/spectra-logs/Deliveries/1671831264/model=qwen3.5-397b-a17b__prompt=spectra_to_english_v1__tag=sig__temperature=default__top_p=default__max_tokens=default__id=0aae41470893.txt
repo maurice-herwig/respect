@@ -1,0 +1,28 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- p0X: DimX
+- p0Y: DimY
+- p1X: DimX
+- p1Y: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+This specification describes a reactive system involving two robots and two packages. The system controls the positions of the robots (`robotX0`, `robotY0` for Robot 0 and `robotX1`, `robotY1` for Robot 1), while the environment controls the positions of the packages (`p0X`, `p0Y` for Package 0 and `p1X`, `p1Y` for Package 1). The constants DX and DY are both defined as 5, limiting coordinates to the range 0 to 5.
+
+The system maintains two visit counters, `r0Count` and `r1Count`, each ranging from 0 to 3. Both counters initialize to 0. A counter increments when its corresponding robot is located at its package's coordinates. A counter resets to 0 when its corresponding robot reaches the corner coordinates (5, 5).
+
+The environment must adhere to specific constraints regarding package movement. Package coordinates are generally static; the environment must keep both the X and Y coordinates of a package constant unless the corresponding robot is currently at the package location and the visit count is less than 3. If the robot is at the package location and the visit count is less than 3, the environment must change the package's Y-coordinate in the next step. Additionally, package coordinates are subject to global safety constraints: the X-coordinates (`p0X`, `p1X`) must never be 0, and the Y-coordinates (`p0Y`, `p1Y`) must never be 5.
+
+The system must satisfy liveness guarantees for both robots. Robot 0 must infinitely often be located at Package 0's coordinates. Similarly, Robot 1 must infinitely often be located at Package 1's coordinates.

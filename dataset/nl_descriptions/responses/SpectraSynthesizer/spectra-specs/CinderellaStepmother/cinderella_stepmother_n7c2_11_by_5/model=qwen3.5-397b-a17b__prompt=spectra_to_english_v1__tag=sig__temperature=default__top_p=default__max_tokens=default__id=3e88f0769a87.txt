@@ -1,0 +1,27 @@
+
+
+Specification name: Cinderella
+
+Environment variables:
+- waterFills: Int(0..ADDED_WATER_UNITS)[N]
+
+System variables:
+- buckets: Int(0..B)[N]
+- bucketToEmpty: Int(0..(N - 1))
+
+In this system, N is 7, C is 2, B is 11, and ADDED_WATER_UNITS is 5. The environment provides water fill amounts for each of the N buckets at every step. The system manages the water levels in the buckets and selects a bucket index to empty.
+
+**Environment Assumptions**
+At every step, the sum of the water fill amounts across all N buckets must exactly equal ADDED_WATER_UNITS (5 units).
+
+**System Guarantees**
+*Initial Condition:*
+Initially, the content of every bucket is 0.
+
+*Next-State Behavior:*
+At every step, the system updates the bucket contents for the next state based on the current value of `bucketToEmpty` and the water fill amounts provided for the next state. For each bucket index `i` from 0 to N-1, the system determines if `i` falls within a specific window of size C starting at `bucketToEmpty`. This window includes indices `i` where `i` is greater than or equal to `bucketToEmpty` and less than `bucketToEmpty + C`, or where wrap-around occurs such that `bucketToEmpty` is greater than or equal to `N - C + 1 + i`.
+
+- If index `i` is within this window, the content of bucket `i` in the next state is set equal to the water fill amount for index `i` in the next state. This effectively empties the previous water content for these buckets.
+- If index `i` is outside this window, the content of bucket `i` in the next state is updated by adding the water fill amount for index `i` in the next state to its current content.
+
+The system must ensure that the content of every bucket always remains within the range 0 to B (11). The system chooses the value of `bucketToEmpty` at each step within the range 0 to N-1 (6).

@@ -1,0 +1,25 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Environment Assumptions**
+The environment behaves according to the following constraints:
+1.  **Police Presence:** Infinitely often, the police signal is false.
+2.  **Car Behavior at Red Light:** It is always the case that if a car is present, the green light is off, and there is no emergency, then the car must remain present in the next step. Essentially, cars do not leave the intersection when the light is red unless an emergency occurs.
+3.  **Car Behavior at Green Light:** It is always the case that if there is no police presence, a car is present, and the green light is on, then the car must not be present in the next step. Essentially, cars must leave the intersection when the light is green, provided no police are present.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Green Light Response:** The system must respond to the presence of a car by eventually turning the green light on. Specifically, the system maintains an internal response state that initializes to a ready state. If a car is present while the green light is off, the system enters a waiting state. The system must eventually turn the green light on to return to the ready state. The system must infinitely often return to this ready state.
+2.  **Car Absence:** The system guarantees that infinitely often, the car variable is false.
+
+**Initial Conditions**
+-   The system's internal response monitoring logic initializes in the ready state.

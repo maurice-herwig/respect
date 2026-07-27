@@ -1,0 +1,27 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The system controls a traffic light signal (`green`) in response to environmental inputs regarding vehicle presence (`car`), emergency status (`emergency`), and police presence (`police`).
+
+**Environment Assumptions**
+The environment adheres to the following constraints regarding vehicle behavior during emergencies and green lights:
+1.  **Emergency Car Stability:** If an emergency was active in the previous step, then whenever a car is currently present and no emergency is currently active, the car must remain present in the next step.
+2.  **Car Movement on Green:** If the traffic light is green and a car is currently present, the car must be absent in the next step. Essentially, a car cannot remain present across consecutive steps while the light is green.
+
+**System Guarantees**
+The system must satisfy the following requirements regarding the traffic light response to vehicles:
+1.  **Initial Condition:** The system starts in a ready state where no car response is pending.
+2.  **Response Safety:**
+    *   If a car is present and the light is green, the system remains in the ready state.
+    *   If a car is present and the light is not green, the system enters a pending state.
+    *   While in the pending state, the system remains pending if the light is not green, and returns to the ready state if the light becomes green.
+3.  **Response Liveness:** The system must infinitely often return to the ready state. This ensures that if a car is present while the light is not green, the light must eventually become green to clear the pending state.

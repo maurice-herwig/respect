@@ -1,0 +1,31 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+This specification describes a reactive traffic light system. The environment controls inputs indicating the presence of a car, an emergency situation, and police presence. The system controls the output indicating whether the traffic light is green.
+
+**Environment Assumptions**
+The environment is assumed to satisfy the following constraints:
+1.  **Police Presence:** Infinitely often, police are not present.
+2.  **Car Behavior During Red Light:** Globally, if there is no emergency, then at least one of the following holds: a car will be present in the next step, the light is currently green, or no car is currently present. Equivalently, if there is no emergency, the light is red, and a car is present, then a car must remain present in the next step.
+3.  **Car Movement Constraints:** Globally, at least one of the following holds: police are present, no car is currently present, no car will be present in the next step, or the light is currently red. Equivalently, if no police are present, a car is present currently, and a car remains present in the next step, then the light must be red.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Car Response:** The system must respond to the presence of a car by eventually turning the light green. This is managed via an internal state mechanism initialized to an idle state.
+    *   **Initial Condition:** The system starts in the idle state.
+    *   **Safety Behavior:** 
+        *   If the system is in the idle state and a car is present while the light is not green, it transitions to a pending state.
+        *   If the system is in the idle state and either no car is present or the light is already green, it remains in the idle state.
+        *   If the system is in the pending state and the light is not green, it remains in the pending state.
+        *   If the system is in the pending state and the light becomes green, it returns to the idle state.
+    *   **Liveness Requirement:** The system must return to the idle state infinitely often. This ensures that if the system enters the pending state due to a car presence without a green light, the light must eventually turn green.
+2.  **Car Frequency:** The system must ensure that the condition where no car is present occurs infinitely often.

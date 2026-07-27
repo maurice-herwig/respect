@@ -1,0 +1,25 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Environment Assumptions**
+The environment behavior is restricted by the following assumptions:
+1.  **Car Idle When Red:** Always, if `emergency` is true, then at least one of the following holds: `car` is true in the next step, `emergency` is true, or `car` is false.
+2.  **Car Moves When Green:** Always, either `car` is false or `car` is false in the next step. This means the `car` signal cannot be true in two consecutive steps.
+
+**System Guarantees**
+The system must satisfy the following guarantees whenever the environment satisfies the assumptions:
+1.  **Green Often:** The system must ensure a response relationship between the `car` signal and the `green` signal. This is defined by an internal state machine that operates as follows:
+    *   **Initial Condition:** The system starts in state S0.
+    *   **Safety Requirements:**
+        *   If the system is in state S0 and `car` is true while `green` is false, the system transitions to state S1. Otherwise, it remains in state S0.
+        *   If the system is in state S1 and `green` is true, the system transitions to state S0. Otherwise, it remains in state S1.
+    *   **Liveness Requirement:** The system must visit state S0 infinitely often.

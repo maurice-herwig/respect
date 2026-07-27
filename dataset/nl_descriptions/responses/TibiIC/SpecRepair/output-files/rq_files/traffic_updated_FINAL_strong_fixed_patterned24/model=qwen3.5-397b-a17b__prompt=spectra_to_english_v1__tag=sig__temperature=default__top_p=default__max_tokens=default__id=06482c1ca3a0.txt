@@ -1,0 +1,34 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- carA: boolean
+- carB: boolean
+- emergency: boolean
+
+System variables:
+- greenA: boolean
+- greenB: boolean
+
+**Requirements Description**
+
+**Overview**
+The system controls traffic lights for two lanes, A and B, represented by the outputs `greenA` and `greenB`. It reacts to environment inputs indicating car presence (`carA`, `carB`) and an emergency status (`emergency`).
+
+**Environment Assumptions**
+The environment is assumed to behave according to the following rules:
+1.  **Emergency Frequency:** The `emergency` signal is not permanently active; it is guaranteed to be false infinitely often.
+2.  **Car Waiting at Red (Lane A):** If `carA` is true, `greenA` is false, and `emergency` is false, then `carA` remains true in the next step.
+3.  **Car Waiting at Red (Lane B):** If `carB` is true and `greenB` is false, then `carB` remains true in the next step.
+4.  **Car Movement on Green (Lane A):** If `carA` is true and `greenA` is true, then `carA` becomes false in the next step.
+5.  **Car Movement on Green (Lane B):** If `carB` is true and `greenB` is true, then `carB` becomes false in the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Mutual Exclusion:** The lights `greenA` and `greenB` must never be true simultaneously. At least one light must be false at all times.
+2.  **Emergency Safety:** Whenever `emergency` is true, both `greenA` and `greenB` must be false.
+3.  **Response to Cars:**
+    *   If `carA` is true, `greenA` must eventually become true.
+    *   If `carB` is true, `greenB` must eventually become true.
+4.  **Initialization:** The system starts in a state where no response obligations are pending.

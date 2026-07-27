@@ -1,0 +1,30 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**System Overview**
+This specification describes a reactive traffic light system. The environment provides inputs indicating the presence of a car, an emergency situation, and a police signal. The system controls the green traffic light output. The system must satisfy specific guarantees whenever the environment adheres to the stated assumptions.
+
+**Environment Assumptions**
+The environment is assumed to behave according to the following constraints:
+1.  **Police Signal Activity:** The police signal must be inactive infinitely often.
+2.  **Car Behavior at Red Light:** If a car is present, no emergency is active, and the green light is off, then the car must remain present in the next step.
+3.  **Car Behavior During Emerging Emergency:** If an emergency signal will become active in the next step, then either no car is currently present, the car will cease to be present in the next step, or the green light is currently off.
+4.  **Car Behavior After No Emergency:** If no emergency was active in the previous step, then either no car is currently present, the car will cease to be present in the next step, or the green light is currently off.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Car Response:** The system must respond to the presence of a car by activating the green light. This behavior is governed by an internal state machine starting in a normal state.
+    *   **Initial Condition:** Initially, the system is in the normal state.
+    *   **Normal State Behavior:** While in the normal state, if a car is present, the green light must be on to remain in the normal state. If a car is present and the green light is off, the system must transition to a pending state.
+    *   **Pending State Behavior:** While in the pending state, the system must remain there until the green light turns on, at which point it must return to the normal state. If the green light remains off, the system stays in the pending state.
+    *   **Liveness:** The system must infinitely often return to the normal state. This ensures that if a car is present, the green light is eventually turned on.
+2.  **Car Absence:** The system must ensure that infinitely often, no car is present.

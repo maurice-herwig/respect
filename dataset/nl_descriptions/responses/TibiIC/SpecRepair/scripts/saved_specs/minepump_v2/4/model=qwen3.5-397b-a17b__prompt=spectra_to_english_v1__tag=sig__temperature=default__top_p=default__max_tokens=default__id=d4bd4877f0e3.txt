@@ -1,0 +1,25 @@
+
+
+Specification name: Minepump
+
+Environment variables:
+- highwater: boolean
+- methane: boolean
+
+System variables:
+- pump: boolean
+
+The Minepump system controls a pump based on environmental sensors for water levels and methane. The environment provides the `highwater` and `methane` inputs, while the system controls the `pump` output.
+
+**Initial Conditions**
+At the start of operation, the environment ensures that both the `highwater` and `methane` sensors are inactive (false). The system ensures that the `pump` is initially off (false).
+
+**Environment Assumptions**
+The environment behaves according to the following constraints:
+*   If the `pump` is on in the current step and was also on in the previous step, the environment ensures that the `highwater` sensor becomes inactive (false) in the next step.
+*   Whenever the `highwater` sensor is inactive (false), the environment ensures that either the `highwater` sensor remains inactive (false) or the `methane` sensor becomes inactive (false).
+
+**System Guarantees**
+The system must satisfy the following requirements:
+*   Whenever the `highwater` sensor is active (true), either the `pump` is currently off (false) or the `pump` will be on (true) in the next step.
+*   Whenever the `methane` sensor is active (true), the `pump` must be off (false) in the next step.

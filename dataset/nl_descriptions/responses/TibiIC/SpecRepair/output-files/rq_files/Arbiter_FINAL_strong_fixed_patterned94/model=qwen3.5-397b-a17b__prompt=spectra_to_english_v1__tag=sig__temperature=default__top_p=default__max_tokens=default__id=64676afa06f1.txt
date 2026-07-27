@@ -1,0 +1,32 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The Arbiter system manages two request channels controlled by the environment and produces two corresponding grant signals. The system operates continuously, responding to environment inputs while adhering to safety and liveness constraints.
+
+**Assumptions on the Environment**
+The environment is assumed to ensure that the enable signal `a` is true whenever the system sets grant `g1` to true.
+
+**Guarantees Required from the System**
+The system must satisfy the following requirements:
+
+1.  **Request-Response Behavior:**
+    For each channel (1 and 2), the system manages requests (`r1`, `r2`) and grants (`g1`, `g2`) using an internal idle and pending state logic. Initially, the system starts in an idle state.
+    *   If a request signal (`r1` or `r2`) is true while the corresponding grant (`g1` or `g2`) is false, the system enters a pending state for that channel.
+    *   While in the pending state, the system must eventually assert the corresponding grant signal to return to the idle state. This obligation holds even if the request signal becomes false after the system enters the pending state.
+    *   The system must return to the idle state infinitely often for both channels. Effectively, whenever a request is asserted, the corresponding grant must eventually be asserted.
+
+2.  **Enable Constraint:**
+    Always, if the enable signal `a` is false, then both grant signals `g1` and `g2` must be false.
+
+3.  **Mutual Exclusion:**
+    Always, the grant signals `g1` and `g2` must never be true simultaneously. At least one of them must be false at any given time.

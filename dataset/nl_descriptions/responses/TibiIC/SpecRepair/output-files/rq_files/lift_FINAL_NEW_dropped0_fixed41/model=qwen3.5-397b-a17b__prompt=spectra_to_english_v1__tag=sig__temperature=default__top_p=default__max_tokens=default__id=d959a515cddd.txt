@@ -1,0 +1,53 @@
+
+
+Specification name: Lift
+
+Environment variables:
+- b1: boolean
+- b2: boolean
+- b3: boolean
+- c: boolean
+
+System variables:
+- f1: boolean
+- f2: boolean
+- f3: boolean
+
+**Requirements Description**
+
+This specification describes a reactive lift system. The environment controls four boolean input signals: `b1`, `b2`, `b3`, and `c`. The system controls three boolean output signals: `f1`, `f2`, and `f3`, representing the lift's presence at floor 1, floor 2, and floor 3, respectively.
+
+**Environment Assumptions**
+The environment behavior is constrained by the following assumptions:
+*   **Initial State:** Initially, all buttons (`b1`, `b2`, `b3`) are off (false).
+*   **Button Release at Floor:**
+    *   If button `b1` is pressed and the lift is at floor 1 (`f1` is true), then `b1` is released (false) in the next step.
+    *   If button `b2` is pressed and the lift is at floor 2 (`f2` is true), then `b2` is released (false) in the next step.
+    *   If button `b3` is pressed and the lift is at floor 3 (`f3` is true), then `b3` is released (false) in the next step.
+*   **Button Persistence:**
+    *   Button `b1` is pressed in the next step unless signal `c` is true.
+    *   If button `b2` is pressed, it remains pressed in the next step unless signal `c` is true, the lift is at floor 2, or it was already off.
+    *   If button `b3` is pressed, it remains pressed in the next step unless signal `c` is true or it was already off.
+*   **Floor Constraints:**
+    *   The lift is always at either floor 1 or floor 3.
+    *   The lift is never at floor 2 and never at floor 3.
+    *   If the lift is not at floor 1, it is not at floor 3.
+    *   If the lift is at floor 3, it is not at floor 1 and not at floor 2.
+
+**System Guarantees**
+The system must satisfy the following guarantees:
+*   **Initial State:** Initially, the lift is at floor 1 (`f1` is true), and not at floor 2 or floor 3 (`f2` and `f3` are false).
+*   **Movement Logic:**
+    *   **When at Floor 1:** The system ensures that in the next step, either:
+        *   It moves to floor 2 (`f2` becomes true) if button `b2` is pressed; or
+        *   It remains at floor 1 (`f1` remains true) if signal `c` is true; or
+        *   It remains at floor 1 (`f1` remains true) if buttons `b2` and `b3` are not pressed.
+    *   **When at Floor 2:** The system ensures that in the next step, either:
+        *   It moves to floor 1 (`f1` becomes true) if button `b1` is pressed; or
+        *   It moves to floor 3 (`f3` becomes true) if button `b3` is pressed; or
+        *   It remains at floor 2 (`f2` remains true) if signal `c` is true; or
+        *   It remains at floor 2 (`f2` remains true) if buttons `b1` and `b3` are not pressed.
+    *   **When at Floor 3:** The system ensures that in the next step, either:
+        *   It moves to floor 2 (`f2` becomes true) if button `b1` or `b2` is pressed; or
+        *   It remains at floor 3 (`f3` remains true) if signal `c` is true; or
+        *   It remains at floor 3 (`f3` remains true) if buttons `b1` and `b2` are not pressed.

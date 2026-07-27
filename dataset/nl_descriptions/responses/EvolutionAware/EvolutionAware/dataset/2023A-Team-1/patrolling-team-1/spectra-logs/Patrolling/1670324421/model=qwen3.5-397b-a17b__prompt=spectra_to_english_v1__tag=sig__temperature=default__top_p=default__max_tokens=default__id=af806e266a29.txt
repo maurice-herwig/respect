@@ -1,0 +1,29 @@
+
+
+Specification name: Patrolling
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+
+Environment variables:
+- goalsX: DimX[num_targets]
+- goalsY: DimY[num_targets]
+
+System variables:
+- robotX: DimX
+- robotY: DimY
+
+**System Overview**
+The specification defines a reactive system for a robot patrolling a two-dimensional grid. The grid coordinates range from 0 to 4 in both the X and Y dimensions. The system controls the robot's position, while the environment provides the locations of target goals. There are 3 target goals and 5 static obstacles fixed at specific coordinates: (1,1), (3,3), (2,1), (0,3), and (3,4).
+
+**Environment Assumptions**
+The environment must adhere to the following constraints regarding the goal locations:
+1.  **Static Goals:** The coordinates for all 3 goals (`goalsX` and `goalsY`) must remain constant throughout the system operation; they cannot change from one step to the next.
+2.  **Valid Placement:** No goal location may coincide with any of the 5 static obstacle positions.
+
+**System Guarantees**
+The system must ensure the robot behaves according to the following requirements:
+1.  **Movement Constraint:** In every step, the robot's X and Y coordinates may change by at most 1 unit. The robot may move to an adjacent cell (horizontally, vertically, or diagonally) or remain in its current position.
+2.  **Obstacle Avoidance:** The robot must never occupy a position that matches any of the 5 static obstacle coordinates. This safety condition must hold at all times.
+3.  **Patrolling Liveness:** The robot must visit every specified goal location infinitely often. For each of the 3 goals, the robot's position must eventually coincide with the goal's coordinates repeatedly throughout operation.

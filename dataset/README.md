@@ -94,12 +94,40 @@ Configure `.env`:
 ```text
 ACADEMIC_CLOUD_API_KEY=<token>
 ACADEMIC_CLOUD_BASE_URL=https://chat-ai.academiccloud.de/v1
-ACADEMIC_CLOUD_MODEL=meta-llama-3.1-8b-instruct
+ACADEMIC_CLOUD_MODEL=qwen3.5-397b-a17b
 ```
 
-Generate descriptions for the accepted dataset:
+On Windows/PyCharm, run the dataset commands from the repository root. In a
+PyCharm run configuration, use:
+
+```text
+Script path: C:\Users\mauri\OneDrive\Desktop\Repos\respect\dataset\generate_nl_description.py
+Parameters: --include-signature
+Working directory: C:\Users\mauri\OneDrive\Desktop\Repos\respect
+```
+
+If the working directory is set to `...\respect\dataset`, do not use
+`dataset\generate_nl_description.py` as a relative script path; otherwise
+Windows will look for `dataset\dataset\generate_nl_description.py`.
+
+Generate descriptions with the fixed environment/system signature included in
+the natural-language prompt:
 
 ```powershell
+python dataset\generate_nl_description.py --include-signature
+```
+
+For a small smoke test before a full run:
+
+```powershell
+cd C:\Users\mauri\OneDrive\Desktop\Repos\respect
+python dataset\generate_nl_description.py --include-signature --limit 3
+```
+
+Without the fixed signature condition, run:
+
+```powershell
+cd C:\Users\mauri\OneDrive\Desktop\Repos\respect
 python dataset\generate_nl_description.py
 ```
 
@@ -111,21 +139,13 @@ current duplicate group is skipped as already generated.
 To process every accepted record anyway:
 
 ```powershell
-python dataset\generate_nl_description.py --no-dedupe-by-content
+python dataset\generate_nl_description.py --include-signature --no-dedupe-by-content
 ```
 
 Use a specific prompt template from `prompts.py`:
 
 ```powershell
-python dataset\generate_nl_description.py --prompt-name spectra_to_english_v1
-```
-
-To make later reconstruction runs use the exact original alphabet, include the
-environment and system variable signature in the generated natural-language
-description prompt:
-
-```powershell
-python dataset\generate_nl_description.py --include-signature
+python dataset\generate_nl_description.py --include-signature --prompt-name spectra_to_english_v1
 ```
 
 With this option, the prompt asks the model to include the exact variable names
@@ -139,19 +159,19 @@ and explicit generation settings are skipped automatically. Use a timestamp to
 refresh older descriptions:
 
 ```powershell
-python dataset\generate_nl_description.py --refresh-before 2026-06-02T00:00:00Z
+python dataset\generate_nl_description.py --include-signature --refresh-before 2026-06-02T00:00:00Z
 ```
 
 Use `--force` to regenerate all descriptions for the current configuration:
 
 ```powershell
-python dataset\generate_nl_description.py --force
+python dataset\generate_nl_description.py --include-signature --force
 ```
 
 Optional logging:
 
 ```powershell
-python dataset\generate_nl_description.py --log-level DEBUG --log-file dataset\nl_descriptions\generation.log
+python dataset\generate_nl_description.py --include-signature --log-level DEBUG --log-file dataset\nl_descriptions\generation.log
 ```
 
 Run a single API test prompt:
@@ -170,7 +190,7 @@ python dataset\generate_nl_description.py --prompt-file prompt.txt --temperature
 Raw API responses are not stored by default. To keep them:
 
 ```powershell
-python dataset\generate_nl_description.py --keep-raw-responses
+python dataset\generate_nl_description.py --include-signature --keep-raw-responses
 ```
 
 Outputs are written to `dataset/nl_descriptions/`:

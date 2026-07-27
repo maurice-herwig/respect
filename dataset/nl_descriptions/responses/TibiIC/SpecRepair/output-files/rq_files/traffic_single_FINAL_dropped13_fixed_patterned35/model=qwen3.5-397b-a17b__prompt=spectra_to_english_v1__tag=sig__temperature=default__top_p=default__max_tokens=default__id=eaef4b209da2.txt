@@ -1,0 +1,31 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines the behavior of a traffic control system interacting with an environment consisting of vehicle detection and emergency signals.
+
+**Environment Assumptions**
+The environment must adhere to the following constraints:
+1.  **Police Signal Liveness:** The `police` signal must be inactive (`false`) infinitely often. It cannot remain active forever.
+2.  **Car Persistence at Red Light:** If the `car` signal is active (`true`) and the `green` light is inactive (`false`), the `car` signal must remain active (`true`) in the next step.
+3.  **Car Behavior Regarding Emergency:** If the `emergency` signal is inactive (`false`), the `car` signal must be inactive (`false`) in the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements regarding the `green` light output:
+1.  **Initial Condition:** Initially, the system starts in a ready state indicating no pending car requests.
+2.  **Safety and Next-State Rules:** The system tracks the response to car requests using an internal status that is either 'ready' or 'waiting'.
+    *   If the system is in the 'ready' state, and the `car` signal is active while the `green` light is inactive, the system transitions to the 'waiting' state.
+    *   If the system is in the 'ready' state, and either the `car` signal is inactive or the `green` light is active, the system remains in the 'ready' state.
+    *   If the system is in the 'waiting' state, and the `green` light becomes active, the system transitions back to the 'ready' state.
+    *   If the system is in the 'waiting' state, and the `green` light is inactive, the system remains in the 'waiting' state.
+3.  **Liveness Requirement:** The system must return to the 'ready' state infinitely often. This ensures that whenever the `car` signal is active, the `green` light must eventually become active.

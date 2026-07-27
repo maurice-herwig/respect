@@ -1,0 +1,48 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+- deliveriesX: DimX [2]
+- deliveriesY: DimY [2]
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+This specification defines the behavior of a delivery system involving two robots operating within a grid environment coordinated by an elevator. The system manages the horizontal (`robotX`) and vertical (`robotY`) positions of two robots, Robot 0 and Robot 1. The environment controls the vertical position of the elevator (`elevatorY`). The horizontal position of the elevator shaft is fixed at 0.
+
+**Environment Assumptions**
+The environment must adhere to the following constraints regarding the elevator:
+1.  **Movement:** In each step, the elevator's vertical position (`elevatorY`) may change by at most 1 unit (it may move up one floor, down one floor, or remain stationary).
+2.  **Liveness:** The elevator must visit vertical position 0 infinitely often and must visit vertical position 5 infinitely often.
+
+**System Guarantees**
+The system must satisfy the following requirements regarding the robots:
+
+1.  **Initial Conditions:**
+    *   Initially, the vertical position of Robot 0 (`robotY0`) is 5.
+    *   Initially, the vertical position of Robot 1 (`robotY1`) is 5.
+
+2.  **Movement Safety:**
+    *   In each step, the horizontal and vertical positions of each robot may change by at most 1 unit (including remaining stationary).
+
+3.  **Elevator Interaction:**
+    *   Robots may only change their vertical position when located at horizontal position 0.
+    *   To change vertical position, a robot must be aligned with the elevator's vertical position (i.e., `robotY` equals `elevatorY`) while at horizontal position 0.
+    *   If a robot changes its vertical position, it must remain at horizontal position 0 in the next state.
+    *   Whenever a robot is at horizontal position 0, its vertical position must match the elevator's vertical position.
+
+4.  **Liveness:**
+    *   Robot 0 must visit vertical position 0 infinitely often and must visit vertical position 5 infinitely often.
+    *   Robot 1 must visit vertical position 0 infinitely often and must visit vertical position 5 infinitely often.

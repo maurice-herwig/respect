@@ -1,0 +1,43 @@
+
+
+Specification name: Module2
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevator: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**System Overview**
+The system controls two robots, Robot 0 and Robot 1, operating within a grid defined by X coordinates ranging from 0 to DX and Y coordinates ranging from 0 to DY. The environment controls an elevator that moves along the Y axis. The robots must navigate the grid while avoiding collisions and coordinating with the elevator when positioned at X=0.
+
+**Environment Assumptions**
+The environment behaves according to the following constraints:
+- The elevator position changes by at most 1 unit per step (it may move up, down, or stay stationary).
+- The elevator visits floor 0 infinitely often.
+- The elevator visits floor DY infinitely often.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+
+*Initial Conditions*
+- Initially, Robot 0 is at Y coordinate DY.
+- Initially, Robot 1 is at Y coordinate DY.
+
+*Safety Requirements*
+- **Collision Avoidance:** The two robots must never occupy the same position simultaneously. They must differ in either their X coordinate or their Y coordinate at all times.
+- **Swap Prevention:** If both robots are on the same Y coordinate, they cannot exchange X coordinates in a single step.
+- **Elevator Alignment:** Whenever a robot is at X coordinate 0, its Y coordinate must exactly match the current position of the elevator.
+- **Vertical Movement Restriction:** A robot may only change its Y coordinate when its X coordinate is 0. If a robot is at any X coordinate other than 0, its Y coordinate must remain constant.
+
+*Movement Constraints*
+- **Horizontal Movement:** In each step, a robot's X coordinate may change by at most 1 unit (increment, decrement, or stay constant).
+- **Manhattan Movement:** In each step, a robot must keep at least one coordinate constant. It cannot change both its X and Y coordinates simultaneously.

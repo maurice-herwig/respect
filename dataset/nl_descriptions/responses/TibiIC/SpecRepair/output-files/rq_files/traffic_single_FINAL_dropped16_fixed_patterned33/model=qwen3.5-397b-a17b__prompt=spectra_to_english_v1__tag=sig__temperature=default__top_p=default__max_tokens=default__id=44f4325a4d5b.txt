@@ -1,0 +1,37 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The system controls the `green` output signal based on the environment inputs `car`, `emergency`, and `police`.
+
+**Environment Assumptions**
+The environment is assumed to satisfy the following conditions regarding the `car` and `emergency` signals:
+1.  **Car Persistence:** At every step, either an emergency is active, no car is present, or a car will be present in the next step. This implies that if a car is currently present and no emergency is active, the car signal must remain present in the next step.
+2.  **Car Absence Condition:** At every step, if no car is present, then either no car is present currently or no car will be present in the next step.
+
+**System Guarantees**
+The system must satisfy a response relationship between the `car` signal and the `green` signal, managed through an internal state mechanism that begins in state S0.
+
+*Initial Condition:*
+The internal state is initialized to S0.
+
+*Safety Requirements:*
+The system updates its internal state and the `green` signal according to the following rules:
+*   If the system is in state S0 and a car is present while the light is not green, the system transitions to state S1.
+*   If the system is in state S0 and either no car is present or the light is green, the system remains in state S0.
+*   If the system is in state S1 and the light becomes green, the system transitions back to state S0.
+*   If the system is in state S1 and the light is not green, the system remains in state S1.
+
+*Liveness Requirements:*
+The system must return to state S0 infinitely often.
+
+*Overall Behavior:*
+Combined, these requirements ensure that whenever a car is present while the light is not green, the system must eventually set the `green` signal to true.

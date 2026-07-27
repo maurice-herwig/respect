@@ -1,0 +1,34 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+**Overview**
+The system controls a traffic light signal (`green`) based on inputs regarding car presence (`car`), emergency status (`emergency`), and police presence (`police`). The following sections detail the assumptions regarding the environment and the guarantees required from the system.
+
+**Environment Assumptions**
+The environment is expected to adhere to the following behavioral constraints:
+1.  **Police Presence:** The police signal is not permanently active; it must be false infinitely often.
+2.  **Car Behavior at Red Light:** If a car is present, the traffic light is red (green is false), and police are present, the car must remain present in the next time step.
+3.  **Car Behavior at Green Light:** If a car is present and the traffic light is green, the car must leave (become absent) in the next time step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Car Signal Frequency:** The system guarantees that the car signal is false infinitely often.
+2.  **Response to Car Presence:** The system must implement a response mechanism ensuring the light turns green when a car is waiting. This behavior is governed by an internal state machine with two states, S0 (default) and S1 (pending).
+    *   **Initial Condition:** The response logic starts in state S0.
+    *   **Safety and Next-State Rules:**
+        *   If the logic is in state S0, and either no car is present or the light is green while a car is present, the logic remains in state S0.
+        *   If the logic is in state S0, and a car is present while the light is not green, the logic transitions to state S1.
+        *   If the logic is in state S1, and the light becomes green, the logic transitions back to state S0.
+        *   If the logic is in state S1, and the light is not green, the logic remains in state S1.
+    *   **Liveness Requirement:** The system must return to state S0 infinitely often. This implies that if the system enters the pending state S1 (due to a car waiting at a red light), it must eventually turn the light green to return to S0.

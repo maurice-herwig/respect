@@ -1,0 +1,44 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+- deliveriesX: DimX [2]
+- deliveriesY: DimY [2]
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**System Overview**
+The system controls two robots, Robot 0 and Robot 1, operating within a grid where coordinates range from 0 to 5 in both X and Y dimensions. The environment provides target delivery coordinates for two packages. The system must manage the movement of both robots to satisfy delivery and return requirements while maintaining delivery counters.
+
+**Environment Assumptions**
+The environment guarantees that the X-coordinate for both delivery locations is never 5. Specifically, `deliveriesX[0]` and `deliveriesX[1]` will always differ from 5.
+
+**System Guarantees**
+
+*Initial Conditions*
+- The delivery counter for Robot 0 (`packagesDeliveredByRobot0`) initializes to 0.
+- The delivery counter for Robot 1 (`packagesDeliveredByRobot1`) initializes to 0.
+
+*Liveness Requirements*
+- Robot 0 must infinitely often reach the target delivery coordinates specified by `deliveriesX[0]` and `deliveriesY[0]`.
+- Robot 1 must infinitely often reach the target delivery coordinates specified by `deliveriesX[1]` and `deliveriesY[1]`.
+- Robot 0 must infinitely often reach the coordinate (5, 5).
+- Robot 1 must infinitely often reach the coordinate (5, 5).
+
+*Counter Update Rules*
+- The counter `packagesDeliveredByRobot0` increments when Robot 0 is located at its delivery coordinates (`deliveriesX[0]`, `deliveriesY[0]`). It resets to 0 when Robot 0 is located at coordinate (5, 5). If the counter reaches its maximum capacity of 4, it retains that value.
+- The counter `packagesDeliveredByRobot1` increments when Robot 1 is located at its delivery coordinates (`deliveriesX[1]`, `deliveriesY[1]`). It resets to 0 when Robot 1 is located at coordinate (5, 5). If the counter reaches its maximum capacity of 4, it retains that value.
+
+*Safety Requirements*
+- The system must ensure that the value of `packagesDeliveredByRobot0` remains strictly less than 4 at all times.

@@ -1,0 +1,22 @@
+
+
+Specification name: EscapingGuard
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- guardX: Dim
+- guardY: Dim
+
+System variables:
+- robotX: Dim
+- robotY: Dim
+
+The system controls the robot's horizontal and vertical coordinates (`robotX`, `robotY`), while the environment controls the guard's horizontal and vertical coordinates (`guardX`, `guardY`). All coordinates are integers within the defined domain.
+
+An internal turn counter cycles continuously through the values 0, 1, and 2, beginning at 0. This counter dictates the timing of the guard's movement.
+
+The environment adheres to the following assumptions regarding the guard's behavior. The guard's coordinates never change by more than one unit in a single step. During turns 0 and 1, the guard remains stationary. During turn 2, the guard moves towards the robot according to specific conditions: if the robot's X coordinate is greater than the guard's X coordinate plus one, the guard's X coordinate must increase by exactly one in the next step; if the robot's Y coordinate is greater than the guard's Y coordinate plus one, the guard's Y coordinate must increase by exactly one in the next step; if the robot's X coordinate is less than the guard's X coordinate, the guard's X coordinate must decrease by exactly one in the next step.
+
+The system must satisfy the following guarantee. At all times, the robot must not occupy any of the four grid cells comprising the 2x2 area defined by the guard's position. Specifically, the robot's coordinates must never simultaneously match the guard's top-left corner (`guardX`, `guardY`), top-right corner (`guardX`+1, `guardY`), bottom-left corner (`guardX`, `guardY`+1), or bottom-right corner (`guardX`+1, `guardY`+1).

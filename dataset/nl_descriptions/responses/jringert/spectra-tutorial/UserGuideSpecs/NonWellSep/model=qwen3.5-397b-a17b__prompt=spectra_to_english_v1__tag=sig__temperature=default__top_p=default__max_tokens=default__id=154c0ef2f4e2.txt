@@ -1,0 +1,23 @@
+
+
+Specification name: NonWellSep
+
+Environment variables:
+- atStation: boolean
+- cargo: boolean
+
+System variables:
+- mot: {STOP, FWD, BWD}
+- lift: {LIFT, DROP}
+
+The system interacts with an environment where the environment controls the `atStation` and `cargo` sensor inputs, and the system controls the `mot` and `lift` output commands. The specification defines constraints on the environment behavior relative to the system's actions.
+
+**Environment Assumptions**
+
+The environment must satisfy the following requirements:
+
+1.  **Station Availability:** The environment must ensure that the `atStation` signal becomes true infinitely often.
+2.  **Station Stability:** Whenever the system sets `mot` to STOP, the value of `atStation` must remain unchanged in the next step.
+3.  **Lift Action:** Whenever the system sets `lift` to LIFT, the `cargo` signal must be false in the next step.
+4.  **Drop Action:** Whenever the system sets `lift` to DROP, the `cargo` signal must be true in the next step.
+5.  **Backward Motion:** Whenever the system sets `mot` to BWD, the `cargo` signal must be false in the next step.

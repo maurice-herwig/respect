@@ -1,0 +1,29 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+**System Overview**
+The system controls two traffic lights, Green A (`greena`) and Green B (`greenb`), based on inputs from car sensors Car A (`cara`) and Car B (`carb`), and an emergency signal (`emergency`). The variables `cara`, `carb`, and `emergency` are controlled by the environment, while `greena` and `greenb` are controlled by the system.
+
+**System Guarantees**
+The system must satisfy the following response requirements from the initial state onwards:
+1.  **Car A Response:** Whenever Car A is detected (`cara` is true), the system must eventually activate Green A (`greena` is true).
+2.  **Car B Response:** Whenever Car B is detected (`carb` is true), the system must eventually activate Green B (`greenb` is true).
+
+These guarantees ensure that if a car presence signal persists, the corresponding green light will be turned on to allow the car to pass. The system logic begins in a ready state to respond to these inputs.
+
+**Environment Assumptions**
+The environment must adhere to the following constraints globally whenever the emergency signal is active (`emergency` is true):
+1.  **Car A Idle Behavior:** When the emergency signal is active, either Car A is detected in the next step, the emergency signal remains active, or Green A is currently active.
+2.  **Car B Idle Behavior:** When the emergency signal is active, either Car B is detected in the next step, the emergency signal remains active, Green B is currently active, or Car B is not currently detected.
+3.  **Car A Movement Behavior:** When the emergency signal is active, either the emergency signal remains active, Car A is not currently detected, Car A will not be detected in the next step, or Green A is not currently active.
+4.  **Car B Movement Behavior:** When the emergency signal is active, either Car B is not currently detected, Car B will not be detected in the next step, or Green B is not currently active.

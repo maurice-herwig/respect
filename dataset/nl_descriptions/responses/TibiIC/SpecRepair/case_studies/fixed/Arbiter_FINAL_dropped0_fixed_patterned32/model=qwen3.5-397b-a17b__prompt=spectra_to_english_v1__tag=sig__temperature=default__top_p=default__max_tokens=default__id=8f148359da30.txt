@@ -1,0 +1,26 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The Arbiter system manages two grant outputs based on two request inputs and an enable signal.
+
+**Assumptions**
+The specification assumes the following conditions hold globally:
+1. If the system output `g2` is true, then the environment input `a` must be true.
+2. If the environment input `r1` is true, then the environment input `a` must be true.
+
+**Guarantees**
+The system must satisfy the following requirements:
+
+1.  **Request Response:** For both request-grant pairs (`r1`, `g1`) and (`r2`, `g2`), the system initializes in a ready state. If a request (`r1` or `r2`) is true while its corresponding grant (`g1` or `g2`) is false, the system enters a pending state. While in the pending state, the system remains there until the corresponding grant becomes true, at which point it returns to the ready state. The system must infinitely often return to the ready state. This ensures that whenever `r1` is true, `g1` must eventually become true, and whenever `r2` is true, `g2` must eventually become true.
+2.  **Enable Constraint:** Globally, if the enable signal `a` is false, the system must ensure that both `g1` and `g2` are false.
+3.  **Mutual Exclusion:** Globally, the system must ensure that `g1` and `g2` are never true simultaneously; at least one of them must be false at all times.

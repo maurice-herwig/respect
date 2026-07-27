@@ -1,0 +1,28 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The Arbiter system manages grant outputs based on environment request inputs and control signals. The environment controls the boolean inputs `a`, `r1`, and `r2`. The system controls the boolean outputs `g1` and `g2`.
+
+**Environment Assumptions**
+The environment must satisfy the following condition globally: whenever request `r1` is false, the signal `a` must be true.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+
+*   **Initial Conditions:** The internal monitoring states for the response patterns initialize to an idle condition.
+*   **Response Requirements:**
+    *   The system must satisfy a response pattern where the stimulus is `r1` being true and the required response condition is `r1` being true or `g1` being true.
+    *   The system must satisfy a response pattern where the stimulus is `r2` being true and the required response is `g2` being true. This requires that if `r2` is true while `g2` is false, `g2` must eventually become true.
+*   **Safety Requirements:**
+    *   Globally, if `a` is false, then either `r1` was true in the previous step or both `g1` and `g2` are false.
+    *   Globally, either `r1` was true in the previous step, or `g1` is false, or `g2` is false.

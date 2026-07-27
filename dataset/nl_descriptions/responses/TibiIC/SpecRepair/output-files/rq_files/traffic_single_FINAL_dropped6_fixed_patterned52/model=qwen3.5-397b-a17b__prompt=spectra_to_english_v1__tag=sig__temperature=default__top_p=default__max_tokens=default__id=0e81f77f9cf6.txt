@@ -1,0 +1,29 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The system controls the `green` light output based on the environment inputs `car`, `emergency`, and `police`. The behavior is defined by the following assumptions on the environment and guarantees required from the system.
+
+**Environment Assumptions**
+The environment is assumed to satisfy the following conditions:
+1.  **Police Absence:** Infinitely often, the `police` variable must be false.
+2.  **Car Idling Constraint:** Globally, if there was no emergency in the previous step, then either a car will be present in the next step, an emergency is active in the current step, or the light is green in the current step.
+3.  **Car Movement Constraint:** Globally, if the light is green, then either police are present, no car is present in the current step, or no car will be present in the next step. This implies that if the light is green and there is no police, the car cannot remain present from the current step to the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Car Response:** The system must ensure a response relationship between the car and the light using an internal state variable initialized to S0.
+    *   **Initial Condition:** The internal state starts at S0.
+    *   **Safety Requirements:**
+        *   While in state S0, if a car is present, the light must be green to remain in S0. If a car is present and the light is not green, the system must transition to state S1. If no car is present, the system remains in S0.
+        *   While in state S1, if the light becomes green, the system must transition back to S0. If the light is not green, the system remains in S1.
+    *   **Liveness Requirements:** The system must return to state S0 infinitely often. This effectively requires that whenever a car is present while the light is not green, the light must eventually become green.
+2.  **Car Absence:** The system guarantees that infinitely often, the `car` variable is false.

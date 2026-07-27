@@ -1,0 +1,23 @@
+
+
+Specification name: EscapingGuard
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- none
+
+System variables:
+- robotX: Dim
+- robotY: Dim
+
+The system controls the position of a robot on a two-dimensional grid. The coordinates `robotX` and `robotY` are system-controlled outputs restricted to the domain `Dim`, which comprises integers from 0 to 7 (where D equals 7).
+
+The system maintains an internal counter, `turnsCnt`, that cycles through values from 0 to 3. This counter initializes to 0. At each step, if the counter value is less than 3, it increments by 1. When the counter reaches 3, it resets to 0 in the subsequent step, creating a repeating sequence of 0, 1, 2, 3.
+
+The system must satisfy the following guarantees regarding the robot's movement:
+1.  **Movement Granularity:** In every step, the robot's position must change by at most one unit per coordinate. Specifically, the next value for `robotX` and the next value for `robotY` must each be either equal to the current value, the current value plus 1, or the current value minus 1. Coordinates must always remain within the valid range of 0 to 7.
+2.  **Stationary Requirement:** Whenever the internal counter `turnsCnt` is equal to 0, the robot must remain stationary. During these steps, both `robotX` and `robotY` must retain their current values in the next state.
+
+The specification imposes no assumptions on the environment.
