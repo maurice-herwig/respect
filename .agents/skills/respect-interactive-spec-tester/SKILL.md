@@ -23,6 +23,10 @@ added:
   independent-test feedback workflow below on the supplied generated Spectra
   and test result file. If a Spectra repair is justified, also write the
   requested `spec.repair_proposed_<round>.spectra` for participant review.
+  Always write the requested `repair-decision.proposed.md`. For each failed
+  test, classify the likely cause as `specification_error`, `test_error`, or
+  `ambiguous`, give a short rationale, and summarize the Spectra changes made
+  or explain why no Spectra change is proposed.
 - Treat participant-reviewed files as authoritative. Use exactly the reviewed
   environment and system variable names and ownerships.
 

@@ -31,6 +31,8 @@ DEFAULT_TEST_SKILL = "respect-interactive-test-writer"
 
 
 def parse_args() -> argparse.Namespace:
+    """Collect the minimal participant-facing inputs and derive study defaults."""
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("description_file", nargs="?", help="Natural-language task file.")
     parser.add_argument(
@@ -62,10 +64,14 @@ def parse_args() -> argparse.Namespace:
 
 
 def utc_now() -> str:
+    """Return an ISO-8601 UTC timestamp for timeline and summary artifacts."""
+
     return datetime.now(timezone.utc).isoformat()
 
 
 def resolve_repo_path(path_value: str | Path) -> Path:
+    """Resolve a user-supplied path relative to the repository root."""
+
     path = Path(path_value)
     if path.is_absolute():
         return path
@@ -73,11 +79,15 @@ def resolve_repo_path(path_value: str | Path) -> Path:
 
 
 def safe_path_part(value: str, max_length: int = 80) -> str:
+    """Convert arbitrary user/task text into a filesystem-safe path segment."""
+
     safe = re.sub(r"[^A-Za-z0-9._=-]+", "_", value).strip("_")
     return (safe or "value")[:max_length]
 
 
 def ask_yes_no(question: str, *, default: bool) -> bool:
+    """Prompt for a yes/no answer while accepting German and English variants."""
+
     suffix = "Y/n" if default else "y/N"
     while True:
         answer = input(f"{question} [{suffix}] ").strip().lower()
@@ -91,6 +101,8 @@ def ask_yes_no(question: str, *, default: bool) -> bool:
 
 
 def choose_description_file(argument_value: str | None) -> Path:
+    """Select an existing task file or create one from direct text input."""
+
     if argument_value:
         return resolve_repo_path(argument_value)
 
@@ -125,6 +137,8 @@ def choose_description_file(argument_value: str | None) -> Path:
 
 
 def create_ad_hoc_task() -> Path:
+    """Create a task text file from multiline terminal input."""
+
     title = input("Task name (optional): ").strip()
     slug_source = title or datetime.now(timezone.utc).strftime("task_%Y%m%dT%H%M%SZ")
     task_id = safe_path_part(slug_source)
@@ -148,6 +162,8 @@ def create_ad_hoc_task() -> Path:
 
 
 def infer_signature_file(description_file: Path) -> Path | None:
+    """Find an optional signature file next to the selected task description."""
+
     candidates = [
         description_file.with_suffix(".signature.json"),
         description_file.with_suffix(".json"),
@@ -160,26 +176,36 @@ def infer_signature_file(description_file: Path) -> Path | None:
 
 
 def write_text(path: Path, content: str | None) -> None:
+    """Write UTF-8 text, creating parent directories as needed."""
+
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content or "", encoding="utf-8")
 
 
 def write_json(path: Path, payload: Any) -> None:
+    """Write pretty-printed JSON, creating parent directories as needed."""
+
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def load_json(path: Path) -> Any:
+    """Load a UTF-8 JSON file."""
+
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def append_jsonl(path: Path, record: dict[str, Any]) -> None:
+    """Append one JSON record to an audit log in JSON Lines format."""
+
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(record, sort_keys=True) + "\n")
 
 
 def copy_if_exists(source: Path, destination: Path) -> bool:
+    """Copy a file if present and report whether the copy happened."""
+
     if not source.is_file():
         return False
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -188,6 +214,8 @@ def copy_if_exists(source: Path, destination: Path) -> bool:
 
 
 def normalize_result_value(value: str) -> Any:
+    """Normalize simple scalar strings emitted by agent key-value summaries."""
+
     stripped = value.strip()
     if stripped.lower() in {"none", "null", ""}:
         return None
@@ -204,6 +232,8 @@ def normalize_result_value(value: str) -> Any:
 
 
 def extract_last_json_object(text: str) -> dict[str, Any] | None:
+    """Extract the last JSON object from agent stdout, if one is present."""
+
     decoder = json.JSONDecoder()
     for start in range(len(text) - 1, -1, -1):
         if text[start] != "{":
@@ -218,6 +248,8 @@ def extract_last_json_object(text: str) -> dict[str, Any] | None:
 
 
 def extract_key_value_result(text: str) -> dict[str, Any] | None:
+    """Parse simple `key: value` or `key=value` agent result blocks."""
+
     result: dict[str, Any] = {}
     for line in text.splitlines():
         match = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*?)\s*$", line)
@@ -227,10 +259,14 @@ def extract_key_value_result(text: str) -> dict[str, Any] | None:
 
 
 def extract_agent_result(text: str) -> dict[str, Any] | None:
+    """Parse an agent phase result from either JSON or key-value output."""
+
     return extract_last_json_object(text) or extract_key_value_result(text)
 
 
 def extract_path_value(value: Any) -> Path | None:
+    """Convert a possibly empty agent result value into a Path."""
+
     if value is None:
         return None
     text = str(value).strip()
@@ -244,6 +280,8 @@ def extract_path_value(value: Any) -> Path | None:
 
 
 def build_command(agent_command: str, prompt_file: Path) -> tuple[str, bool]:
+    """Build the shell command used to invoke a Codex skill phase."""
+
     if "{prompt_file}" in agent_command:
         return agent_command.format(prompt_file=str(prompt_file)), False
     return agent_command, True
@@ -259,6 +297,8 @@ def run_agent(
     timeout: float,
     dry_run: bool,
 ) -> tuple[int | None, dict[str, Any] | None, str | None]:
+    """Run one skill process and persist its prompt, stdout, and stderr."""
+
     write_text(prompt_file, prompt)
     if dry_run:
         write_text(stdout_file, "")
@@ -290,6 +330,8 @@ def run_agent(
 
 
 def prompt_review(message: str, files: list[Path], *, non_interactive: bool) -> None:
+    """Pause the wizard while the participant reviews or edits files."""
+
     print("\n" + message)
     for path in files:
         print(f"  {path}")
@@ -300,6 +342,8 @@ def prompt_review(message: str, files: list[Path], *, non_interactive: bool) -> 
 
 
 def signature_names(signature: dict[str, Any], key: str) -> list[str]:
+    """Extract variable names from a signature list of strings or objects."""
+
     names: list[str] = []
     for item in signature.get(key) or []:
         if isinstance(item, str):
@@ -310,6 +354,8 @@ def signature_names(signature: dict[str, Any], key: str) -> list[str]:
 
 
 def infer_spec_name(spectra_file: Path) -> str | None:
+    """Read the Spectra module name from a generated specification file."""
+
     if not spectra_file.is_file():
         return None
     match = re.search(r"^\s*spec\s+([A-Za-z_][A-Za-z0-9_]*)", spectra_file.read_text(encoding="utf-8"), re.MULTILINE)
@@ -317,6 +363,8 @@ def infer_spec_name(spectra_file: Path) -> str | None:
 
 
 def build_controller_tests(dry_run: bool) -> subprocess.CompletedProcess[str]:
+    """Compile the Java controller-test runner classes."""
+
     if dry_run:
         return subprocess.CompletedProcess(args=["javac"], returncode=0, stdout="", stderr="dry run\n")
     java_files = [str(path) for path in (REPO_ROOT / "controller_tests" / "src" / "main" / "java").rglob("*.java")]
@@ -332,6 +380,8 @@ def build_controller_tests(dry_run: bool) -> subprocess.CompletedProcess[str]:
 
 
 def compile_test_plan(rtest_file: Path, json_file: Path, dry_run: bool) -> subprocess.CompletedProcess[str]:
+    """Compile a participant-reviewed `.rtest` plan into runner JSON."""
+
     if dry_run:
         return subprocess.CompletedProcess(args=["compile_test_plan"], returncode=0, stdout="", stderr="dry run\n")
     return subprocess.run(
@@ -346,6 +396,8 @@ def compile_test_plan(rtest_file: Path, json_file: Path, dry_run: bool) -> subpr
 
 
 def run_controller_tests(plan_file: Path, result_file: Path, dry_run: bool) -> subprocess.CompletedProcess[str]:
+    """Execute the Java controller-test runner for a compiled test plan."""
+
     if dry_run:
         write_json(result_file, {"results": []})
         return subprocess.CompletedProcess(args=["TestRunner"], returncode=0, stdout="", stderr="dry run\n")
@@ -373,6 +425,8 @@ def run_controller_tests(plan_file: Path, result_file: Path, dry_run: bool) -> s
 
 
 def rebind_test_plan(source_plan: Path, target_plan: Path, *, spec_name: str, spectra_file: Path, controller_dir: Path) -> None:
+    """Reuse a compiled plan with a newly synthesized controller/spec pair."""
+
     plan = load_json(source_plan)
     plan["spec_name"] = spec_name
     plan["spectra_file"] = str(spectra_file)
@@ -381,6 +435,8 @@ def rebind_test_plan(source_plan: Path, target_plan: Path, *, spec_name: str, sp
 
 
 def test_counts(result_file: Path) -> tuple[int, int, int]:
+    """Return total, passed, and failed counts from a controller-test result."""
+
     if not result_file.is_file():
         return 0, 0, 0
     payload = load_json(result_file)
@@ -390,7 +446,138 @@ def test_counts(result_file: Path) -> tuple[int, int, int]:
     return total, passed, total - passed
 
 
+def test_results(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return normalized per-test result objects from supported JSON shapes."""
+
+    results = payload.get("results") or payload.get("tests") or []
+    return [item for item in results if isinstance(item, dict)]
+
+
+def failed_test_results(result_file: Path) -> list[dict[str, Any]]:
+    """Load and return the failed test objects from a result file."""
+
+    if not result_file.is_file():
+        return []
+    payload = load_json(result_file)
+    return [item for item in test_results(payload) if item.get("passed") is not True]
+
+
+def format_json_block(value: Any) -> str:
+    """Format nested result details for inclusion in Markdown reports."""
+
+    return json.dumps(value, indent=2, sort_keys=True)
+
+
+def write_test_failure_report(result_file: Path, report_file: Path, *, round_label: str) -> dict[str, Any]:
+    """Write a participant-readable Markdown report for one test run.
+
+    The returned summary is intentionally small and JSON-serializable so it can
+    also be embedded directly in `timeline.jsonl`.
+    """
+
+    payload = load_json(result_file) if result_file.is_file() else {}
+    results = test_results(payload)
+    failed = [item for item in results if item.get("passed") is not True]
+    passed = sum(1 for item in results if item.get("passed") is True)
+    summary = {
+        "round": round_label,
+        "result_file": str(result_file),
+        "report_file": str(report_file),
+        "total": len(results),
+        "passed": passed,
+        "failed": len(failed),
+        "failed_tests": [str(item.get("name", "<unnamed>")) for item in failed],
+    }
+
+    lines = [
+        f"# Test Feedback {round_label}",
+        "",
+        f"- Result file: `{result_file}`",
+        f"- Total: {summary['total']}",
+        f"- Passed: {summary['passed']}",
+        f"- Failed: {summary['failed']}",
+        "",
+    ]
+    if not failed:
+        lines.extend(["All tests passed.", ""])
+    else:
+        lines.append("## Failed Tests")
+        lines.append("")
+        for index, item in enumerate(failed, start=1):
+            name = item.get("name", "<unnamed>")
+            kind = item.get("kind", "<unknown>")
+            lines.append(f"### {index}. {name}")
+            lines.append("")
+            lines.append(f"- Kind: `{kind}`")
+            if item.get("requirement"):
+                lines.append(f"- Requirement: {item['requirement']}")
+            if item.get("reason"):
+                lines.append(f"- Reason: {item['reason']}")
+            for key in ("trace", "first_mismatch", "details"):
+                if key in item:
+                    lines.append(f"- {key}:")
+                    lines.append("")
+                    lines.append("```json")
+                    lines.append(format_json_block(item[key]))
+                    lines.append("```")
+            lines.append("")
+    write_text(report_file, "\n".join(lines))
+    return summary
+
+
+def print_test_failure_summary(summary: dict[str, Any]) -> None:
+    """Print the concise test summary that participants see in the terminal."""
+
+    print(f"Tests: total={summary['total']}, passed={summary['passed']}, failed={summary['failed']}")
+    if summary["failed"]:
+        print("Failed tests:")
+        for name in summary["failed_tests"]:
+            print(f"  - {name}")
+        print(f"Failure report: {summary['report_file']}")
+
+
+def append_study_log(run_dir: Path, title: str, body: str) -> None:
+    """Append a human-readable event to the run-level study log."""
+
+    log_file = run_dir / "study-log.md"
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    with log_file.open("a", encoding="utf-8") as handle:
+        handle.write(f"\n## {title}\n\n{body.strip()}\n")
+
+
+def write_test_command_failure_report(
+    report_file: Path,
+    *,
+    build_result: subprocess.CompletedProcess[str],
+    compile_result: subprocess.CompletedProcess[str],
+) -> None:
+    """Write a Markdown report for Java build or TestDSL compilation failures."""
+
+    lines = [
+        "# Test Build or DSL Compilation Failed",
+        "",
+        f"- Build return code: {build_result.returncode}",
+        f"- DSL compile return code: {compile_result.returncode}",
+        "",
+        "## Build stderr",
+        "",
+        "```text",
+        build_result.stderr.strip(),
+        "```",
+        "",
+        "## DSL compile stderr",
+        "",
+        "```text",
+        compile_result.stderr.strip(),
+        "```",
+        "",
+    ]
+    write_text(report_file, "\n".join(lines))
+
+
 def phase_prompt_header(skill: str, phase: str, run_dir: Path) -> str:
+    """Build the common prompt prefix used for all skill phases."""
+
     return f"""Use ${skill}.
 
 User-study interactive mode.
@@ -404,6 +591,8 @@ process exits.
 
 
 def build_setup_prompt(skill: str, run_dir: Path, natural_language: str, signature_file: Path | None) -> str:
+    """Prompt the spec skill to propose a signature and decomposition."""
+
     initial_signature = "No starting signature file was provided."
     if signature_file:
         initial_signature = f"Starting signature file: {signature_file}\n\n```json\n{signature_file.read_text(encoding='utf-8')}\n```"
@@ -422,6 +611,8 @@ Natural-language requirements:
 
 
 def build_draft_prompt(skill: str, run_dir: Path, natural_language: str, signature_file: Path, decomposition_file: Path) -> str:
+    """Prompt the spec skill to draft Spectra from reviewed setup artifacts."""
+
     return f"""{phase_prompt_header(skill, "draft", run_dir)}
 
 Reviewed signature file: {signature_file}
@@ -435,6 +626,8 @@ Natural-language requirements:
 
 
 def build_validate_prompt(skill: str, run_dir: Path, natural_language: str, spectra_file: Path, round_index: int) -> str:
+    """Prompt the spec skill to validate, repair if needed, and synthesize."""
+
     artifact_dir = run_dir / f"spec-validation-round-{round_index:02d}"
     return f"""{phase_prompt_header(skill, "validate_and_synthesize", artifact_dir)}
 
@@ -458,6 +651,8 @@ def build_test_prompt(
     spectra_file: Path,
     controller_dir: Path,
 ) -> str:
+    """Prompt the independent test skill to propose a reviewable `.rtest` plan."""
+
     test_dir = run_dir / "tests"
     return f"""{phase_prompt_header(skill, "test_plan_proposal", test_dir)}
 
@@ -485,15 +680,25 @@ def build_feedback_prompt(
     natural_language: str,
     spectra_file: Path,
     test_result_file: Path,
+    failure_report_file: Path,
     round_index: int,
 ) -> str:
+    """Prompt the spec skill to diagnose failed tests and propose a repair."""
+
     artifact_dir = run_dir / f"test-feedback-repair-round-{round_index:02d}"
     return f"""{phase_prompt_header(skill, "test_feedback_repair", artifact_dir)}
 
 Current generated Spectra file: {spectra_file}
 Independent reviewed test result file: {test_result_file}
+Human-readable test failure report: {failure_report_file}
+Required repair decision file: {artifact_dir / "repair-decision.proposed.md"}
 Required repair proposal file: {run_dir / f"spec.repair_proposed_{round_index:02d}.spectra"}
 Required final Spectra file after validation/synthesis: {artifact_dir / "final.spectra"}
+
+In the repair decision file, explain for each failed test whether the likely
+cause is `specification_error`, `test_error`, or `ambiguous`. Include a short
+rationale and list the Spectra changes you propose. If you believe a test is
+wrong or too strong, say so explicitly and explain why.
 
 Natural-language requirements:
 
@@ -509,6 +714,8 @@ def run_skill_phase(
     args: argparse.Namespace,
     timeline: Path,
 ) -> dict[str, Any] | None:
+    """Run one named skill phase and record it in the machine-readable timeline."""
+
     print(f"\nRunning {phase_name}...")
     started = time.perf_counter()
     exit_code, result, error = run_agent(
@@ -679,19 +886,59 @@ def main() -> int:
                 write_text(tests_dir / "compile.stdout.txt", compile_result.stdout)
                 write_text(tests_dir / "compile.stderr.txt", compile_result.stderr)
                 if build_result.returncode == 0 and compile_result.returncode == 0:
-                    test_result_file = tests_dir / "test-results.json"
+                    # Keep the first execution as round-00 so later repair
+                    # rounds line up naturally with round-01, round-02, ...
+                    test_result_file = tests_dir / "test-results-round-00.json"
                     run_result = run_controller_tests(compiled_plan, test_result_file, args.dry_run)
                     write_text(tests_dir / "test-run.stdout.txt", run_result.stdout)
                     write_text(tests_dir / "test-run.stderr.txt", run_result.stderr)
-                    tests_total, tests_passed, tests_failed = test_counts(test_result_file)
-                    print(f"Tests: total={tests_total}, passed={tests_passed}, failed={tests_failed}")
+                    if test_result_file.is_file():
+                        shutil.copy2(test_result_file, tests_dir / "test-results.json")
+                    # The JSON result is complete but not pleasant to inspect
+                    # during a study. The Markdown report is the participant-
+                    # facing feedback layer for failed tests.
+                    failure_report_file = tests_dir / "test-failures-round-00.md"
+                    test_summary = write_test_failure_report(test_result_file, failure_report_file, round_label="round-00")
+                    tests_total = int(test_summary["total"])
+                    tests_passed = int(test_summary["passed"])
+                    tests_failed = int(test_summary["failed"])
+                    print_test_failure_summary(test_summary)
+                    append_jsonl(timeline, {"event": "test_execution", "phase": "test_round_00", "time": utc_now(), **test_summary})
+                    if tests_failed:
+                        append_study_log(
+                            run_dir,
+                            "Test Run round-00",
+                            f"Failed tests: {', '.join(test_summary['failed_tests'])}\n\nSee `{failure_report_file}`.",
+                        )
                 else:
-                    print("Test build or DSL compilation failed. Check the tests directory.")
+                    command_failure_report = tests_dir / "test-build-or-compile-failure.md"
+                    write_test_command_failure_report(
+                        command_failure_report,
+                        build_result=build_result,
+                        compile_result=compile_result,
+                    )
+                    append_jsonl(
+                        timeline,
+                        {
+                            "event": "test_build_or_compile_failed",
+                            "time": utc_now(),
+                            "build_returncode": build_result.returncode,
+                            "compile_returncode": compile_result.returncode,
+                            "report_file": str(command_failure_report),
+                        },
+                    )
+                    append_study_log(run_dir, "Test Build or DSL Compilation Failed", f"See `{command_failure_report}`.")
+                    print(f"Test build or DSL compilation failed. Report: {command_failure_report}")
 
                 for round_index in range(1, args.max_feedback_rounds + 1):
                     if not test_result_file or tests_failed == 0:
                         break
+                    failure_report_file = tests_dir / f"test-failures-round-{round_index - 1:02d}.md"
                     feedback_dir = run_dir / f"phase-05-test-feedback-round-{round_index:02d}"
+                    # The spec skill receives both machine-readable JSON and
+                    # the human-readable report. The required decision file is
+                    # what participants and later study analysis should inspect
+                    # to understand why a repair was proposed.
                     repair_result = run_skill_phase(
                         phase_name=f"test_feedback_repair_{round_index:02d}",
                         prompt=build_feedback_prompt(
@@ -700,16 +947,26 @@ def main() -> int:
                             natural_language=natural_language,
                             spectra_file=final_spec,
                             test_result_file=test_result_file,
+                            failure_report_file=failure_report_file,
                             round_index=round_index,
                         ),
                         phase_dir=feedback_dir,
                         args=args,
                         timeline=timeline,
                     )
+                    repair_decision = run_dir / f"test-feedback-repair-round-{round_index:02d}" / "repair-decision.proposed.md"
                     repair_proposal = run_dir / f"spec.repair_proposed_{round_index:02d}.spectra"
                     if repair_proposal.is_file():
                         shutil.copy2(repair_proposal, reviewed_spec)
-                    prompt_review("Step 5: review/edit the test-feedback repair proposal.", [reviewed_spec], non_interactive=args.non_interactive)
+                    review_files = [reviewed_spec]
+                    if repair_decision.is_file():
+                        review_files.insert(0, repair_decision)
+                        append_study_log(
+                            run_dir,
+                            f"Repair Decision round-{round_index:02d}",
+                            f"See `{repair_decision}`.\n\nRepair proposal: `{repair_proposal}`.",
+                        )
+                    prompt_review("Step 5: review/edit the test-feedback repair proposal and decision.", review_files, non_interactive=args.non_interactive)
                     spec_result = run_skill_phase(
                         phase_name=f"validate_after_test_feedback_{round_index:02d}",
                         prompt=build_validate_prompt(args.spec_skill, run_dir, natural_language, reviewed_spec, round_index),
@@ -725,6 +982,8 @@ def main() -> int:
                     controller_dir = controller_output_dir / "jit" if controller_output_dir and controller_output_dir.name != "jit" else controller_output_dir
                     if controller_dir is None:
                         break
+                    # Reuse the participant-reviewed test plan, but point it at
+                    # the newly synthesized controller before rerunning tests.
                     test_result_file = tests_dir / f"test-results-round-{round_index:02d}.json"
                     replay_plan = tests_dir / f"replay-plan-round-{round_index:02d}.json"
                     rebind_test_plan(
@@ -737,8 +996,20 @@ def main() -> int:
                     run_result = run_controller_tests(replay_plan, test_result_file, args.dry_run)
                     write_text(tests_dir / f"test-run-round-{round_index:02d}.stdout.txt", run_result.stdout)
                     write_text(tests_dir / f"test-run-round-{round_index:02d}.stderr.txt", run_result.stderr)
-                    tests_total, tests_passed, tests_failed = test_counts(test_result_file)
-                    print(f"Retests: total={tests_total}, passed={tests_passed}, failed={tests_failed}")
+                    failure_report_file = tests_dir / f"test-failures-round-{round_index:02d}.md"
+                    test_summary = write_test_failure_report(test_result_file, failure_report_file, round_label=f"round-{round_index:02d}")
+                    tests_total = int(test_summary["total"])
+                    tests_passed = int(test_summary["passed"])
+                    tests_failed = int(test_summary["failed"])
+                    print("Retest result:")
+                    print_test_failure_summary(test_summary)
+                    append_jsonl(timeline, {"event": "test_execution", "phase": f"test_round_{round_index:02d}", "time": utc_now(), **test_summary})
+                    if tests_failed:
+                        append_study_log(
+                            run_dir,
+                            f"Test Run round-{round_index:02d}",
+                            f"Failed tests: {', '.join(test_summary['failed_tests'])}\n\nSee `{failure_report_file}`.",
+                        )
 
     summary = {
         "status": "completed",
