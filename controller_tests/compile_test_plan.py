@@ -239,10 +239,11 @@ def parse_map(value: str, line_number: int) -> dict[str, str]:
 def parse_statement(line: Line) -> tuple[str, str]:
     """Parse either `key value` or `key: value` statement syntax."""
 
-    if ":" in line.text:
-        key, value = line.text.split(":", 1)
-        return key.strip(), value.strip()
     parts = line.text.split(None, 1)
+    if parts and parts[0].endswith(":"):
+        key = parts[0][:-1].strip()
+        value = parts[1].strip() if len(parts) == 2 else ""
+        return key, value
     if len(parts) != 2:
         raise DslError(
             f"Line {line.number}: expected '<key> <value>' or '<key>: <value>'.",

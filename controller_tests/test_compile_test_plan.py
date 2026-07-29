@@ -81,6 +81,84 @@ class RTestCompilerTests(unittest.TestCase):
             ],
         )
 
+    def test_accepts_unquoted_windows_paths_with_drive_colon(self):
+        """Drive-letter colons in Windows paths are part of the value, not key separators."""
+
+        source = textwrap.dedent(r"""
+        controller_dir C:\study\run\synthesis\jit
+        spec_name Door
+        spectra_file C:\study\run\final.spectra
+        environment request
+        system grant
+
+        test declared:
+          kind variable_ownership
+        """)
+
+        plan = compile_rtest(source)
+
+        self.assertEqual(plan["controller_dir"], r"C:\study\run\synthesis\jit")
+        self.assertEqual(plan["spectra_file"], r"C:\study\run\final.spectra")
+
+    def test_accepts_regular_paths_without_drive_colon_after_windows_path_fix(self):
+        """The Windows drive-colon fix must not change normal path parsing."""
+
+        source = textwrap.dedent("""
+        controller_dir generated/out/jit
+        spec_name Door
+        spectra_file generated/final.spectra
+        environment request
+        system grant
+
+        test declared:
+          kind variable_ownership
+        """)
+
+        plan = compile_rtest(source)
+
+        self.assertEqual(plan["controller_dir"], "generated/out/jit")
+        self.assertEqual(plan["spectra_file"], "generated/final.spectra")
+
+    def test_colon_syntax_still_parses_scalars_and_blocks(self):
+        """The DSL's `key: value` and block syntax should still work."""
+
+        source = textwrap.dedent(r"""
+        controller_dir: C:\study\run\synthesis\jit
+        spec_name: Door
+        spectra_file: C:\study\run\final.spectra
+        environment: request
+        system: grant
+
+        test response:
+          kind: eventually_response
+          requirement: "Requests should eventually be granted."
+          trace:
+            request=true
+            request=true
+          when: request=true
+          eventually: grant=true
+          within_steps: 2
+        """)
+
+        plan = compile_rtest(source)
+
+        self.assertEqual(plan["controller_dir"], r"C:\study\run\synthesis\jit")
+        self.assertEqual(plan["spectra_file"], r"C:\study\run\final.spectra")
+        self.assertEqual(plan["environment"], ["request"])
+        self.assertEqual(plan["system"], ["grant"])
+        self.assertEqual(
+            plan["tests"][0],
+            {
+                "name": "response",
+                "kind": "eventually_response",
+                "requirement": "Requests should eventually be granted.",
+                "trace": [{"request": "true"}, {"request": "true"}],
+                "when": {"request": "true"},
+                "eventually": {"grant": "true"},
+                "within_steps": 2,
+            },
+        )
+
     def test_translates_legacy_outputs_alias_to_system_and_outputs(self):
         """Old DSL files using `outputs` should still compile to the new shape."""
 
