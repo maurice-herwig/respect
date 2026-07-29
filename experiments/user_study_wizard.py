@@ -23,7 +23,7 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_AGENT_COMMAND = "codex --ask-for-approval never exec --ephemeral --sandbox danger-full-access -"
+DEFAULT_AGENT_COMMAND = "codex --ask-for-approval never exec --skip-git-repo-check --ephemeral --sandbox danger-full-access -"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "experiments" / "user_study_runs"
 DEFAULT_SPEC_SKILL = "respect-interactive-spec"
 DEFAULT_SPEC_TESTER_SKILL = "respect-interactive-spec-tester"
@@ -403,10 +403,11 @@ def run_controller_tests(plan_file: Path, result_file: Path, dry_run: bool) -> s
         return subprocess.CompletedProcess(args=["TestRunner"], returncode=0, stdout="", stderr="dry run\n")
     classpath_sep = ";" if os.name == "nt" else ":"
     classpath = f"controller_tests/build/classes{classpath_sep}assets/examples/E2_execution/executor.jar"
+    native_library_path = os.pathsep.join([".", "assets/examples/E2_execution"])
     return subprocess.run(
         [
             "java",
-            "-Djava.library.path=.",
+            f"-Djava.library.path={native_library_path}",
             "-cp",
             classpath,
             "respect.controller_tests.TestRunner",
@@ -739,9 +740,9 @@ def run_skill_phase(
     append_jsonl(timeline, record)
     write_json(phase_dir / "parsed_result.json", result or {})
     if exit_code not in {0, None}:
-        print(f"Warning: {phase_name} exited with code {exit_code}. Check {phase_dir / 'agent_stderr.txt'}.")
+        raise SystemExit(f"{phase_name} failed with exit code {exit_code}. Check {phase_dir / 'agent_stderr.txt'}.")
     if error:
-        print(f"Warning: {error}")
+        raise SystemExit(f"{phase_name} failed: {error}. Check {phase_dir / 'agent_stderr.txt'}.")
     return result
 
 
