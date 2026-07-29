@@ -1,0 +1,38 @@
+A restaurant decides how to handle arriving guest groups.
+A group may arrive with or without a reservation.
+Depending on table availability, kitchen status, and group size, the restaurant either seats the group, asks it to wait, declines it, or does nothing if no group is currently arriving.
+
+Assume that guest groups keep arriving repeatedly over time.
+Also assume that tables become available repeatedly over time, because guests eventually finish their meals and leave.
+
+\ \\
+\textbf{Environment-Variables:}
+\begin{itemize}
+\item \texttt{groupArrives}: true if a new guest group is currently arriving.
+\item \texttt{reservation}: true if the arriving group has a reservation.
+\item \texttt{tableAvailable}: true if at least one suitable table is currently available.
+\item \texttt{kitchenOpen}: true if the kitchen is currently open.
+\item \texttt{groupTooLarge}: true if the arriving group is too large for the restaurant.
+\end{itemize}
+
+\ \\
+\textbf{System-Variables:}
+\begin{itemize}
+\item \texttt{decision}: current decision of the restaurant. The possible values are \texttt{NONE}, \texttt{SEAT}, \texttt{WAIT}, and \texttt{DECLINE}.
+\end{itemize}
+
+\ \\
+The following assumptions about the environment can be made:
+\begin{itemize}
+\item Guest groups arrive repeatedly over time.
+\item Tables become available repeatedly over time. \end{itemize}
+
+\ \\
+Table~\ref{tab:restaurant-table-assignment} shows the restaurant's decision for the possible operating situations.
+A value of \texttt{t} means that the signal is true, a value of \texttt{f} means that the signal is false, and \texttt{*} means that the value is irrelevant for that row.
+\begin{table}[h]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{ccccc|c} \toprule \texttt{groupArrives} & \texttt{kitchenOpen} & \texttt{groupTooLarge} & \texttt{tableAvailable} & \texttt{reservation} & \texttt{decision} \\ \midrule \texttt{f} & \texttt{*} & \texttt{*} & \texttt{*} & \texttt{*} & \texttt{NONE} \\ \texttt{t} & \texttt{f} & \texttt{*} & \texttt{*} & \texttt{*} & \texttt{DECLINE} \\ \texttt{t} & \texttt{t} & \texttt{t} & \texttt{*} & \texttt{*} & \texttt{DECLINE} \\ \texttt{t} & \texttt{t} & \texttt{f} & \texttt{t} & \texttt{*} & \texttt{SEAT} \\ \texttt{t} & \texttt{t} & \texttt{f} & \texttt{f} & \texttt{t} & \texttt{WAIT} \\ \texttt{t} & \texttt{t} & \texttt{f} & \texttt{f} & \texttt{f} & \texttt{DECLINE} \\ \bottomrule \end{tabular} }
+\caption{Decision table for the restaurant table assignment.} \label{tab:restaurant-table-assignment}
+\end{table}
