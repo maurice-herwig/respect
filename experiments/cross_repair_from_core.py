@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import subprocess
 import sys
 import threading
@@ -37,6 +38,9 @@ DEFAULT_OUTPUT_DIR = REPO_ROOT / "experiments" / "branched_runs" / "cross_standa
 DEFAULT_INCUMBENT_SKILL = "respect-broker-from-core"
 DEFAULT_CHALLENGER_SKILL = "respect-broker"
 DEFAULT_AGENT_IDS = ("incumbent", "challenger")
+DEFAULT_AGENT_TIMEOUT_SECONDS = 7200.0
+DEFAULT_BROKER_TIMEOUT_SECONDS = 1800.0
+LOGGER = logging.getLogger("cross_repair_from_core")
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,18 +57,37 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--challenger-skill", default=DEFAULT_CHALLENGER_SKILL)
     parser.add_argument("--agent-ids", nargs=2, default=list(DEFAULT_AGENT_IDS))
     parser.add_argument("--round", type=int, default=0, dest="round_id")
-    parser.add_argument("--timeout", type=float, default=1800.0)
-    parser.add_argument("--broker-timeout", type=float, default=600.0)
+    parser.add_argument("--timeout", type=float, default=DEFAULT_AGENT_TIMEOUT_SECONDS)
+    parser.add_argument("--broker-timeout", type=float, default=DEFAULT_BROKER_TIMEOUT_SECONDS)
     parser.add_argument("--max-broker-repair-loops", type=int, default=3)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--log-file", default=None)
+    parser.add_argument("--log-level", default="INFO", choices=("DEBUG", "INFO", "WARNING", "ERROR"))
     return parser.parse_args()
 
 
+def configure_logging(log_level: str = "INFO", log_file: str | None = None) -> None:
+    """Configure console/file logging for a cross-from-core run."""
+    handlers: list[logging.Handler] = [logging.StreamHandler(sys.stderr)]
+    if log_file:
+        log_path = resolve_repo_path(log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_path, encoding="utf-8"))
+    logging.basicConfig(
+        level=getattr(logging, log_level),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        handlers=handlers,
+        force=True,
+    )
+
+
 def utc_now() -> str:
+    """Return an ISO-8601 UTC timestamp for cross-run summaries."""
     return datetime.now(timezone.utc).isoformat()
 
 
 def start_agent(command: str, prompt: str | None) -> subprocess.Popen[str]:
+    """Start one long-running agent process without waiting for completion."""
     return subprocess.Popen(
         command,
         cwd=REPO_ROOT,
@@ -79,6 +102,7 @@ def start_agent(command: str, prompt: str | None) -> subprocess.Popen[str]:
 
 
 def stream_pipe(pipe, label: str, output_stream, chunks: list[str]) -> None:
+    """Mirror a subprocess stream to console while preserving captured text."""
     if pipe is None:
         return
     for line in iter(pipe.readline, ""):
@@ -92,6 +116,7 @@ def finish_agent_live(
     timeout: float,
     agent_id: str,
 ) -> tuple[int | None, str, str, str | None]:
+    """Wait for one agent, stream output, and enforce its equal time budget."""
     stdout_chunks: list[str] = []
     stderr_chunks: list[str] = []
     stdout_thread = threading.Thread(
@@ -121,6 +146,7 @@ def finish_agent_live(
         process.kill()
         exit_code = None
         error = f"Agent timed out after {timeout} seconds."
+        LOGGER.warning("Cross agent timed out: agent=%s timeout=%ss", agent_id, timeout)
 
     stdout_thread.join(timeout=5)
     stderr_thread.join(timeout=5)
@@ -138,6 +164,7 @@ def build_incumbent_prompt(
     round_id: int,
     broker_timeout: float,
     max_broker_repair_loops: int,
+    timeout: float,
     expected_agents: list[str],
     natural_language: str,
     signature_json: str,
@@ -145,6 +172,7 @@ def build_incumbent_prompt(
     core_context_file: Path | None,
     core_controller_output_dir: Path | None,
 ) -> str:
+    """Build the incumbent prompt with full core context and broker metadata."""
     expected_agents_text = " ".join(expected_agents)
     return f"""Use ${skill}.
 
@@ -156,6 +184,7 @@ Run metadata:
 - agent_id: {agent_id}
 - peer_agent_id: {peer_agent_id}
 - round_id: {round_id}
+- agent_timeout_budget_seconds: {timeout}
 - broker_runs_root: {broker_runs_root}
 - broker_timeout_seconds: {broker_timeout}
 - max_broker_repair_loops: {max_broker_repair_loops}
@@ -181,7 +210,9 @@ python experiments\\cross_broker.py submit-and-wait --runs-root {broker_runs_roo
 If broker feedback justifies a Spectra repair under the natural-language
 requirements, validate and synthesize the repaired Spectra, increment the round
 id by 1, and call the same broker command with the new round id. Stop after at
-most {max_broker_repair_loops} broker-repair loops.
+most {max_broker_repair_loops} broker-repair loops. Use the same generous agent
+timeout budget as the challenger; do not stop early unless a nested command
+reports its own timeout or the broker-repair loop limit is reached.
 
 Natural-language requirements:
 
@@ -200,10 +231,12 @@ def build_challenger_prompt(
     round_id: int,
     broker_timeout: float,
     max_broker_repair_loops: int,
+    timeout: float,
     expected_agents: list[str],
     natural_language: str,
     signature_json: str,
 ) -> str:
+    """Build the fresh challenger prompt without any core artifacts."""
     expected_agents_text = " ".join(expected_agents)
     return f"""Use ${skill}.
 
@@ -215,6 +248,7 @@ Run metadata:
 - agent_id: {agent_id}
 - peer_agent_id: {peer_agent_id}
 - round_id: {round_id}
+- agent_timeout_budget_seconds: {timeout}
 - broker_runs_root: {broker_runs_root}
 - broker_timeout_seconds: {broker_timeout}
 - max_broker_repair_loops: {max_broker_repair_loops}
@@ -239,7 +273,9 @@ python experiments\\cross_broker.py submit-and-wait --runs-root {broker_runs_roo
 If broker feedback justifies a Spectra repair under the natural-language
 requirements, validate and synthesize the repaired Spectra, increment the round
 id by 1, and call the same broker command with the new round id. Stop after at
-most {max_broker_repair_loops} broker-repair loops.
+most {max_broker_repair_loops} broker-repair loops. Use the same generous agent
+timeout budget as the incumbent; do not stop early unless a nested command
+reports its own timeout or the broker-repair loop limit is reached.
 
 Natural-language requirements:
 
@@ -248,6 +284,7 @@ Natural-language requirements:
 
 
 def archive_agent_result(agent_dir: Path, stdout: str) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Parse an agent final result and archive its reported artifacts."""
     parsed_result = extract_agent_result(stdout)
     if parsed_result:
         write_json(agent_dir / "parsed_result.json", parsed_result)
@@ -255,7 +292,9 @@ def archive_agent_result(agent_dir: Path, stdout: str) -> tuple[dict[str, Any] |
 
 
 def main() -> int:
+    """Run the asymmetric incumbent/challenger broker experiment."""
     args = parse_args()
+    configure_logging(args.log_level, args.log_file)
     description_file = resolve_repo_path(args.description_file)
     signature_file = resolve_repo_path(args.signature_file)
     core_spectra_file = resolve_repo_path(args.core_spectra_file)
@@ -272,6 +311,15 @@ def main() -> int:
     expected_agents = [incumbent_id, challenger_id]
     started_at = utc_now()
     started = time.perf_counter()
+    LOGGER.info(
+        "Starting cross-from-core run: run_id=%s incumbent=%s challenger=%s timeout=%ss broker_timeout=%ss dry_run=%s",
+        args.run_id,
+        args.incumbent_skill,
+        args.challenger_skill,
+        args.timeout,
+        args.broker_timeout,
+        args.dry_run,
+    )
 
     prompts = {
         incumbent_id: build_incumbent_prompt(
@@ -284,6 +332,7 @@ def main() -> int:
             round_id=args.round_id,
             broker_timeout=args.broker_timeout,
             max_broker_repair_loops=args.max_broker_repair_loops,
+            timeout=args.timeout,
             expected_agents=expected_agents,
             natural_language=natural_language,
             signature_json=signature_json,
@@ -301,6 +350,7 @@ def main() -> int:
             round_id=args.round_id,
             broker_timeout=args.broker_timeout,
             max_broker_repair_loops=args.max_broker_repair_loops,
+            timeout=args.timeout,
             expected_agents=expected_agents,
             natural_language=natural_language,
             signature_json=signature_json,
@@ -358,10 +408,12 @@ def main() -> int:
         }
         write_json(run_dir / "summary.json", summary)
         print(json.dumps(summary, indent=2, sort_keys=True))
+        LOGGER.info("Finished cross-from-core dry-run: run_id=%s summary=%s", args.run_id, repo_relative_path(run_dir / "summary.json"))
         return 0
 
     processes: dict[str, subprocess.Popen[str]] = {}
     for agent_id, (command, pass_prompt_on_stdin) in commands.items():
+        LOGGER.info("Starting cross agent: agent=%s command=%s", agent_id, command)
         processes[agent_id] = start_agent(command, prompts[agent_id] if pass_prompt_on_stdin else None)
 
     results: dict[str, dict[str, Any]] = {}
@@ -401,6 +453,14 @@ def main() -> int:
             "final_spectra_file": artifacts["spectra_file"],
             "controller_output_dir": artifacts["controller_output_dir"],
         }
+        LOGGER.info(
+            "Finished cross agent: agent=%s role=%s status=%s exit_code=%s final=%s",
+            agent_id,
+            role,
+            results[agent_id]["status"],
+            exit_code,
+            results[agent_id]["final_spectra_file"],
+        )
 
     threads = [
         threading.Thread(target=finish_and_record, args=(agent_id, process), daemon=True)
@@ -424,6 +484,7 @@ def main() -> int:
     }
     write_json(run_dir / "summary.json", summary)
     print(json.dumps(summary, indent=2, sort_keys=True))
+    LOGGER.info("Finished cross-from-core run: run_id=%s status=%s summary=%s", args.run_id, status, repo_relative_path(run_dir / "summary.json"))
     return 0 if status == "success" else 1
 
 

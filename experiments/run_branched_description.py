@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -19,8 +20,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from experiments import branched_reconstruction as branched  # noqa: E402
 
+LOGGER = logging.getLogger("run_branched_description")
+
 
 def parse_args() -> argparse.Namespace:
+    """Parse CLI options for one complete branched experiment."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--description-file", required=True)
     parser.add_argument("--signature-file", required=True)
@@ -37,15 +41,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cross-challenger-skill", default=branched.DEFAULT_CROSS_CHALLENGER_SKILL)
     parser.add_argument("--cross-runner", default=branched.DEFAULT_CROSS_RUNNER)
     parser.add_argument("--branches", nargs="+", choices=branched.DEFAULT_BRANCHES, default=list(branched.DEFAULT_BRANCHES))
-    parser.add_argument("--timeout", type=float, default=1800.0)
-    parser.add_argument("--broker-timeout", type=float, default=600.0)
+    parser.add_argument("--timeout", type=float, default=branched.DEFAULT_AGENT_TIMEOUT_SECONDS)
+    parser.add_argument("--broker-timeout", type=float, default=branched.DEFAULT_BROKER_TIMEOUT_SECONDS)
     parser.add_argument("--max-feedback-rounds", type=int, default=3)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--log-file", default=None)
+    parser.add_argument("--log-level", default="INFO", choices=("DEBUG", "INFO", "WARNING", "ERROR"))
     return parser.parse_args()
 
 
 def description_id_for(description_file: Path, explicit_id: str | None) -> str:
+    """Use the explicit id or derive a stable id from description contents."""
     if explicit_id:
         return explicit_id
     content = description_file.read_text(encoding="utf-8")
@@ -53,13 +60,22 @@ def description_id_for(description_file: Path, explicit_id: str | None) -> str:
 
 
 def main() -> int:
+    """Run all selected branches for one description/signature pair."""
     args = parse_args()
+    branched.configure_logging(args.log_level, args.log_file)
     description_file = branched.resolve_repo_path(args.description_file)
     signature_file = branched.resolve_repo_path(args.signature_file)
     output_dir = branched.resolve_repo_path(args.output_dir)
     runs_manifest = output_dir / "runs.jsonl"
 
     description_id = description_id_for(description_file, args.description_id)
+    LOGGER.info(
+        "Starting single-description branched run: description_id=%s branches=%s output=%s dry_run=%s",
+        description_id,
+        ",".join(args.branches),
+        branched.repo_relative_path(output_dir),
+        args.dry_run,
+    )
     record = {
         "description_id": description_id,
         "dataset_id": args.dataset_id or description_id,
@@ -88,6 +104,12 @@ def main() -> int:
         "branches": args.branches,
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
+    LOGGER.info(
+        "Finished single-description branched run: description_id=%s status=%s manifest=%s",
+        description_id,
+        status,
+        branched.repo_relative_path(runs_manifest),
+    )
     return 0 if status not in {"missing_input"} else 1
 
 
