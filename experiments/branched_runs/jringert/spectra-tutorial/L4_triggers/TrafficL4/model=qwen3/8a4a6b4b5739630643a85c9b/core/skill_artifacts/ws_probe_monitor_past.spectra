@@ -1,0 +1,31 @@
+spec TrafficL4
+
+env boolean carA;
+env boolean carB;
+
+sys boolean greenA;
+sys boolean greenB;
+
+monitor boolean waitA1 {
+  initially false;
+  trans waitA1 <-> Y(carA & !carB);
+}
+
+monitor boolean waitA2 {
+  initially false;
+  trans waitA2 <-> Y(waitA1 & !carB);
+}
+
+monitor boolean waitA3 {
+  initially false;
+  trans waitA3 <-> Y(waitA2 & !carB);
+}
+
+asm carA_requires_carB_within_three_steps:
+  always !(waitA3 & !carB);
+
+gar never_both_green:
+  always !(greenA & greenB);
+
+gar serve_A_after_four_waiting_steps:
+  trig [carA & !greenA]{4} |=> [greenA];

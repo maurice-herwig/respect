@@ -7,10 +7,7 @@ sys boolean greenA;
 sys boolean greenB;
 
 asm carA_requires_carB_within_three_steps:
-  trig [carA] |=> ([carB] | ([true][carB]) | ([true][true][carB]) | ([true][true][true][carB]));
+  always !(Y(Y(Y(carA & !carB))) & Y(Y(!carB)) & Y(!carB) & !carB);
 
 gar never_both_green:
   always !(greenA & greenB);
-
-gar serve_A_after_four_waiting_steps:
-  trig [carA & !greenA]{4} |=> [greenA];

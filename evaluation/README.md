@@ -15,6 +15,9 @@ as `test_plan_compile_failed`, `spec_repair_not_well_separated`, or
 `spec_repair_not_synthesized` are kept as skip reasons for later aggregation.
 By default it requires the Spot Python bindings up front, because the
 Buchi/Markov-chain distance is part of the per-artifact evaluation.
+It also defaults to the current `ACADEMIC_CLOUD_MODEL` from `.env`, so older
+branched runs generated from another NL-description model are skipped unless
+`--all-description-models` is passed.
 
 For each generated Spectra artifact recorded by the branched run, the script
 stores syntax/realizability and well-separation checks, repair-loop counters

@@ -1,0 +1,28 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The system controls the `green` traffic light signal based on inputs from the environment regarding car presence, emergency status, and police activity.
+
+**Environment Assumptions**
+The environment is assumed to adhere to the following constraints:
+1.  **Police Signal Activity:** The police signal is not permanently active. It must be false infinitely often throughout the system operation.
+2.  **Car Stability During Green Light:** Whenever the green light is on, if a car is currently present, it must remain present in the next time step. If no car is present, this rule imposes no restriction on the car's next state.
+3.  **Car Movement and Police Interaction:** The environment ensures that the following situation never occurs: the police signal is off, a car is present, the car remains present in the next step, and the green light is on simultaneously. At any time, at least one of these conditions must hold: the police signal is active, no car is present, the car disappears in the next step, or the green light is off.
+
+**System Guarantees**
+The system must satisfy a response requirement between car presence and the green light, enforced by an internal state monitor operating as follows:
+1.  **Initial Condition:** The monitor starts in state S0.
+2.  **Safety Requirements (State Transitions):**
+    *   If the monitor is in state S0, it remains in S0 if either no car is present or both a car is present and the green light is on. It transitions to state S1 if a car is present but the green light is off.
+    *   If the monitor is in state S1, it transitions to S0 if the green light becomes on. It remains in S1 if the green light remains off.
+3.  **Liveness Requirements:** The monitor must return to state S0 infinitely often.
+4.  **Behavioral Implication:** Collectively, these rules require that whenever a car is present, the system must eventually turn the green light on.
