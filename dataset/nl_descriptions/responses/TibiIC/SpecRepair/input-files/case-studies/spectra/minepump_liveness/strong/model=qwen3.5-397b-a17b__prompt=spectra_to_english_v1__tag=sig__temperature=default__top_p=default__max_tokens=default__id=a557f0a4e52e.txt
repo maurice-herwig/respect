@@ -1,0 +1,28 @@
+
+
+Specification name: Minepump
+
+Environment variables:
+- highwater: boolean
+- methane: boolean
+
+System variables:
+- pump: boolean
+- flag: boolean
+
+**Initial Conditions**
+At the start of operation, the water level is not high (`highwater` is false), no methane is detected (`methane` is false), and the pump is off (`pump` is false).
+
+**Environment Assumptions**
+The environment behaves according to the following constraints:
+1.  The conditions `highwater` and `methane` are never true at the same time.
+2.  If the pump is on in the current step and was also on in the previous step, the water level will drop, ensuring `highwater` is false in the next step.
+3.  If the water level is high (`highwater` is true) and the pump is not running continuously (meaning the pump is currently off or was off in the previous step), the water level remains high in the next step.
+4.  Infinitely often, there occur states where methane is absent and remains absent in the subsequent step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  Whenever `highwater` is true, the system must set the `pump` to on in the next step.
+2.  Whenever `methane` is true, the system must set the `pump` to off in the next step.
+3.  Whenever `highwater` is true, the `flag` must be true.
+4.  The `flag` must be false infinitely often throughout the operation.

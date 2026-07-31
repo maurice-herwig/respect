@@ -1,0 +1,34 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The system functions as an arbiter that manages two grant signals, `g1` and `g2`, in response to two request signals, `r1` and `r2`, subject to an enable signal `a`.
+
+**Environment Assumptions**
+The specification assumes the environment adheres to the following constraints regarding signal `a`:
+- Whenever the system output `g1` is true, the environment input `a` must be true.
+- Whenever the system output `g1` was true in the immediately preceding step, the environment input `a` must be true in the current step.
+- Whenever the environment input `r2` is true, the environment input `a` must also be true.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+
+*Initial Conditions*
+- Internally, the system starts in an idle state regarding request tracking, indicating no pending requests without grants.
+
+*Safety Requirements*
+- Mutual Exclusion: The system must never assert both `g1` and `g2` simultaneously. At least one of these signals must be false at all times.
+- Enable Control: If the environment signal `a` is false, the system must ensure that both `g1` and `g2` are false.
+
+*Liveness and Next-State Requirements*
+- Request Response: The system must track each request-grant pair (`r1`/`g1` and `r2`/`g2`) such that if a request occurs without an immediate corresponding grant, the system enters a pending state. The system must remain in this pending state until the corresponding grant is asserted, at which point it returns to the idle state.
+- Eventual Grant: The system must infinitely often return to the idle state for both request channels. This requires that whenever `r1` becomes true, `g1` must eventually become true, and whenever `r2` becomes true, `g2` must eventually become true. Requests cannot remain pending indefinitely.

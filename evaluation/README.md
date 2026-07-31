@@ -5,6 +5,43 @@ experiment results.
 
 Unless a section says otherwise, run commands from the repository root.
 
+## Branched Run Evaluation
+
+`evaluate_branched_runs.py` creates one `evaluation.json` per complete record in
+`experiments/branched_runs/runs.jsonl`. It skips dry-runs, missing-input runs,
+partial runs, and branch runs that did not reach a complete terminal status.
+By default it requires the Spot Python bindings up front, because the
+Buchi/Markov-chain distance is part of the per-artifact evaluation.
+
+For each generated Spectra artifact recorded by the branched run, the script
+stores syntax/realizability and well-separation checks, repair-loop counters
+reported by the branch, test/broker metadata where available, and the
+Buchi/Markov-chain distance to the original `source_spectra_file` from the
+dataset.
+
+```powershell
+python evaluation\evaluate_branched_runs.py --limit 1
+```
+
+With a log file:
+
+```powershell
+python evaluation\evaluate_branched_runs.py --limit 1 --log-file evaluation\branched_runs\eval.log
+```
+
+Outputs are written under:
+
+```text
+evaluation/branched_runs/<run_id>/evaluation.json
+```
+
+Use `--force` to recompute an existing evaluation JSON. Timeouts are recorded in
+the per-artifact validation or distance result; incomplete branched runs are not
+evaluated.
+
+For validation-only debugging without Spot, pass `--allow-missing-spot`; distance
+entries will then be recorded as `distance_unavailable`.
+
 ## Global Evaluation Summary
 
 `summarize_all_results.py` combines the available outputs from the other

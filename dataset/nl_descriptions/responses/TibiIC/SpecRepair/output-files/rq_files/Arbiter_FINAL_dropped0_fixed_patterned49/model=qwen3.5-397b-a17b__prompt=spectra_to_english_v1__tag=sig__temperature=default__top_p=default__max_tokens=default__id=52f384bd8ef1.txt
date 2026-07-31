@@ -1,0 +1,35 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The system functions as an arbiter that manages two request-grant pairs. The environment controls the input signals `a`, `r1`, and `r2`, while the system controls the output signals `g1` and `g2`.
+
+**Environment Assumptions**
+The environment is assumed to adhere to the following constraints:
+- Whenever `r1` is true, `a` must be true.
+- Whenever `g1` is true, `a` must be true.
+
+**System Guarantees**
+The system must satisfy the following behavioral requirements:
+
+1.  **Request-Response Logic:**
+    For the pair `r1` and `g1`, and separately for the pair `r2` and `g2`, the system implements a response protocol using an internal state machine. Initially, the internal state for each pair is idle.
+    -   If a request signal (`r1` or `r2`) is true while the corresponding grant signal (`g1` or `g2`) is false, the system transitions to a pending state.
+    -   If the system is in the pending state, it must transition back to the idle state when the corresponding grant signal becomes true.
+    -   If the system is in the pending state and the grant signal remains false, it remains in the pending state.
+    -   **Liveness:** The system must return to the idle state infinitely often for each pair. This ensures that if a request occurs without an immediate grant, the corresponding grant must eventually become true.
+
+2.  **Global Disable:**
+    Always, if `a` is false, then both `g1` and `g2` must be false.
+
+3.  **Mutual Exclusion:**
+    Always, at least one of `g1` or `g2` must be false. The system must never allow both `g1` and `g2` to be true simultaneously.

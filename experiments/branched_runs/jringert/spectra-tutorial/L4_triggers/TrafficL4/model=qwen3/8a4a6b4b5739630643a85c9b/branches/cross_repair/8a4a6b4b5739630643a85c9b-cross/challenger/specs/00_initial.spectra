@@ -1,0 +1,16 @@
+spec TrafficL4
+
+env boolean carA;
+env boolean carB;
+
+sys boolean greenA;
+sys boolean greenB;
+
+asm carBWithin3AfterCarA:
+  alw (carA -> (carB | next(carB) | next(next(carB)) | next(next(next(carB)))));
+
+gar neverBothGreen:
+  alw !(greenA & greenB);
+
+gar greenAAfterFourWaitingSteps:
+  trig [carA & !greenA]{4} |=> [greenA];

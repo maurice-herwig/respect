@@ -1,0 +1,24 @@
+
+
+Specification name: b
+
+Named domains:
+- Color: {RED, GREEN, BLUE, EMPTY, NOT}
+
+Environment variables:
+- color0: Color
+- color1: Color
+- color2: Color
+
+System variables:
+- a: Int(0..2)
+- b: Int(0..2)
+
+The system controls two integer indices, `a` and `b`, which select from three color inputs provided by the environment: `color0`, `color1`, and `color2`. Two auxiliary variables, `aColor` and `bColor`, track the specific environment colors currently selected by indices `a` and `b`, respectively.
+
+The system must satisfy the following guarantees globally from the initial state onwards:
+1. The variable `aColor` always reflects the environment color indicated by `a`. Specifically, if `a` is 0, `aColor` equals `color0`; if `a` is 1, `aColor` equals `color1`; and if `a` is 2, `aColor` equals `color2`.
+2. Similarly, `bColor` always reflects the environment color indicated by `b` using the same mapping.
+
+The specification operates under the following assumption regarding the interaction context:
+1. At every step, the selected colors swap values in the next state. Specifically, the value of `aColor` in the current state must equal the value of `bColor` in the next state, and the value of `bColor` in the current state must equal the value of `aColor` in the next state.

@@ -1,0 +1,35 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+**Requirements Description**
+
+The system operates as an arbiter managing two request-grant pairs controlled by an enable signal. The environment provides the request signals `r1` and `r2`, along with the enable signal `a`. The system controls the grant signals `g1` and `g2`.
+
+**Environment Assumptions**
+The environment must constrain the behavior of signal `a` relative to `r2` as follows:
+1. Whenever `r2` is true, `a` must be true.
+2. Whenever `r2` was false in the immediately preceding step, `a` must be true in the current step.
+
+**System Guarantees**
+The system must satisfy the following initial, safety, and liveness requirements:
+
+*Initial Conditions:*
+The system initializes its internal request-tracking state to indicate that no requests are pending.
+
+*Safety Requirements:*
+1. **Enable Control:** Globally, if `a` is false, then both `g1` and `g2` must be false. The system must not assert any grant signal when the enable signal is inactive.
+2. **Mutual Exclusion:** Globally, `g1` and `g2` cannot both be true simultaneously. At least one grant signal must be false at all times.
+3. **Request Tracking:** For each pair (`r1`, `g1`) and (`r2`, `g2`), the system tracks whether a request is pending. If a request signal is true while the corresponding grant is false, the system enters a pending state. While in this state, the system maintains the pending status until the corresponding grant becomes true.
+
+*Liveness Requirements:*
+1. **Response:** For both request-grant pairs, the system must return to the "no pending request" state infinitely often. This ensures that whenever a request (`r1` or `r2`) is asserted, the corresponding grant (`g1` or `g2`) must eventually become true to clear the pending status.

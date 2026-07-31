@@ -1,0 +1,31 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines the behavior of a traffic light system interacting with an environment consisting of vehicles, emergency situations, and police presence.
+
+**Interface**
+The environment controls three boolean inputs: `car`, indicating the presence of a vehicle; `emergency`, indicating an emergency status; and `police`, indicating police presence. The system controls one boolean output: `green`, representing the state of the traffic light.
+
+**Initial Conditions**
+Upon initialization, the system starts in a state where no car request is pending.
+
+**Environment Assumptions**
+The environment must adhere to the following constraints regarding vehicle behavior:
+1.  **Vehicle Stability at Red Light:** Whenever there is no emergency (`emergency` is false), if a car is present (`car` is true) and the light is not green (`green` is false), the car must remain present in the next step (`car` remains true).
+2.  **Vehicle Movement Constraint:** The environment ensures that if there are no police (`police` is false) and a car is present (`car` is true) and remains present in the next step, then the light must be green (`green` is true). Effectively, a car will not remain waiting at a red light indefinitely unless police are present.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+1.  **Response to Vehicles:** Whenever a car is present (`car` is true) while the light is not green (`green` is false), the system must eventually turn the light green (`green` becomes true). This ensures that every vehicle request is eventually granted.
+2.  **Safety and State Tracking:** Internally, the system tracks whether a car request is pending. If a car arrives while the light is red, the system enters a pending state. The system remains in this pending state until the light turns green, at which point it returns to a ready state. The system must return to the ready state infinitely often, ensuring that pending requests are not ignored forever.

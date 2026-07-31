@@ -1,0 +1,32 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines the behavior of a traffic light system interacting with an environment that monitors car presence, emergency status, and police activity.
+
+**Environment Assumptions**
+The environment adheres to the following constraints:
+1.  **Car Idle Behavior:** At any time when there is no car present, either a car arrives in the next step, an emergency is currently active, or there continues to be no car present.
+2.  **Car Movement:** Whenever a car is present and the green light is on, the car must depart in the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements regarding the `green` light output:
+
+1.  **Initial Condition:** The internal response monitoring mechanism starts in a ready state.
+2.  **Safety Requirements:** The monitoring mechanism governs the relationship between car presence and the green light as follows:
+    *   If the system is in the ready state and a car is present without the green light being on, the system transitions to a pending state.
+    *   If the system is in the ready state and either no car is present or the green light is on while a car is present, the system remains in the ready state.
+    *   If the system is in the pending state and the green light is on, the system transitions back to the ready state.
+    *   If the system is in the pending state and the green light is off, the system remains in the pending state.
+3.  **Liveness Requirements:** The system must return to the ready state infinitely often.
+4.  **Overall Behavior:** Consequently, whenever a car is present, the system must eventually turn the green light on. The system ensures that no car request remains pending forever.

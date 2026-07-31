@@ -1,0 +1,86 @@
+Use $respect-broker.
+
+This is the fresh challenger side of an asymmetric branched cross-repair run.
+
+Run metadata:
+- run_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\cross_repair\8a4a6b4b5739630643a85c9b-cross\challenger
+- run_id: 8a4a6b4b5739630643a85c9b-cross
+- agent_id: challenger
+- peer_agent_id: incumbent
+- round_id: 0
+- agent_timeout_budget_seconds: 7200.0
+- broker_runs_root: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\cross_repair\8a4a6b4b5739630643a85c9b-cross\broker_runs
+- broker_timeout_seconds: 1800.0
+- max_broker_repair_loops: 3
+- expected_agents: incumbent challenger
+
+Fixed env/sys signature JSON:
+
+```json
+{
+  "environment": [
+    {
+      "name": "carA",
+      "type": "boolean"
+    },
+    {
+      "name": "carB",
+      "type": "boolean"
+    }
+  ],
+  "spec_name": "TrafficL4",
+  "system": [
+    {
+      "name": "greenA",
+      "type": "boolean"
+    },
+    {
+      "name": "greenB",
+      "type": "boolean"
+    }
+  ],
+  "type_definitions": []
+}
+
+```
+
+Start fresh from only the natural-language requirements and fixed signature.
+Do not read core_final.spectra, core_context.full.json, incumbent artifacts,
+source Spectra, benchmark oracles, or distance results.
+
+After successful synthesis, call the broker with the current round id:
+
+```powershell
+python experiments\cross_broker.py submit-and-wait --runs-root C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\cross_repair\8a4a6b4b5739630643a85c9b-cross\broker_runs --run-id 8a4a6b4b5739630643a85c9b-cross --round 0 --agent challenger --spec <path-to-current-spectra-file> --expected-agents incumbent challenger --timeout 1800.0
+```
+
+If broker feedback justifies a Spectra repair under the natural-language
+requirements, validate and synthesize the repaired Spectra, increment the round
+id by 1, and call the same broker command with the new round id. Stop after at
+most 3 broker-repair loops. Use the same generous agent
+timeout budget as the incumbent; do not stop early unless a nested command
+reports its own timeout or the broker-repair loop limit is reached.
+
+Natural-language requirements:
+
+
+
+Specification name: TrafficL4
+
+Environment variables:
+- carA: boolean
+- carB: boolean
+
+System variables:
+- greenA: boolean
+- greenB: boolean
+
+The system controls traffic light signals based on car presence sensors. The environment provides inputs indicating whether cars are present at locations A and B, while the system determines whether the traffic lights for A and B are green.
+
+**Environment Assumptions**
+The environment is assumed to satisfy the following behavior: whenever a car is detected at location A (`carA` is true), a car must be detected at location B (`carB` is true) within 0 to 3 time steps.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Safety:** The system must never allow both `greenA` and `greenB` to be true simultaneously.
+2.  **Liveness:** If a car is present at location A (`carA` is true) while the light for A is not green (`greenA` is false) for 4 consecutive time steps, the system must eventually set `greenA` to true.
