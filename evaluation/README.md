@@ -10,6 +10,9 @@ Unless a section says otherwise, run commands from the repository root.
 `evaluate_branched_runs.py` creates one `evaluation.json` per complete record in
 `experiments/branched_runs/runs.jsonl`. It skips dry-runs, missing-input runs,
 partial runs, and branch runs that did not reach a complete terminal status.
+For branches, only `success` and `tests_passed` count as complete; statuses such
+as `test_plan_compile_failed`, `spec_repair_not_well_separated`, or
+`spec_repair_not_synthesized` are kept as skip reasons for later aggregation.
 By default it requires the Spot Python bindings up front, because the
 Buchi/Markov-chain distance is part of the per-artifact evaluation.
 

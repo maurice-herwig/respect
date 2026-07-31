@@ -51,7 +51,7 @@ from evaluation.signature_mapping import DEFAULT_MAPPING_FILE
 DEFAULT_RUNS_MANIFEST = REPO_ROOT / "experiments" / "branched_runs" / "runs.jsonl"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "evaluation" / "branched_runs"
 DEFAULT_CLI_WRAPPER = REPO_ROOT / ".agents" / "skills" / "respect" / "scripts" / "run_spectra_cli.py"
-COMPLETE_BRANCH_STATUSES = {"success", "completed", "tests_passed"}
+COMPLETE_BRANCH_STATUSES = {"success", "tests_passed"}
 LOGGER = logging.getLogger("evaluate_branched_runs")
 
 
@@ -273,8 +273,32 @@ def is_complete_record(record: dict[str, Any]) -> tuple[bool, str | None]:
         if not isinstance(branch, dict):
             return False, f"missing_branch_{branch_name}"
         if branch.get("status") not in COMPLETE_BRANCH_STATUSES:
-            return False, f"branch_{branch_name}_status_{branch.get('status') or 'missing'}"
+            reason = branch.get("terminal_reason")
+            rounds = branch.get("rounds")
+            if reason is None and isinstance(rounds, list) and rounds:
+                reason = rounds[-1].get("stop_reason")
+            suffix = f"_reason_{reason}" if reason else ""
+            return False, f"branch_{branch_name}_status_{branch.get('status') or 'missing'}{suffix}"
     return True, None
+
+
+def branch_status_summary(record: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Summarize branch terminal states for the per-run evaluation JSON."""
+    summary: dict[str, dict[str, Any]] = {}
+    branches = record.get("branches") or {}
+    for name, branch in branches.items():
+        if not isinstance(branch, dict):
+            continue
+        terminal_reason = branch.get("terminal_reason")
+        rounds = branch.get("rounds")
+        if terminal_reason is None and isinstance(rounds, list) and rounds:
+            terminal_reason = rounds[-1].get("stop_reason")
+        summary[name] = {
+            "status": branch.get("status"),
+            "terminal_reason": terminal_reason,
+            "complete_for_evaluation": branch.get("status") in COMPLETE_BRANCH_STATUSES,
+        }
+    return summary
 
 
 def walk_branch_nodes(branch_name: str, value: Any, path: tuple[str, ...] = ()) -> list[dict[str, Any]]:
@@ -771,6 +795,7 @@ def evaluate_one_branched_run(record: dict[str, Any], args: argparse.Namespace, 
             "branches_requested": record.get("branches_requested"),
             "timeout_seconds": record.get("timeout_seconds"),
             "broker_timeout_seconds": record.get("broker_timeout_seconds"),
+            "branch_statuses": branch_status_summary(record),
         },
         "evaluation": {
             "status": "success",

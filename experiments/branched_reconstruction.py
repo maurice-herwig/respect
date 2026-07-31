@@ -36,6 +36,7 @@ DEFAULT_CROSS_RUNNER = "experiments/cross_repair_from_core.py"
 DEFAULT_BRANCHES = ("no_test", "self_test", "independent_test", "cross_repair")
 DEFAULT_AGENT_TIMEOUT_SECONDS = 7200.0
 DEFAULT_BROKER_TIMEOUT_SECONDS = 1800.0
+SUCCESS_BRANCH_STATUSES = {"success", "tests_passed"}
 LOGGER = logging.getLogger("branched_reconstruction")
 
 if str(REPO_ROOT) not in sys.path:
@@ -284,7 +285,7 @@ def run_key(record: dict[str, Any], args: argparse.Namespace, signature_file: Pa
 
 def completed_run_keys(runs_manifest: Path) -> set[str]:
     """Return completed run keys from an existing branched manifest."""
-    completed = {"success", "partial_success"}
+    completed = {"success"}
     return {
         record["run_key"]
         for record in load_jsonl(runs_manifest)
@@ -785,6 +786,25 @@ def test_counts(result_file: Path) -> tuple[int, int, int]:
     return total, passed, total - passed
 
 
+def independent_terminal_status(rounds: list[dict[str, Any]]) -> str:
+    """Map the final independent-test stop reason to an evaluation-safe status."""
+    if not rounds:
+        return "no_rounds"
+    stop_reason = rounds[-1].get("stop_reason")
+    mapping = {
+        "tests_passed": "tests_passed",
+        "test_agent_failed": "test_agent_failed",
+        "missing_test_plan_path": "missing_test_plan_path",
+        "test_plan_compile_failed": "test_plan_compile_failed",
+        "max_feedback_rounds_reached": "max_rounds_with_failures",
+        "spec_repair_failed": "spec_repair_failed",
+        "spec_repair_not_synthesized": "spec_repair_not_synthesized",
+        "spec_repair_not_well_separated": "spec_repair_not_well_separated",
+        "missing_controller_dir": "missing_controller_dir",
+    }
+    return mapping.get(str(stop_reason), str(stop_reason or "unknown_stop_reason"))
+
+
 def process_no_test(core_artifacts: dict[str, Any], branch_dir: Path) -> dict[str, Any]:
     """Create the no-test baseline by copying the core final Spectra."""
     LOGGER.info("Starting no_test branch: dir=%s", repo_relative_path(branch_dir))
@@ -951,7 +971,17 @@ def process_independent_branch(
         controller_dir = controller_jit_dir(current_controller_output_dir)
         if controller_dir is None:
             LOGGER.error("Independent branch missing controller dir at round %s", round_index)
-            return {"status": "missing_controller_dir", "lineage": "independent_test", "rounds": rounds}
+            if rounds:
+                rounds[-1]["stop_reason"] = rounds[-1].get("stop_reason") or "missing_controller_dir"
+            return {
+                "status": "missing_controller_dir",
+                "lineage": "independent_test",
+                "role": "spec_repair_from_independent_tests",
+                "start_source": "core_final",
+                "parent_spectra_file": repo_relative_path(core_spectra_file),
+                "final_spectra_file": repo_relative_path(current_spectra_file),
+                "rounds": rounds,
+            }
 
         test_dir = round_dir / "test-writer"
         test_prompt = build_test_writer_prompt(
@@ -1095,17 +1125,33 @@ def process_independent_branch(
             round_record["stop_reason"] = "spec_repair_failed"
             LOGGER.warning("Independent spec repair failed at round %s", round_index)
             break
+        if not repair_branch.get("controller_output_dir"):
+            reported = repair_branch.get("reported") or {}
+            if reported.get("well_separation_status") == "non_well_separated":
+                round_record["stop_reason"] = "spec_repair_not_well_separated"
+            else:
+                round_record["stop_reason"] = "spec_repair_not_synthesized"
+            LOGGER.warning(
+                "Independent spec repair produced no synthesized controller at round %s: cli_status=%s well_separation=%s",
+                round_index,
+                reported.get("cli_status"),
+                reported.get("well_separation_status"),
+            )
+            final_spec_branch = repair_branch
+            break
         current_spectra_file = resolve_repo_path(repair_branch["final_spectra_file"])
         current_controller_output_dir = resolve_repo_path(repair_branch["controller_output_dir"]) if repair_branch.get("controller_output_dir") else None
 
     final_spectra = final_spec_branch.get("final_spectra_file") if final_spec_branch else repo_relative_path(core_spectra_file)
+    status = independent_terminal_status(rounds)
     result = {
-        "status": "tests_passed" if rounds and rounds[-1].get("stop_reason") == "tests_passed" else "completed",
+        "status": status,
         "lineage": "independent_test",
         "role": "spec_repair_from_independent_tests",
         "start_source": "core_final",
         "parent_spectra_file": repo_relative_path(core_spectra_file),
         "final_spectra_file": final_spectra,
+        "terminal_reason": rounds[-1].get("stop_reason") if rounds else "no_rounds",
         "rounds": rounds,
     }
     LOGGER.info("Finished independent_test branch: status=%s rounds=%s final=%s", result["status"], len(rounds), result["final_spectra_file"])
@@ -1344,7 +1390,7 @@ def process_record(record: dict[str, Any], args: argparse.Namespace, output_dir:
         status = "missing_input" if not branches else "partial_success"
     elif args.dry_run:
         status = "dry_run"
-    elif all(value in {"success", "tests_passed", "completed"} for value in branch_statuses.values()):
+    elif all(value in SUCCESS_BRANCH_STATUSES for value in branch_statuses.values()):
         status = "success"
     else:
         status = "partial_success"
@@ -1393,7 +1439,7 @@ def process_record(record: dict[str, Any], args: argparse.Namespace, output_dir:
         repo_relative_path(run_dir / "summary.json"),
         repo_relative_path(runs_manifest),
     )
-    if status in {"success", "partial_success", "dry_run"}:
+    if status == "success":
         completed.add(current_run_key)
     return status
 

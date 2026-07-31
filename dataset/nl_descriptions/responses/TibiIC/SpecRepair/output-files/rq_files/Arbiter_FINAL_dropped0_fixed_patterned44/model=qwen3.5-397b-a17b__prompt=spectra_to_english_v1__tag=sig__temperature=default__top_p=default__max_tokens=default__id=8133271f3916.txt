@@ -1,0 +1,33 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The Arbiter system manages two grant signals, `g1` and `g2`, in response to two request signals, `r1` and `r2`, subject to an environment control signal `a`.
+
+**Environment Assumptions**
+The environment is assumed to adhere to the following constraints regarding the signal `a`:
+- Whenever the system sets `g1` to true, the environment must set `a` to true in the same step.
+- Whenever the system set `g1` to true in the previous step, the environment must set `a` to true in the current step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+
+*Initial Conditions*
+- For both request-grant pairs (`r1`/`g1` and `r2`/`g2`), the internal response tracking starts in a satisfied state.
+
+*Safety Requirements*
+- Globally, if `a` is false, then both `g1` and `g2` must be false.
+- Globally, `g1` and `g2` must never be true simultaneously; at least one of them must be false at all times.
+- For each pair (`r1`, `g1`) and (`r2`, `g2`), the system maintains a response state machine. If the system is in the satisfied state and the request is true while the grant is false, the system transitions to a pending state. If the system is in the pending state and the grant is false, it remains in the pending state. If the system is in the pending state and the grant becomes true, it returns to the satisfied state. If the system is in the satisfied state and either the request is false or both the request and grant are true, it remains in the satisfied state.
+
+*Liveness Requirements*
+- For each pair (`r1`, `g1`) and (`r2`, `g2`), the system must visit the satisfied state infinitely often. This ensures that if a request occurs without an immediate grant (entering the pending state), the system must eventually assert the corresponding grant to return to the satisfied state.

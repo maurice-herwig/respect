@@ -29,8 +29,9 @@ another generated-description model, or `--all-description-models` to disable
 this filter intentionally.
 
 Completed records are skipped by default when a matching `run_key` already
-exists in `experiments/branched_runs/runs.jsonl` with status `success` or
-`partial_success`. Use `--force` only when a record should be recomputed.
+exists in `experiments/branched_runs/runs.jsonl` with status `success`.
+`partial_success` is treated as incomplete and can be retried without `--force`.
+Use `--force` only when a successful record should be recomputed.
 
 If `dataset\signatures` does not contain a matching JSON file, the runner falls
 back to the `source_spectra_file` referenced by the NL manifest, extracts the
