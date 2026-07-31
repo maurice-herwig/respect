@@ -1,0 +1,31 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines the behavior of a traffic light system interacting with an environment consisting of car presence, emergency status, and police activity. The system controls the traffic light signal, while the environment controls the presence of cars and external status signals.
+
+**Environment Assumptions**
+The specification assumes the environment behaves according to the following constraints:
+1.  **Police Activity:** The police signal must not remain active indefinitely; it must become inactive infinitely often.
+2.  **Emergency Car Stability:** Whenever an emergency is active, if a car is currently present, it must remain present in the next step. A car cannot disappear immediately during an emergency.
+3.  **Movement and Light Constraint:** At every step, at least one of the following conditions must hold: police activity is active, no car is present, the car will not be present in the next step, or the traffic light is not green. Consequently, the scenario where police is inactive, a car is present continuously across two steps, and the light is green simultaneously is assumed not to occur.
+
+**System Guarantees**
+The system must satisfy a response guarantee ensuring the traffic light reacts to car presence. This behavior is defined by a monitoring pattern with an internal state initialized to S0.
+1.  **Initial Condition:** The monitoring state begins in state S0.
+2.  **Safety and Next-State Rules:**
+    *   If the monitoring state is S0, and either no car is present or the light is green while a car is present, the state remains S0.
+    *   If the monitoring state is S0, and a car is present while the light is not green, the state transitions to S1.
+    *   If the monitoring state is S1, and the light becomes green, the state transitions back to S0.
+    *   If the monitoring state is S1, and the light is not green, the state remains S1.
+3.  **Liveness Requirement:** The monitoring state must return to state S0 infinitely often. This requires that the system cannot allow a condition where a car is present while the light remains not green indefinitely; whenever a car is present, the light must eventually turn green.

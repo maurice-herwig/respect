@@ -6,11 +6,11 @@ env boolean carB;
 sys boolean greenA;
 sys boolean greenB;
 
-asm env_carA_reaches_carB_within_3:
-  trig [carA] |=> ([carB] | [true] [carB] | [true] [true] [carB] | [true] [true] [true] [carB]);
+asm carA_requires_carB_within_three_steps:
+  trig [carA] |=> ([carB] | ([true][carB]) | ([true][true][carB]) | ([true][true][true][carB]));
 
-gar only_one_green:
-  alw !(greenA & greenB);
+gar never_both_green:
+  always !(greenA & greenB);
 
-gar carA_waiting_eventually_greenA:
-  trig [carA & !greenA] [carA & !greenA] [carA & !greenA] [carA & !greenA] |=> [greenA];
+gar serve_A_after_four_waiting_steps:
+  trig [carA & !greenA]{4} |=> [greenA];

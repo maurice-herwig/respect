@@ -1,0 +1,17 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+This specification describes a traffic light control system. The environment controls three boolean inputs: `car`, indicating the presence of a vehicle; `emergency`, indicating an emergency status; and `police`, indicating police presence. The system controls one boolean output: `green`, representing the traffic light state.
+
+The environment is assumed to adhere to specific behavioral constraints. First, the police presence signal must not be active permanently; `police` must be false infinitely often. Second, regarding vehicle behavior, if a car is present, there is no emergency, and the light is not green, the car must remain present in the next time step. Third, if a car is present, there are no police, and the light is green, the car must leave (become absent) in the next time step.
+
+The system must satisfy specific guarantees regarding safety and liveness. Initially, the internal response monitoring state starts at S0. The system must ensure that this internal state returns to S0 infinitely often. Based on the response pattern logic, this means that if a car is present while the light is not green, the system must eventually set the light to green to satisfy the liveness requirement. Additionally, the system guarantees that the `car` signal is false infinitely often.

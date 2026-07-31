@@ -6,28 +6,11 @@ env boolean carB;
 sys boolean greenA;
 sys boolean greenB;
 
-aux Int(0..4) waitA;
+asm carA_requires_carB_within_three_steps:
+  trig [carA] |=> [true]{0,3} [carB];
 
-asm env_carA_reaches_carB_within_3:
-  alw PREV(PREV(PREV(carA))) -> (PREV(PREV(PREV(carB))) | PREV(PREV(carB)) | PREV(carB) | carB);
+gar never_both_green:
+  always !(greenA & greenB);
 
-gar only_one_green:
-  alw !(greenA & greenB);
-
-gar waitA_initial:
-  ini waitA = 0;
-
-gar waitA_reset_on_greenA:
-  trans greenA -> next(waitA) = 0;
-
-gar waitA_increment_while_A_waits:
-  trans (!greenA & carA & waitA < 4) -> next(waitA) = waitA + 1;
-
-gar waitA_remains_pending:
-  trans (!greenA & waitA = 4) -> next(waitA) = 4;
-
-gar waitA_reset_before_pending_if_A_absent:
-  trans (!greenA & !carA & waitA < 4) -> next(waitA) = 0;
-
-gar carA_waiting_eventually_greenA:
-  alwEv waitA < 4;
+gar serve_A_after_four_waiting_steps:
+  trig [carA & !greenA]{4} |=> [greenA];

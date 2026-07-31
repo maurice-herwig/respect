@@ -1,0 +1,17 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The system controls the boolean output variable `green` based on the boolean input variables `car`, `emergency`, and `police`. The variable `emergency` is declared but does not appear in the specified behavior constraints.
+
+The environment is subject to several assumptions. First, the police signal must be inactive infinitely often. Second, regarding the relationship between police, car, and light status: whenever the police variable is true in the next step, it must be the case that either the car variable is true in the next step, the green light is currently true, or the car variable is currently false. Third, regarding car movement and the green light: it is always the case that either the car is currently false, the car will be false in the next step, or the green light is currently false. Effectively, if the green light is true, the car cannot be present in both the current and the next step.
+
+The system must satisfy specific guarantees. The system guarantees that infinitely often, the car variable is false. Additionally, the system must implement a response pattern for the car and green light. This requirement begins in an initial satisfied state. The system remains in the satisfied state if either no car is present or the green light is active while a car is present. If a car is present while the green light is inactive, the system enters a pending state. While in the pending state, the system remains there until the green light becomes active, at which point it returns to the satisfied state. The system must ensure that the satisfied state is visited infinitely often, meaning it cannot remain in the pending state indefinitely.

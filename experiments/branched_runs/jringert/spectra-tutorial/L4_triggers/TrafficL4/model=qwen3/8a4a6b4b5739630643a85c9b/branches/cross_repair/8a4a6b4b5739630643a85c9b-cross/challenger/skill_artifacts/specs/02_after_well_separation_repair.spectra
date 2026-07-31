@@ -1,0 +1,26 @@
+spec TrafficL4
+
+env boolean carA;
+env boolean carB;
+
+sys boolean greenA;
+sys boolean greenB;
+
+type WaitA = {ZERO, ONE, TWO, THREE, FOUR};
+
+monitor WaitA waitA {
+  waitA = ZERO;
+  alw carB -> next(waitA) = ZERO;
+  alw !carB & (waitA = ZERO) & !carA -> next(waitA) = ZERO;
+  alw !carB & (waitA = ZERO) & carA -> next(waitA) = ONE;
+  alw !carB & (waitA = ONE) -> next(waitA) = TWO;
+  alw !carB & (waitA = TWO) -> next(waitA) = THREE;
+  alw !carB & (waitA = THREE) -> next(waitA) = FOUR;
+  alw !carB & (waitA = FOUR) -> next(waitA) = FOUR;
+}
+
+asm alw waitA != FOUR;
+
+gar alw !(greenA & greenB);
+
+gar trig [true]* [carA & !greenA]{4} |=> [true]* [greenA];

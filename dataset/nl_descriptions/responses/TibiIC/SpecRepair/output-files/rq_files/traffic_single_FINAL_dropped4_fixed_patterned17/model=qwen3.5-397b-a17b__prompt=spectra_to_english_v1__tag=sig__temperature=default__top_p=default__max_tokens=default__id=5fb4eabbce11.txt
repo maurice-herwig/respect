@@ -1,0 +1,26 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**System Overview**
+The system controls a traffic light signal `green`. The environment provides inputs regarding vehicle presence `car`, emergency status `emergency`, and police status `police`.
+
+**Environment Assumptions**
+The environment must satisfy the following constraints:
+1.  **Police Signal:** The `police` signal must be false infinitely often; it cannot remain true forever.
+2.  **Car Behavior at Red Light:** Whenever the light is not green (`green` is false), if a car is present (`car` is true), then either an emergency is active (`emergency` is true) or the car must remain present in the next step (`next(car)` is true). If no car is present, this condition is automatically satisfied.
+3.  **Car Movement:** Whenever a car is present (`car` is true), it must be absent in the immediately following step (`next(car)` is false).
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Response to Car Presence:** The system must ensure that the light turns green in response to car presence. This behavior is governed by an internal monitoring state that is initially inactive.
+    *   **Safety:** While the monitoring state is inactive, if a car is present while the light is not green, the system transitions to a pending state. If no car is present or the light is green, the system remains inactive. While in the pending state, the system remains pending if the light is not green, and returns to the inactive state if the light becomes green.
+    *   **Liveness:** The system must return to the inactive monitoring state infinitely often. This ensures that if the system enters the pending state due to a car waiting at a red light, it must eventually turn the light green to exit the pending state.

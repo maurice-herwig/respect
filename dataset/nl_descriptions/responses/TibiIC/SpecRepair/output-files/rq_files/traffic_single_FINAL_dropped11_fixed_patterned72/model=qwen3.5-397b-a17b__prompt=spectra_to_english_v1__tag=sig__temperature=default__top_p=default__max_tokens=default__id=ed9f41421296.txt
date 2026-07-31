@@ -1,0 +1,29 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**System Overview**
+This specification describes a traffic light control system. The environment provides inputs regarding the presence of a car, emergency status, and police presence. The system controls the traffic light signal, specifically whether it is green.
+
+**Environment Assumptions**
+The system operates under the following assumptions regarding the environment's behavior:
+1.  **Police Presence:** Police presence is not permanent. The condition where police are absent must occur infinitely often.
+2.  **Car Persistence:** If a car is currently present, no emergency is active, and the traffic light is not green, the car will remain present in the next step.
+3.  **Green Light Transition:** If the traffic light was not green in the previous step, it cannot become green in the current step unless police are present or the car is absent. If police are absent and a car is present, the light must remain not green.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Initial Condition:** The system starts in a state ready to respond to car presence.
+2.  **Response to Cars:** Whenever a car is present, the traffic light must eventually turn green. The system must ensure this response condition is satisfied infinitely often throughout operation. Specifically, if a car is present and the light is not green, the system must transition to a state where the light eventually becomes green, and it must repeatedly return to a ready state.
+
+**Safety and Liveness Requirements**
+-   **Safety:** The system must maintain the response logic such that it tracks whether a car has been served by a green light. It must not indicate readiness to respond again until the green light condition has been met following a car presence.
+-   **Liveness:** The system must infinitely often reach a state where it is ready to respond to a new car presence, ensuring that cars are not ignored indefinitely.

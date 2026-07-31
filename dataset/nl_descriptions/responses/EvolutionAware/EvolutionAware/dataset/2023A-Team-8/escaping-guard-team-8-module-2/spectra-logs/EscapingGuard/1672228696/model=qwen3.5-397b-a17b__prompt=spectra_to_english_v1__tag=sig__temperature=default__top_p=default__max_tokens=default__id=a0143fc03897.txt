@@ -1,0 +1,28 @@
+
+
+Specification name: EscapingGuard
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- obstacleUpX: Dim
+- obstacleLeftY: Dim
+
+System variables:
+- robotX: Dim
+- robotY: Dim
+
+**Requirements Description**
+
+The system controls a robot operating on a grid where the horizontal position `robotX` and vertical position `robotY` are integers ranging from 0 to 7 (where D=7). The environment provides obstacle coordinates `obstacleUpX` and `obstacleLeftY`, which share the same domain.
+
+**Environment Assumptions**
+The environment must initialize the obstacle coordinates such that `obstacleUpX` is 0 and `obstacleLeftY` is 0. Throughout operation, the environment must ensure that both `obstacleUpX` and `obstacleLeftY` remain strictly less than 7 (i.e., within the range 0 to 6).
+
+**System Guarantees**
+The system must ensure the robot never occupies the grid positions (2,2), (2,3), (2,4), or (2,5).
+
+The system regulates robot movement using an internal cycle counter that ranges from 0 to 2. This counter initializes to 0 and increments automatically at every step, wrapping around to 0 after reaching 2. The robot's movement is constrained based on the current value of this counter:
+1.  **When the counter is 0:** The robot must remain stationary. Both `robotX` and `robotY` must remain unchanged in the next state.
+2.  **When the counter is greater than 0 (1 or 2):** The robot may move. In these steps, the next value of `robotX` must differ from its current value by at most 1 unit (current value minus 1, current value, or current value plus 1). The same constraint applies to `robotY`.

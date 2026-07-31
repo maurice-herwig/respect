@@ -1,0 +1,31 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines a reactive traffic light system. The system controls the `green` light output based on environment inputs indicating the presence of a `car`, an `emergency`, or `police`.
+
+**Environment Assumptions**
+The environment is assumed to satisfy the following constraints:
+1.  **Police Presence:** Infinitely often, the `police` input is false. Police presence is not permanent.
+2.  **Car Behavior When Green:** Whenever the `green` light is true, the environment ensures that either a `car` will be present in the next step, the `green` light is true, or no `car` is currently present.
+3.  **Car Movement:** Whenever there is no `police` presence, a `car` is present, and the `green` light is true, the `car` must not be present in the next step. This ensures cars move away when the light is green and no police are stopping them.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Response to Cars:** The system must respond to the presence of a `car` by eventually turning the `green` light true. Specifically, the system ensures it does not remain indefinitely in a state where a `car` is present and the `green` light is false.
+2.  **Car Frequency:** The system guarantees that infinitely often, the `car` input is false.
+
+**Initial and State Conditions**
+*   **Initial State:** The system's internal response monitoring starts in a satisfied state, ready to detect cars.
+*   **Safety:** The system must maintain the response logic such that if a `car` is detected while the `green` light is false, the system enters a pending state until the `green` light becomes true.
+*   **Liveness:** The system must infinitely often return to the satisfied state, ensuring that the `green` light is activated repeatedly in response to car presence over time.

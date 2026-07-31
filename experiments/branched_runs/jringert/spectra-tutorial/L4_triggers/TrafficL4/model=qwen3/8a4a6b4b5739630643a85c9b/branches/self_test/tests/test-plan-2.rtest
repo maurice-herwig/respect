@@ -1,40 +1,30 @@
-controller_dir C:/Users/mauri/OneDrive/Desktop/Repos/respect/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/core/synthesis/jit
+controller_dir experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/core/synthesis/jit
 spec_name TrafficL4
-spectra_file C:/Users/mauri/OneDrive/Desktop/Repos/respect/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/self_test/specs/00_from_core.spectra
+spectra_file experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/self_test/specs/00_from_core.spectra
 environment carA, carB
 system greenA, greenB
 
 test declared_variables:
   kind variable_ownership
 
-test never_both_green_no_cars:
+test never_both_green_valid_trace:
   kind mutual_exclusion
   requirement "The system must never allow both greenA and greenB to be true simultaneously."
   trace:
     carA=false, carB=false
-    carA=false, carB=false
-    carA=false, carB=false
+    carA=false, carB=true
+    carA=true, carB=true
+    carA=true, carB=true
+    carA=false, carB=true
     carA=false, carB=false
   variables greenA, greenB
 
-test never_both_green_with_A_and_B:
-  kind mutual_exclusion
-  requirement "The system must never allow both greenA and greenB to be true simultaneously."
-  trace:
-    carA=true, carB=true
-    carA=true, carB=true
-    carA=true, carB=true
-    carA=true, carB=true
-    carA=true, carB=true
-    carA=true, carB=true
-    carA=true, carB=true
-    carA=true, carB=true
-  variables greenA, greenB
-
-test carA_wait_eventually_gets_greenA:
+test serve_A_after_sustained_wait:
   kind eventually_response
-  requirement "If carA is present while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
+  requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
   trace:
+    carA=true, carB=true
+    carA=true, carB=true
     carA=true, carB=true
     carA=true, carB=true
     carA=true, carB=true
@@ -45,4 +35,5 @@ test carA_wait_eventually_gets_greenA:
     carA=true, carB=true
   when carA=true, greenA=false
   eventually greenA=true
-  within_steps 8
+  within_steps 10
+  require_closed_obligations true

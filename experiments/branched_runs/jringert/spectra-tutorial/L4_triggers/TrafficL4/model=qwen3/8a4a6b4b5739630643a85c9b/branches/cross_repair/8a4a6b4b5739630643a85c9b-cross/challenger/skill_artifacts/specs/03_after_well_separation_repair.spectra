@@ -6,26 +6,8 @@ env boolean carB;
 sys boolean greenA;
 sys boolean greenB;
 
-monitor boolean waitB1 {
-  !waitB1;
-  alw next(waitB1) = (carA & !carB);
-}
+asm alw !(!carB & Y(!carB) & Y(Y(!carB)) & Y(Y(Y(carA & !carB))));
 
-monitor boolean waitB2 {
-  !waitB2;
-  alw next(waitB2) = (waitB1 & !carB);
-}
+gar alw !(greenA & greenB);
 
-monitor boolean waitB3 {
-  !waitB3;
-  alw next(waitB3) = (waitB2 & !carB);
-}
-
-asm carBWithin3AfterCarA:
-  alw !(waitB3 & !carB);
-
-gar neverBothGreen:
-  alw !(greenA & greenB);
-
-gar greenAAfterFourWaitingSteps:
-  trig [carA & !greenA]{4} |=> [greenA];
+gar trig [true]* [carA & !greenA]{4} |=> [true]* [greenA];

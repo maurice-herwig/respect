@@ -1,0 +1,34 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+**System Behavior Requirements**
+
+This specification defines the behavior of a traffic light control system interacting with car presence sensors and an emergency signal. The environment controls the car signals (`cara`, `carb`) and the `emergency` flag. The system controls the green light signals (`greena`, `greenb`).
+
+**Environment Assumptions**
+
+The environment is assumed to adhere to the following constraints regarding the car signals during emergency conditions:
+
+1.  **Car A Signal During Emergency:** Whenever the `emergency` signal is active, car A's signal (`cara`) must be active in the immediately following step.
+2.  **Car B Signal During Emergency:** Whenever the `emergency` signal is active, at least one of the following must hold: car B's signal (`carb`) becomes active in the next step, the `emergency` signal remains active, green light B (`greenb`) is active, or car B's signal (`carb`) is inactive.
+3.  **Car A Movement During Emergency:** Whenever the `emergency` signal is active, at least one of the following must hold: car A's signal (`cara`) is inactive, car A's signal becomes inactive in the next step, or green light A (`greena`) is inactive.
+4.  **Car B Movement During Emergency:** Whenever the `emergency` signal is active, at least one of the following must hold: the `emergency` signal remains active, car B's signal (`carb`) is inactive, car B's signal becomes inactive in the next step, or green light B (`greenb`) is inactive.
+
+**System Guarantees**
+
+The system must satisfy the following safety and liveness requirements:
+
+1.  **Emergency Light Restriction (Green B):** It is always the case that either the `emergency` signal is inactive or green light B (`greenb`) is inactive. Effectively, if `emergency` is active, `greenb` must be off.
+2.  **Emergency Light Restriction (All Red):** It is always the case that either the `emergency` signal is inactive or both green light A (`greena`) and green light B (`greenb`) are inactive. Effectively, if `emergency` is active, both green lights must be off.
+3.  **Car A Response:** The system monitors car A's presence using a response pattern that initializes in an idle state. Whenever car A's signal (`cara`) is active, the system must eventually ensure that either green light B (`greenb`) is inactive or green light A (`greena`) is active.
+4.  **Car B Response:** The system monitors car B's presence using a response pattern that initializes in an idle state. Whenever car B's signal (`carb`) is active, the system must eventually ensure that green light B (`greenb`) is active.

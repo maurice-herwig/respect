@@ -1,0 +1,40 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- lamp0X: DimX
+- lamp0Y: DimY
+- lamp1X: DimX
+- lamp1Y: DimY
+- elevator: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+This specification defines a reactive system controlling two robots interacting with an environment that includes an elevator and lamp positions. The environment controls the vertical position of the elevator and the positions of two lamps. The system controls the horizontal and vertical coordinates of Robot 0 and Robot 1.
+
+**Environment Assumptions**
+The environment must adhere to the following constraints regarding the elevator:
+1.  **Movement Constraint:** The elevator's vertical position changes by at most one unit per step. It may move up by one, move down by one, or remain stationary.
+2.  **Liveness Requirements:** The elevator must infinitely often reach position 0 and infinitely often reach position DY (the maximum vertical coordinate).
+
+**System Guarantees**
+The system must satisfy the following behavioral guarantees for the robots:
+1.  **Robot 0 Horizontal Movement:** Robot 0's horizontal coordinate (`robotX0`) changes by at most one unit per step. It may increment by one, decrement by one, or remain stationary.
+2.  **Robot 1 Horizontal Movement:** Robot 1's horizontal coordinate (`robotX1`) changes by at most one unit per step. It may increment by one, decrement by one, or remain stationary.
+3.  **Robot 0 Vertical Movement and Elevator Coupling:**
+    *   Whenever Robot 0 is at horizontal position 0, its vertical position (`robotY0`) must exactly match the current vertical position of the elevator.
+    *   Whenever Robot 0 is not at horizontal position 0, its vertical position must remain unchanged in the next step. Effectively, Robot 0 can only change its vertical position when it is located at horizontal position 0, and doing so requires synchronizing with the elevator.
+
+There are no specified constraints on the vertical movement of Robot 1 (`robotY1`) or the behavior of the lamp variables within this specification.

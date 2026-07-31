@@ -1,0 +1,37 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+This specification defines the behavior of a delivery system involving two robots operating within a grid environment where the horizontal dimension ranges from 0 to 5 and the vertical dimension ranges from 0 to 5. The system controls the positions of Robot 0 and Robot 1, while the environment controls the vertical position of an elevator.
+
+**Initial Conditions**
+At the start of operation, both Robot 0 and Robot 1 must be located at vertical coordinate 5.
+
+**Environment Assumptions**
+The environment guarantees that the elevator's vertical position changes by at most 1 unit per step. This means the elevator may move up one level, move down one level, or remain stationary at each step.
+
+**System Guarantees**
+The system must ensure the following behaviors for both robots:
+
+1.  **Movement Constraints:** At each step, each robot's horizontal and vertical coordinates may change by at most 1 unit. A robot may move one step horizontally, one step vertically, both simultaneously, or remain stationary.
+2.  **Elevator Interaction:** Robots are restricted in how they change their vertical position (floor). A robot may only change its vertical coordinate if it is positioned at horizontal coordinate 0. Specifically:
+    *   If a robot is not at horizontal coordinate 0, its vertical coordinate must remain unchanged in the next step.
+    *   If a robot's vertical coordinate changes, its horizontal coordinate in the next state must be 0.
+
+These constraints apply identically to both Robot 0 and Robot 1.

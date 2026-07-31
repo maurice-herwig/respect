@@ -1,0 +1,29 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines a reactive traffic control system. The system controls the traffic light signal (`green`) based on inputs from the environment regarding vehicle presence (`car`), emergency status (`emergency`), and police presence (`police`).
+
+**Environment Assumptions**
+The environment is assumed to behave according to the following constraints:
+1.  **Police Presence:** Police presence is not permanent; there must be infinitely many moments where `police` is false.
+2.  **Car Behavior at Red Light:** When the traffic light is red (`green` is false), the car must either remain present in the next step, an emergency must be active, or the car must not be present currently. Specifically, if the light is red and no emergency is active, a car that is currently present must remain present in the next step.
+3.  **Car Movement:** If there is no police presence and a car is present, the car must not be present in the next step. This implies that without police intervention, a present car must clear the intersection immediately.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Response to Car:** The system must respond to the presence of a car by eventually turning the light green. Specifically, whenever `car` is true while `green` is false, the system must eventually make `green` true. The system initializes in a ready state where no response is pending. If a car is present without the light being green, the system enters a waiting state and must remain there until the light turns green, at which point it returns to the ready state. The system must infinitely often return to this ready state.
+2.  **Car Absence:** The system guarantees that it is infinitely often the case that no car is present (`car` is false).
+
+**Initial Conditions**
+*   The internal logic tracking the response to the car initializes in a state indicating no pending response is required.
