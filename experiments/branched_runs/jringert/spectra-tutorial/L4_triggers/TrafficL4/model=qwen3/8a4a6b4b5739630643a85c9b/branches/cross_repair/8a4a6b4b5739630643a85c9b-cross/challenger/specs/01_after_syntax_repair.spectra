@@ -6,11 +6,8 @@ env boolean carB;
 sys boolean greenA;
 sys boolean greenB;
 
-asm carBWithin3AfterCarA:
-  trig [carA] |=> [!carB]{0,3} [carB];
+asm trig [true]* [carA] |=> [true]{0,3} [carB];
 
-gar neverBothGreen:
-  alw !(greenA & greenB);
+gar always !(greenA & greenB);
 
-gar greenAAfterFourWaitingSteps:
-  trig [carA & !greenA]{4} |=> [greenA];
+gar trig [true]* ([carA & !greenA]){4} |=> [true]* [greenA];

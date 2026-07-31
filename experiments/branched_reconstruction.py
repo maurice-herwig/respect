@@ -293,6 +293,55 @@ def completed_run_keys(runs_manifest: Path) -> set[str]:
     }
 
 
+def branch_has_required_artifact(branch_name: str, branch: dict[str, Any]) -> bool:
+    """Check whether a completed branch still has the artifact needed for reuse."""
+    if branch_name == "core":
+        final_file = branch.get("final_spectra_file")
+        return bool(final_file and resolve_repo_path(final_file).is_file())
+    if branch_name == "cross_repair":
+        summary_file = branch.get("summary_file")
+        return bool(summary_file and resolve_repo_path(summary_file).is_file())
+    final_file = branch.get("final_spectra_file")
+    return bool(final_file and resolve_repo_path(final_file).is_file())
+
+
+def reusable_branch(branch_name: str, branch: Any, *, force: bool) -> bool:
+    """Return whether an existing branch result can be reused for this run."""
+    if force or not isinstance(branch, dict):
+        return False
+    if branch.get("status") not in SUCCESS_BRANCH_STATUSES:
+        return False
+    return branch_has_required_artifact(branch_name, branch)
+
+
+def requested_branch_statuses(branches: dict[str, Any], requested: list[str]) -> dict[str, Any]:
+    """Return statuses for core plus the currently requested experiment branches."""
+    required = ["core", *requested]
+    return {name: (branches.get(name) or {}).get("status") for name in required}
+
+
+def find_resume_summary(description_root: Path, record: dict[str, Any]) -> tuple[Path, dict[str, Any]] | None:
+    """Find an existing branched summary for this NL description, independent of branch set."""
+    if not description_root.is_dir():
+        return None
+    candidates: list[tuple[float, Path, dict[str, Any]]] = []
+    for summary_file in description_root.glob("*/summary.json"):
+        summary = load_json(summary_file)
+        if summary.get("dry_run"):
+            continue
+        if summary.get("description_id") != record.get("description_id"):
+            continue
+        if record.get("dataset_id") and summary.get("dataset_id") != record.get("dataset_id"):
+            continue
+        if not reusable_branch("core", (summary.get("branches") or {}).get("core"), force=False):
+            continue
+        candidates.append((summary_file.stat().st_mtime, summary_file, summary))
+    if not candidates:
+        return None
+    _, summary_file, summary = max(candidates, key=lambda item: item[0])
+    return summary_file, summary
+
+
 def filter_descriptions_by_model(descriptions: list[dict[str, Any]], args: argparse.Namespace) -> tuple[list[dict[str, Any]], str | None]:
     """Apply the default NL-generation model filter before limit processing."""
     if args.all_description_models:
@@ -1328,11 +1377,26 @@ def process_record(record: dict[str, Any], args: argparse.Namespace, output_dir:
 
     description_stem = description_relative_stem(response_file)
     core_run_id = current_run_key[:24]
-    run_dir = output_dir / description_stem / core_run_id
+    description_root = output_dir / description_stem
+    run_dir = description_root / core_run_id
+    existing_summary_file = run_dir / "summary.json"
+    existing_summary = load_json(existing_summary_file) if existing_summary_file.is_file() and not args.force and not args.dry_run else {}
+    if not existing_summary and not args.force and not args.dry_run:
+        resume_candidate = find_resume_summary(description_root, record)
+        if resume_candidate:
+            existing_summary_file, existing_summary = resume_candidate
+            run_dir = existing_summary_file.parent
+            core_run_id = run_dir.name
+            LOGGER.info(
+                "Resuming existing branched run for description_id=%s run_id=%s summary=%s",
+                record.get("description_id"),
+                core_run_id,
+                repo_relative_path(existing_summary_file),
+            )
     started_at = utc_now()
     started = time.perf_counter()
     error = None
-    branches: dict[str, Any] = {}
+    branches: dict[str, Any] = dict(existing_summary.get("branches") or {})
     LOGGER.info(
         "Starting branched record: description_id=%s dataset_id=%s run_id=%s branches=%s dry_run=%s",
         record.get("description_id"),
@@ -1356,17 +1420,25 @@ def process_record(record: dict[str, Any], args: argparse.Namespace, output_dir:
         signature = load_json(signature_file)
         signature_json = json.dumps(signature, indent=2, sort_keys=True)
         core_dir = run_dir / "core"
-        core_prompt = build_core_prompt(args.core_skill, core_dir, natural_language, signature_json, args.timeout)
-        LOGGER.info("Starting core branch: skill=%s dir=%s", args.core_skill, repo_relative_path(core_dir))
-        core_branch = process_agent_branch(
-            branch="core",
-            role="shared_core",
-            prompt=core_prompt,
-            branch_dir=core_dir,
-            args=args,
-        )
-        core_branch.update({"start_source": "fresh", "parent_spectra_file": None})
-        branches["core"] = core_branch
+        if reusable_branch("core", branches.get("core"), force=args.force):
+            core_branch = branches["core"]
+            LOGGER.info(
+                "Reusing completed core branch: status=%s final=%s",
+                core_branch.get("status"),
+                core_branch.get("final_spectra_file"),
+            )
+        else:
+            core_prompt = build_core_prompt(args.core_skill, core_dir, natural_language, signature_json, args.timeout)
+            LOGGER.info("Starting core branch: skill=%s dir=%s", args.core_skill, repo_relative_path(core_dir))
+            core_branch = process_agent_branch(
+                branch="core",
+                role="shared_core",
+                prompt=core_prompt,
+                branch_dir=core_dir,
+                args=args,
+            )
+            core_branch.update({"start_source": "fresh", "parent_spectra_file": None})
+            branches["core"] = core_branch
         LOGGER.info("Core branch completed: status=%s final=%s", core_branch.get("status"), core_branch.get("final_spectra_file"))
 
         core_spectra = resolve_repo_path(core_branch["final_spectra_file"]) if core_branch.get("final_spectra_file") else None
@@ -1375,64 +1447,76 @@ def process_record(record: dict[str, Any], args: argparse.Namespace, output_dir:
 
         if args.dry_run or (core_branch.get("status") == "success" and core_spectra and core_spectra.is_file()):
             if "no_test" in args.branches:
-                branches["no_test"] = (
-                    {"status": "dry_run", "lineage": "no_test", "role": "baseline", "start_source": "core_final"}
-                    if args.dry_run
-                    else process_no_test(core_branch, run_dir / "branches" / "no_test")
-                )
+                if reusable_branch("no_test", branches.get("no_test"), force=args.force):
+                    LOGGER.info("Reusing completed no_test branch: final=%s", branches["no_test"].get("final_spectra_file"))
+                else:
+                    branches["no_test"] = (
+                        {"status": "dry_run", "lineage": "no_test", "role": "baseline", "start_source": "core_final"}
+                        if args.dry_run
+                        else process_no_test(core_branch, run_dir / "branches" / "no_test")
+                    )
             if "self_test" in args.branches:
-                self_prompt = build_self_test_prompt(
-                    skill=args.self_test_skill,
-                    run_dir=run_dir / "branches" / "self_test",
-                    natural_language=natural_language,
-                    signature_json=signature_json,
-                    core_spectra_file=core_spectra or Path("<core_final.spectra>"),
-                    core_context_file=core_context,
-                    controller_output_dir=core_controller,
-                    max_feedback_rounds=args.max_feedback_rounds,
-                    timeout=args.timeout,
-                )
-                self_branch = process_agent_branch(
-                    branch="self_test",
-                    role="self_test_from_core",
-                    prompt=self_prompt,
-                    branch_dir=run_dir / "branches" / "self_test",
-                    args=args,
-                )
-                self_branch.update({"start_source": "core_final", "parent_spectra_file": repo_relative_path(core_spectra) if core_spectra else "<core_final.spectra>"})
-                branches["self_test"] = self_branch
+                if reusable_branch("self_test", branches.get("self_test"), force=args.force):
+                    LOGGER.info("Reusing completed self_test branch: final=%s", branches["self_test"].get("final_spectra_file"))
+                else:
+                    self_prompt = build_self_test_prompt(
+                        skill=args.self_test_skill,
+                        run_dir=run_dir / "branches" / "self_test",
+                        natural_language=natural_language,
+                        signature_json=signature_json,
+                        core_spectra_file=core_spectra or Path("<core_final.spectra>"),
+                        core_context_file=core_context,
+                        controller_output_dir=core_controller,
+                        max_feedback_rounds=args.max_feedback_rounds,
+                        timeout=args.timeout,
+                    )
+                    self_branch = process_agent_branch(
+                        branch="self_test",
+                        role="self_test_from_core",
+                        prompt=self_prompt,
+                        branch_dir=run_dir / "branches" / "self_test",
+                        args=args,
+                    )
+                    self_branch.update({"start_source": "core_final", "parent_spectra_file": repo_relative_path(core_spectra) if core_spectra else "<core_final.spectra>"})
+                    branches["self_test"] = self_branch
             if "independent_test" in args.branches:
-                branches["independent_test"] = process_independent_branch(
-                    branch_dir=run_dir / "branches" / "independent_test",
-                    natural_language=natural_language,
-                    signature=signature,
-                    signature_json=signature_json,
-                    core_spectra_file=core_spectra or Path("<core_final.spectra>"),
-                    core_context_file=core_context,
-                    core_controller_output_dir=core_controller,
-                    args=args,
-                )
+                if reusable_branch("independent_test", branches.get("independent_test"), force=args.force):
+                    LOGGER.info("Reusing completed independent_test branch: final=%s", branches["independent_test"].get("final_spectra_file"))
+                else:
+                    branches["independent_test"] = process_independent_branch(
+                        branch_dir=run_dir / "branches" / "independent_test",
+                        natural_language=natural_language,
+                        signature=signature,
+                        signature_json=signature_json,
+                        core_spectra_file=core_spectra or Path("<core_final.spectra>"),
+                        core_context_file=core_context,
+                        core_controller_output_dir=core_controller,
+                        args=args,
+                    )
             if "cross_repair" in args.branches:
-                branches["cross_repair"] = process_cross_branch(
-                    branch_dir=run_dir / "branches" / "cross_repair",
-                    description_file=response_file,
-                    signature_file=signature_file,
-                    core_spectra_file=core_spectra or Path("<core_final.spectra>"),
-                    core_context_file=core_context,
-                    core_controller_output_dir=core_controller,
-                    core_run_id=core_run_id,
-                    args=args,
-                )
+                if reusable_branch("cross_repair", branches.get("cross_repair"), force=args.force):
+                    LOGGER.info("Reusing completed cross_repair branch: summary=%s", branches["cross_repair"].get("summary_file"))
+                else:
+                    branches["cross_repair"] = process_cross_branch(
+                        branch_dir=run_dir / "branches" / "cross_repair",
+                        description_file=response_file,
+                        signature_file=signature_file,
+                        core_spectra_file=core_spectra or Path("<core_final.spectra>"),
+                        core_context_file=core_context,
+                        core_controller_output_dir=core_controller,
+                        core_run_id=core_run_id,
+                        args=args,
+                    )
         else:
             error = "Core branch did not produce a final Spectra file; branches were not run."
             LOGGER.warning(error)
 
-    branch_statuses = {name: branch.get("status") for name, branch in branches.items()}
+    branch_statuses = requested_branch_statuses(branches, list(args.branches))
     if error:
         status = "missing_input" if not branches else "partial_success"
     elif args.dry_run:
         status = "dry_run"
-    elif all(value in SUCCESS_BRANCH_STATUSES for value in branch_statuses.values()):
+    elif branch_statuses and all(value in SUCCESS_BRANCH_STATUSES for value in branch_statuses.values()):
         status = "success"
     else:
         status = "partial_success"

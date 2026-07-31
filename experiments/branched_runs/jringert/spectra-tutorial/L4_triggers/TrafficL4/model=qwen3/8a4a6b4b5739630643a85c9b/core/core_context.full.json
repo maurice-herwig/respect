@@ -2,13 +2,11 @@
   "natural_language_summary": {
     "spec_name": "TrafficL4",
     "environment_assumptions": [
-      "The environment provides carA and carB sensors.",
-      "The stated requirement is that whenever carA is true, carB must become true within 0 to 3 time steps."
+      "Whenever carA is true, carB must be true within 0 to 3 time steps."
     ],
     "system_guarantees": [
-      "The system controls greenA and greenB.",
-      "greenA and greenB must never be true simultaneously.",
-      "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually make greenA true."
+      "greenA and greenB are never true simultaneously.",
+      "If carA is true while greenA is false for 4 consecutive time steps, greenA must eventually become true."
     ]
   },
   "signature": {
@@ -39,35 +37,29 @@
   "controller_output_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\core\\synthesis",
   "well_separation_status": "well_separated",
   "repair_counters": {
-    "repair_loops": 3,
-    "syntax_repair_loops": 1,
+    "repair_loops": 1,
+    "syntax_repair_loops": 0,
     "unrealizable_repair_loops": 0,
-    "well_separation_repair_loops": 2
+    "well_separation_repair_loops": 1
   },
   "intermediate_spectra_files": {
     "initial": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\core\\specs\\00_initial.spectra",
     "after_syntax_repair": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\core\\specs\\01_after_syntax_repair.spectra",
-    "after_unrealizable_repair": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\core\\specs\\02_after_unrealizable_repair.spectra",
+    "after_unrealizable_repair": null,
     "after_well_separation_repair": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\core\\specs\\03_after_well_separation_repair.spectra"
   },
   "diagnostic_files": {
-    "well_separation": [
-      "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\core\\diagnostics\\well-separation-0.json",
-      "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\core\\diagnostics\\well-separation-1.json",
-      "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\core\\diagnostics\\well-separation-2.json"
-    ],
-    "unrealizable": [],
-    "unrealizable_core": []
+    "well_separation_initial": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\core\\diagnostics\\well-separation-0.json",
+    "well_separation_final": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\core\\diagnostics\\well-separation-1.json",
+    "synthesis": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\core\\diagnostics\\synthesis.json"
   },
   "repair_log_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\core\\repair_log.jsonl",
   "modeling_decisions": [
-    "Used fixed environment variables carA and carB and fixed system variables greenA and greenB.",
-    "The mutual exclusion requirement is encoded as an always guarantee.",
-    "The four-consecutive-step wait for A is encoded as a Spectra trigger from four consecutive states satisfying carA and not greenA to a future state satisfying greenA.",
-    "The initial faithful 0-to-3 environment response was realizable but non-well-separated. A nested-next safety repair was rejected by the CLI as double priming. A past-time three-step repair remained non-well-separated. The final well-separated model strengthens the environment assumption to require carB in the same or next step after carA; this implies the stated within-three upper bound but excludes allowed two- and three-step delays."
+    "The initial Spectra trigger directly encodes the natural-language 0-to-3 step environment response and is realizable.",
+    "The CLI reported the faithful 0-to-3 trigger encoding as non-well-separated.",
+    "The final core uses the well-separated one-step implication always (carA -> (carB | next(carB))). This implies the stated within-three upper bound, but is stronger than the full set of environment behaviors allowed by the natural-language requirement."
   ],
   "unresolved_ambiguities": [
-    "The natural-language environment assumption permits carB responses at delays 0, 1, 2, or 3. The final synthesized well-separated core uses delays 0 or 1 only due to CLI well-separation constraints observed during repair."
-  ],
-  "blocked_by_nl_conflict": false
+    "Whether downstream branches should preserve the well-separated strengthening or attempt a different encoding of the full 0-to-3 environment response."
+  ]
 }
