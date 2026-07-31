@@ -1,0 +1,31 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- lamp0X: DimX
+- lamp0Y: DimY
+- lamp1X: DimX
+- lamp1Y: DimY
+- elevator: DimY
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+The Deliveries specification describes a reactive system coordinating robot movements within a bounded grid defined by dimensions DX and DY.
+
+**Environment Assumptions**
+The environment controls the `elevator` variable. The elevator's position is constrained to change by no more than one unit per transition; it may move up, move down, or remain stationary. Regarding liveness, the elevator must infinitely often return to position 0 and infinitely often reach position DY.
+
+**System Guarantees**
+The system controls the X and Y coordinates for two robots, Robot 0 and Robot 1. Both robots are restricted to moving at most one unit in the X direction and at most one unit in the Y direction during any single transition.
+
+Robot 0 has additional constraints linking its vertical position to the elevator. Whenever Robot 0's X coordinate is 0, its Y coordinate must equal the current elevator position. Furthermore, whenever Robot 0's X coordinate is not 0, its Y coordinate must remain constant in the next state.
