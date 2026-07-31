@@ -1,0 +1,67 @@
+Use $respect-broker-from-core.
+
+This is the incumbent side of an asymmetric branched cross-repair run.
+
+Run metadata:
+- run_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV0\model=llama-3\39c8817443100cc4b0852fba\branches\cross_repair\39c8817443100cc4b0852fba-cross\incumbent
+- run_id: 39c8817443100cc4b0852fba-cross
+- agent_id: incumbent
+- peer_agent_id: challenger
+- round_id: 0
+- agent_timeout_budget_seconds: 7200.0
+- broker_runs_root: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV0\model=llama-3\39c8817443100cc4b0852fba\branches\cross_repair\39c8817443100cc4b0852fba-cross\broker_runs
+- broker_timeout_seconds: 1800.0
+- max_broker_repair_loops: 3
+- expected_agents: incumbent challenger
+
+Fixed env/sys signature JSON:
+
+```json
+{
+  "environment": [],
+  "spec_name": "BotV0",
+  "system": [
+    {
+      "name": "leftM",
+      "type": "MotorCmd"
+    },
+    {
+      "name": "rightM",
+      "type": "MotorCmd"
+    }
+  ],
+  "type_definitions": [
+    {
+      "domain": "{FWD, BWD, STP}",
+      "name": "MotorCmd"
+    }
+  ]
+}
+
+```
+
+Core artifacts:
+- core_final_spectra_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV0\model=llama-3\39c8817443100cc4b0852fba\core\skill_artifacts\final.spectra
+- core_context_full_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV0\model=llama-3\39c8817443100cc4b0852fba\core\skill_artifacts\core_context.full.json
+- core_controller_output_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV0\model=llama-3\39c8817443100cc4b0852fba\core\synthesis
+
+After successful synthesis, call the broker with the current round id:
+
+```powershell
+python experiments\cross_broker.py submit-and-wait --runs-root C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV0\model=llama-3\39c8817443100cc4b0852fba\branches\cross_repair\39c8817443100cc4b0852fba-cross\broker_runs --run-id 39c8817443100cc4b0852fba-cross --round 0 --agent incumbent --spec <path-to-current-spectra-file> --expected-agents incumbent challenger --timeout 1800.0
+```
+
+If broker feedback justifies a Spectra repair under the natural-language
+requirements, validate and synthesize the repaired Spectra, increment the round
+id by 1, and call the same broker command with the new round id. Stop after at
+most 3 broker-repair loops. Use the same generous agent
+timeout budget as the challenger; do not stop early unless a nested command
+reports its own timeout or the broker-repair loop limit is reached.
+
+Natural-language requirements:
+
+The system, BotV0, is a reactive system that interacts with its environment. The system controls two outputs: the left motor command and the right motor command, each of which can be one of three values: forward (FWD), backward (BWD), or stop (STP).
+
+Initially, the system must ensure that both the left motor command and the right motor command are set to stop (STP). This initial condition sets the starting state of the system. 
+
+Note that the environment's behavior and additional system requirements are not specified in this partial description.
