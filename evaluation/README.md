@@ -48,6 +48,35 @@ evaluated.
 For validation-only debugging without Spot, pass `--allow-missing-spot`; distance
 entries will then be recorded as `distance_unavailable`.
 
+## Branched Run Summary
+
+`summarize_branched_runs.py` collects all per-run
+`evaluation/branched_runs/<run_id>/evaluation.json` files and writes basic
+aggregate tables for the branched experiment.
+
+```powershell
+python evaluation\summarize_branched_runs.py
+```
+
+Outputs are written under:
+
+```text
+evaluation/branched_summary/
+```
+
+The basic outputs are:
+
+- `summary.json`: machine-readable aggregate summary
+- `artifacts.csv`: one row per evaluated Spectra artifact
+- `branch_statuses.csv`: one row per branch/run status
+- `by_branch.csv`: aggregate validation, repair-loop, and distance metrics by branch
+- `by_lineage.csv`: the same metrics by branch and lineage
+- `by_stage.csv`: the same metrics by branch, lineage, and intermediate stage
+- `final_by_branch.csv`: final-artifact metrics by branch
+
+If `matplotlib` is installed, the script also writes simple PNG plots under
+`evaluation/branched_summary/plots/`. Use `--no-plots` to skip plot creation.
+
 ## Global Evaluation Summary
 
 `summarize_all_results.py` combines the available outputs from the other

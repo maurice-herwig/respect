@@ -1,0 +1,48 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+- deliveriesX: DimX [2]
+- deliveriesY: DimY [2]
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+This specification defines the behavior of a delivery system involving two robots operating within a grid defined by dimensions `DimX` and `DimY`. The environment provides the target delivery locations, and the system controls the positions of the two robots.
+
+**Environment Assumptions**
+The environment guarantees that the Y-coordinates for both delivery locations are never equal to 5. Specifically, `deliveriesY[0]` and `deliveriesY[1]` will always differ from 5.
+
+**System Guarantees**
+The system must control the robot positions to satisfy the following liveness and counting requirements:
+
+1.  **Robot 0 Delivery and Return:**
+    *   Robot 0 must infinitely often reach the location specified by the environment variables `deliveriesX[0]` and `deliveriesY[0]`.
+    *   Robot 0 must infinitely often return to the coordinates (5, 5).
+
+2.  **Robot 1 Delivery and Return:**
+    *   Robot 1 must infinitely often reach the location specified by the environment variables `deliveriesX[1]` and `deliveriesY[1]`.
+    *   Robot 1 must infinitely often return to the coordinates (5, 5).
+
+3.  **Delivery Counters:**
+    The system maintains two counters to track delivery cycles, `packagesDeliveredByRobot0` and `packagesDeliveredByRobot1`, both ranging from 0 to 3.
+    *   **Initialization:** Both counters initialize to 0.
+    *   **Increment Conditions:**
+        *   `packagesDeliveredByRobot0` increments when Robot 0 is at the location (`deliveriesX[0]`, `deliveriesY[0]`).
+        *   `packagesDeliveredByRobot1` increments when Robot 1 is at the location (`deliveriesX[1]`, `deliveriesY[1]`).
+    *   **Reset Conditions:**
+        *   `packagesDeliveredByRobot0` resets to 0 when Robot 0 is at coordinates (5, 5).
+        *   `packagesDeliveredByRobot1` resets to 0 when Robot 1 is at coordinates (5, 5).
+    *   **Counter Liveness:** The system must ensure that `packagesDeliveredByRobot0` reaches the value 3 infinitely often.
