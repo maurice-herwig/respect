@@ -16,8 +16,24 @@ part of the per-artifact evaluation. It also defaults to the current
 `ACADEMIC_CLOUD_MODEL` from `.env`; pass `--all-description-models` to disable
 that filter.
 
+The main omega-distance uses a substochastic BSCC Markov chain by default:
+internal HOA APs are projected away, no rejecting sink is added, and missing
+transition mass is not renormalized. This avoids the saturation effect where an
+explicit reachable sink is almost surely reached on infinite random traces.
+
+The evaluator also computes a bounded semantic prefix distance by default. It
+samples finite prefixes up to `--bounded-depth` and records mismatch,
+false-positive, false-negative, and Jaccard-style rates under
+`bounded_semantic_distance`.
+
 ```powershell
 python evaluation\evaluate_branched_runs.py --limit 1
+```
+
+To change the bounded prefix depth or sample count:
+
+```powershell
+python evaluation\evaluate_branched_runs.py --limit 1 --bounded-depth 12 --bounded-samples 5000
 ```
 
 With a log file:
@@ -35,6 +51,12 @@ evaluation/branched_runs/<run_id>/evaluation.json
 Use `--force` to recompute existing evaluation JSON files. For validation-only
 debugging without Spot, pass `--allow-missing-spot`; distance entries will then
 be recorded as `distance_unavailable`.
+
+For quick distance debugging, select a specific artifact stage before limiting:
+
+```powershell
+python evaluation\evaluate_branched_runs.py --limit 1 --artifact-stage final --artifact-limit 1 --force
+```
 
 ## Aggregate Summary
 

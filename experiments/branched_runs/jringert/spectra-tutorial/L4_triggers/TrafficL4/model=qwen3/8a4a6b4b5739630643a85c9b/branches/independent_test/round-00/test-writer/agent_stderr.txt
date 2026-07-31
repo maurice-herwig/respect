@@ -7,7 +7,7 @@ approval: never
 sandbox: danger-full-access
 reasoning effort: medium
 reasoning summaries: none
-session id: 019fb811-7d08-75e0-9865-06d566d4c583
+session id: 019fb824-bdc8-7012-bbf3-6ee3e401c778
 --------
 user
 Use $respect-test-writer.
@@ -84,76 +84,12 @@ The system must satisfy the following requirements:
 2.  **Liveness:** If a car is present at location A (`carA` is true) while the light for A is not green (`greenA` is false) for 4 consecutive time steps, the system must eventually set `greenA` to true.
 
 codex
-I’ll use `respect-test-writer` and keep the tests independent of the generated Spectra contents. I’m going to read the skill file and the controller test DSL, then write the `.rtest` plan in the requested directory.
+I’m using the `respect-test-writer` skill and will only read the controller test DSL plus the inputs you provided. I’ll avoid opening the generated Spectra or any core artifacts.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\.agents\\skills\\respect-test-writer\\SKILL.md'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw .agents\\skills\\respect-test-writer\\SKILL.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\controller_tests\\DSL.md'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 800ms:
----
-name: respect-test-writer
-description: Independent ReSpect controller-test writer. Generate controller_tests .rtest plans from natural-language requirements plus a fixed env/sys signature and controller metadata, without reading generated Spectra contents or the specification agent's reasoning. Use for independent-test experiments that reduce self-testing bias.
----
-
-# ReSpect Test Writer
-
-## Research Role
-
-This skill writes independent bounded controller tests for a generated controller:
-
-- Input: natural-language requirements, fixed environment/system signature, `spec_name`, `controller_dir`, `spectra_file` path, and output directory.
-- Output: `.rtest` controller-test DSL plan plus optional DSL compile diagnostics.
-- Allowed sources: the natural-language requirements, fixed signature, controller metadata, and `controller_tests/DSL.md`.
-- Not allowed: reading generated Spectra contents, source/reference Spectra files, the specification agent's stdout/reasoning, repair logs, benchmark oracles, mutation checks, equivalence checks, or distance results.
-
-The goal is to test the natural-language requirements independently of the generated implementation.
-
-## Workflow
-
-1. Read `controller_tests/DSL.md`.
-2. Read the fixed signature from the prompt. Use exactly those environment and system variables.
-3. Derive tests only from the natural-language requirements.
-4. Use `spectra_file` only as a top-level DSL path. Do not open or inspect its contents.
-5. Prefer adversarial tests that could expose incomplete, over-permissive, over-restrictive, wrongly initialized, or unfair controllers. Do not write only happy-path tests.
-6. Include a `variable_ownership` test. Write it explicitly with `env ...` and
-   `sys ...` lists copied from the fixed signature, even though the DSL can infer
-   them from top-level `environment` and `system`. Avoid the compact form
-   `test declared_variables: kind variable_ownership` because it is hard for
-   humans to review.
-7. For every runtime test, include `requirement "<quote or close paraphrase from the NL description>"`.
-8. Use bounded trace, random, or exhaustive modes with conservative bounds. Prefer `max_depth <= 6`, `max_paths <= 256`, `runs <= 50`, and `within_steps <= 10` unless the description gives a bound.
-9. Save the plan as `test-plan.rtest` in the output directory supplied by the prompt.
-10. If asked to compile, run `python controller_tests\compile_test_plan.py <rtest> -o <json>` and repair only DSL/test-plan issues, not Spectra.
-
-## Test Selection
-
-Cover each clearly testable requirement at least once:
-
-- Ownership/signature declarations.
-- Initial output requirements.
-- Safety exclusions and invariants.
-- Immediate implications.
-- Bounded evidence for response/liveness requirements.
-- Small exhaustive exploration for Boolean or small finite input domains.
-
-Do not limit the plan to traces where the controller is expected to behave nicely. Include stress cases when supported by the natural-language requirements, such as simultaneous requests, no requests, persistent one-sided requests, alternating requests, rapid input changes, boundary enum values, and inputs that could reveal over-permissive behavior. Do not turn an unbounded liveness requirement into a hard bounded deadline unless the natural-language text gives that deadline.
-
-If a requirement cannot be tested soundly with bounded controller tests, record it in the final response under `untestable_requirements`.
-
-## Final Response Format
-
-Return a final JSON object or key-value block with:
-
-```text
-test_plan_file: <path>
-compiled_test_plan_file: <path or none>
-dsl_diagnostics_file: <path or none>
-tests_planned: <number>
-untestable_requirements: <number>
-artifact_dir: <path>
-```
-
- succeeded in 861ms:
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw controller_tests\\DSL.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 826ms:
 # ReSpect Controller-Test DSL
 
 This document defines the `.rtest` language used to write Method-3 controller
@@ -852,646 +788,728 @@ requirements:
 Do not assert a concrete output strategy when the natural-language requirement
 allows multiple valid strategies.
 
-codex
-I’ve got the DSL constraints. The plan will avoid assuming a concrete traffic-light schedule, but it can still check ownership, global mutual exclusion, and bounded evidence for the A response requirement under environment traces that satisfy the stated assumption.
-exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "New-Item -ItemType Directory -Force -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer' | Out-Null" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
-2026-07-31T12:06:58.944887Z ERROR codex_core::tools::router: error=Exit code: 1
-Wall time: 1.1 seconds
-Output:
-New-Item : Es wurde kein Parameter gefunden, der dem Parameternamen "LiteralPath" entspricht.
-In Zeile:2 Zeichen:37
-+ New-Item -ItemType Directory -Force -LiteralPath 'C:\Users\mauri\OneD ...
-+                                     ~~~~~~~~~~~~
-    + CategoryInfo          : InvalidArgument: (:) [New-Item], ParameterBindingException
-    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.NewItemCommand
- 
 
- exited 1 in 1118ms:
-New-Item : Es wurde kein Parameter gefunden, der dem Parameternamen "LiteralPath" entspricht.
-In Zeile:2 Zeichen:37
-+ New-Item -ItemType Directory -Force -LiteralPath 'C:\Users\mauri\OneD ...
-+                                     ~~~~~~~~~~~~
-    + CategoryInfo          : InvalidArgument: (:) [New-Item], ParameterBindingException
-    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.NewItemCommand
- 
+ succeeded in 844ms:
+---
+name: respect-test-writer
+description: Independent ReSpect controller-test writer. Generate controller_tests .rtest plans from natural-language requirements plus a fixed env/sys signature and controller metadata, without reading generated Spectra contents or the specification agent's reasoning. Use for independent-test experiments that reduce self-testing bias.
+---
+
+# ReSpect Test Writer
+
+## Research Role
+
+This skill writes independent bounded controller tests for a generated controller:
+
+- Input: natural-language requirements, fixed environment/system signature, `spec_name`, `controller_dir`, `spectra_file` path, and output directory.
+- Output: `.rtest` controller-test DSL plan plus optional DSL compile diagnostics.
+- Allowed sources: the natural-language requirements, fixed signature, controller metadata, and `controller_tests/DSL.md`.
+- Not allowed: reading generated Spectra contents, source/reference Spectra files, the specification agent's stdout/reasoning, repair logs, benchmark oracles, mutation checks, equivalence checks, or distance results.
+
+The goal is to test the natural-language requirements independently of the generated implementation.
+
+## Workflow
+
+1. Read `controller_tests/DSL.md`.
+2. Read the fixed signature from the prompt. Use exactly those environment and system variables.
+3. Derive tests only from the natural-language requirements.
+4. Use `spectra_file` only as a top-level DSL path. Do not open or inspect its contents.
+5. Prefer adversarial tests that could expose incomplete, over-permissive, over-restrictive, wrongly initialized, or unfair controllers. Do not write only happy-path tests.
+6. Include a `variable_ownership` test. Write it explicitly with `env ...` and
+   `sys ...` lists copied from the fixed signature, even though the DSL can infer
+   them from top-level `environment` and `system`. Avoid the compact form
+   `test declared_variables: kind variable_ownership` because it is hard for
+   humans to review.
+7. For every runtime test, include `requirement "<quote or close paraphrase from the NL description>"`.
+8. Use bounded trace, random, or exhaustive modes with conservative bounds. Prefer `max_depth <= 6`, `max_paths <= 256`, `runs <= 50`, and `within_steps <= 10` unless the description gives a bound.
+9. Save the plan as `test-plan.rtest` in the output directory supplied by the prompt.
+10. If asked to compile, run `python controller_tests\compile_test_plan.py <rtest> -o <json>` and repair only DSL/test-plan issues, not Spectra.
+
+## Test Selection
+
+Cover each clearly testable requirement at least once:
+
+- Ownership/signature declarations.
+- Initial output requirements.
+- Safety exclusions and invariants.
+- Immediate implications.
+- Bounded evidence for response/liveness requirements.
+- Small exhaustive exploration for Boolean or small finite input domains.
+
+Do not limit the plan to traces where the controller is expected to behave nicely. Include stress cases when supported by the natural-language requirements, such as simultaneous requests, no requests, persistent one-sided requests, alternating requests, rapid input changes, boundary enum values, and inputs that could reveal over-permissive behavior. Do not turn an unbounded liveness requirement into a hard bounded deadline unless the natural-language text gives that deadline.
+
+If a requirement cannot be tested soundly with bounded controller tests, record it in the final response under `untestable_requirements`.
+
+## Final Response Format
+
+Return a final JSON object or key-value block with:
+
+```text
+test_plan_file: <path>
+compiled_test_plan_file: <path or none>
+dsl_diagnostics_file: <path or none>
+tests_planned: <number>
+untestable_requirements: <number>
+artifact_dir: <path>
+```
+
 
 codex
-The first directory creation command hit a PowerShell parameter compatibility issue, so I’m retrying with the older `-Path` form. No files have been written yet.
+I’ve got the DSL constraints now. I’m going to create a small independent plan that checks ownership, mutual exclusion across concrete and bounded input exploration, and bounded evidence for the A-side response without asserting a specific scheduling strategy.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "New-Item -ItemType Directory -Force -Path 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer' | Out-Null" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 614ms:
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "New-Item -ItemType Directory -Force -Path \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\" | Out-Null" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 634ms:
 codex
-I’m writing the test plan now. The liveness requirement is unbounded, so the `.rtest` file uses bounded response probes as evidence and I’ll report the remaining untestable part explicitly.
+I’m writing the `.rtest` file now. The response tests use persistent A demand traces that satisfy the environment assumption, including the boundary where B appears three steps after A.
 apply patch
 patch: completed
 C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\independent_test\round-00\test-writer\test-plan.rtest
 diff --git a/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
-index 9719abae133499b900370e4df79b5e8cee789f09..7aea13c8eb814487251f9b52793c45d884e40c0d
+index 7aea13c8eb814487251f9b52793c45d884e40c0d..e9f33122438d16d9614c590166ed01e785e8a3b8
 --- a/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
 @@ -1,6 +1,6 @@
--controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
-+controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
+-controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
  spec_name TrafficL4
--spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
-+spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
+-spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
  environment carA, carB
  system greenA, greenB
  
-@@ -24,12 +24,10 @@
+@@ -9,7 +9,7 @@
+   env carA, carB
+   sys greenA, greenB
+ 
+-test exhaustive_never_both_green:
++test never_both_green_exhaustive:
+   kind mutual_exclusion
+   requirement "The system must never allow both greenA and greenB to be true simultaneously."
+   mode exhaustive
+@@ -20,17 +20,7 @@
+     carB false, true
+   variables greenA, greenB
+ 
+-test idle_inputs_never_both_green:
+-  kind exclusion
+-  requirement "The system must never allow both greenA and greenB to be true simultaneously."
+-  trace:
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-  forbidden greenA=true, greenB=true
+-
+-test simultaneous_cars_never_both_green:
++test never_both_green_persistent_demands:
    kind exclusion
    requirement "The system must never allow both greenA and greenB to be true simultaneously."
    trace:
--    carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
--    carA=false, carB=false
-   forbidden greenA=true, greenB=true
- 
- test simultaneous_cars_never_both_green:
-@@ -44,19 +42,19 @@
+@@ -42,19 +32,19 @@
      carA=true, carB=true
    forbidden greenA=true, greenB=true
  
--test delayed_carB_assumption_boundary_safety:
-+test boundary_b_arrival_never_both_green:
+-test boundary_b_arrival_never_both_green:
++test never_both_green_boundary_b_response:
    kind exclusion
--  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and both green lights must never be true simultaneously."
-+  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
+-  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
++  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and the system must never allow both green lights simultaneously."
    trace:
      carA=true, carB=false
      carA=true, carB=false
      carA=true, carB=false
      carA=true, carB=true
--    carA=false, carB=true
-+    carA=true, carB=true
-     carA=false, carB=false
+     carA=true, carB=true
+-    carA=false, carB=false
++    carA=false, carB=true
    forbidden greenA=true, greenB=true
  
--test persistent_A_request_eventually_greenA:
-+test persistent_a_request_gets_greenA:
+-test persistent_a_request_gets_greenA:
++test greenA_eventually_after_persistent_block:
    kind eventually_response
    requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
    trace:
-@@ -66,28 +64,34 @@
+@@ -64,18 +54,14 @@
      carA=true, carB=true
      carA=true, carB=true
      carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+  when carA=true, greenA=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
++    carA=true, carB=true
++    carA=true, carB=true
+   when carA=true, greenA=false
    eventually greenA=true
    within_steps 10
    require_closed_obligations true
  
--test delayed_carB_then_persistent_A_eventually_greenA:
-+test delayed_b_arrival_a_request_gets_greenA:
+-test delayed_b_arrival_a_request_gets_greenA:
++test greenA_eventually_after_boundary_b_delay:
    kind eventually_response
    requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
    trace:
-     carA=true, carB=false
-     carA=true, carB=false
-     carA=true, carB=false
--    carA=true, carB=true
--    carA=true, carB=true
+@@ -85,12 +71,8 @@
      carA=true, carB=true
      carA=true, carB=true
      carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+  when carA=true, greenA=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
++    carA=true, carB=true
++    carA=true, carB=true
+   when carA=true, greenA=false
    eventually greenA=true
    within_steps 10
-   require_closed_obligations true
 
 diff --git a/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
-index 9719abae133499b900370e4df79b5e8cee789f09..7aea13c8eb814487251f9b52793c45d884e40c0d
+index 7aea13c8eb814487251f9b52793c45d884e40c0d..e9f33122438d16d9614c590166ed01e785e8a3b8
 --- a/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
 @@ -1,6 +1,6 @@
--controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
-+controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
+-controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
  spec_name TrafficL4
--spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
-+spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
+-spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
  environment carA, carB
  system greenA, greenB
  
-@@ -24,12 +24,10 @@
+@@ -9,7 +9,7 @@
+   env carA, carB
+   sys greenA, greenB
+ 
+-test exhaustive_never_both_green:
++test never_both_green_exhaustive:
+   kind mutual_exclusion
+   requirement "The system must never allow both greenA and greenB to be true simultaneously."
+   mode exhaustive
+@@ -20,17 +20,7 @@
+     carB false, true
+   variables greenA, greenB
+ 
+-test idle_inputs_never_both_green:
+-  kind exclusion
+-  requirement "The system must never allow both greenA and greenB to be true simultaneously."
+-  trace:
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-  forbidden greenA=true, greenB=true
+-
+-test simultaneous_cars_never_both_green:
++test never_both_green_persistent_demands:
    kind exclusion
    requirement "The system must never allow both greenA and greenB to be true simultaneously."
    trace:
--    carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
--    carA=false, carB=false
-   forbidden greenA=true, greenB=true
- 
- test simultaneous_cars_never_both_green:
-@@ -44,19 +42,19 @@
+@@ -42,19 +32,19 @@
      carA=true, carB=true
    forbidden greenA=true, greenB=true
  
--test delayed_carB_assumption_boundary_safety:
-+test boundary_b_arrival_never_both_green:
+-test boundary_b_arrival_never_both_green:
++test never_both_green_boundary_b_response:
    kind exclusion
--  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and both green lights must never be true simultaneously."
-+  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
+-  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
++  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and the system must never allow both green lights simultaneously."
    trace:
      carA=true, carB=false
      carA=true, carB=false
      carA=true, carB=false
      carA=true, carB=true
--    carA=false, carB=true
-+    carA=true, carB=true
-     carA=false, carB=false
+     carA=true, carB=true
+-    carA=false, carB=false
++    carA=false, carB=true
    forbidden greenA=true, greenB=true
  
--test persistent_A_request_eventually_greenA:
-+test persistent_a_request_gets_greenA:
+-test persistent_a_request_gets_greenA:
++test greenA_eventually_after_persistent_block:
    kind eventually_response
    requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
    trace:
-@@ -66,28 +64,34 @@
+@@ -64,18 +54,14 @@
      carA=true, carB=true
      carA=true, carB=true
      carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+  when carA=true, greenA=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
++    carA=true, carB=true
++    carA=true, carB=true
+   when carA=true, greenA=false
    eventually greenA=true
    within_steps 10
    require_closed_obligations true
  
--test delayed_carB_then_persistent_A_eventually_greenA:
-+test delayed_b_arrival_a_request_gets_greenA:
+-test delayed_b_arrival_a_request_gets_greenA:
++test greenA_eventually_after_boundary_b_delay:
    kind eventually_response
    requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
    trace:
-     carA=true, carB=false
-     carA=true, carB=false
-     carA=true, carB=false
--    carA=true, carB=true
--    carA=true, carB=true
+@@ -85,12 +71,8 @@
      carA=true, carB=true
      carA=true, carB=true
      carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+  when carA=true, greenA=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
++    carA=true, carB=true
++    carA=true, carB=true
+   when carA=true, greenA=false
    eventually greenA=true
    within_steps 10
-   require_closed_obligations true
 
 codex
-The `.rtest` file is in place. I’m compiling it now to catch DSL syntax or structural issues only; I won’t inspect or use the generated Spectra contents.
+The plan is in place. I’ll run the DSL compiler in check/output mode to catch syntax or schema issues only; this does not inspect or repair the Spectra contents.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\\test-plan.rtest' -o 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\\test-plan.json'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 1133ms:
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\\test-plan.rtest\" -o \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\\test-plan.json\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1125ms:
 diff --git a/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
-index 9719abae133499b900370e4df79b5e8cee789f09..7aea13c8eb814487251f9b52793c45d884e40c0d
+index 7aea13c8eb814487251f9b52793c45d884e40c0d..e9f33122438d16d9614c590166ed01e785e8a3b8
 --- a/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
 @@ -1,6 +1,6 @@
--controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
-+controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
+-controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
  spec_name TrafficL4
--spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
-+spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
+-spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
  environment carA, carB
  system greenA, greenB
  
-@@ -24,12 +24,10 @@
+@@ -9,7 +9,7 @@
+   env carA, carB
+   sys greenA, greenB
+ 
+-test exhaustive_never_both_green:
++test never_both_green_exhaustive:
+   kind mutual_exclusion
+   requirement "The system must never allow both greenA and greenB to be true simultaneously."
+   mode exhaustive
+@@ -20,17 +20,7 @@
+     carB false, true
+   variables greenA, greenB
+ 
+-test idle_inputs_never_both_green:
+-  kind exclusion
+-  requirement "The system must never allow both greenA and greenB to be true simultaneously."
+-  trace:
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-  forbidden greenA=true, greenB=true
+-
+-test simultaneous_cars_never_both_green:
++test never_both_green_persistent_demands:
    kind exclusion
    requirement "The system must never allow both greenA and greenB to be true simultaneously."
    trace:
--    carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
--    carA=false, carB=false
-   forbidden greenA=true, greenB=true
- 
- test simultaneous_cars_never_both_green:
-@@ -44,19 +42,19 @@
+@@ -42,19 +32,19 @@
      carA=true, carB=true
    forbidden greenA=true, greenB=true
  
--test delayed_carB_assumption_boundary_safety:
-+test boundary_b_arrival_never_both_green:
+-test boundary_b_arrival_never_both_green:
++test never_both_green_boundary_b_response:
    kind exclusion
--  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and both green lights must never be true simultaneously."
-+  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
+-  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
++  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and the system must never allow both green lights simultaneously."
    trace:
      carA=true, carB=false
      carA=true, carB=false
      carA=true, carB=false
      carA=true, carB=true
--    carA=false, carB=true
-+    carA=true, carB=true
-     carA=false, carB=false
+     carA=true, carB=true
+-    carA=false, carB=false
++    carA=false, carB=true
    forbidden greenA=true, greenB=true
  
--test persistent_A_request_eventually_greenA:
-+test persistent_a_request_gets_greenA:
+-test persistent_a_request_gets_greenA:
++test greenA_eventually_after_persistent_block:
    kind eventually_response
    requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
    trace:
-@@ -66,28 +64,34 @@
+@@ -64,18 +54,14 @@
      carA=true, carB=true
      carA=true, carB=true
      carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+  when carA=true, greenA=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
++    carA=true, carB=true
++    carA=true, carB=true
+   when carA=true, greenA=false
    eventually greenA=true
    within_steps 10
    require_closed_obligations true
  
--test delayed_carB_then_persistent_A_eventually_greenA:
-+test delayed_b_arrival_a_request_gets_greenA:
+-test delayed_b_arrival_a_request_gets_greenA:
++test greenA_eventually_after_boundary_b_delay:
    kind eventually_response
    requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
    trace:
-     carA=true, carB=false
-     carA=true, carB=false
-     carA=true, carB=false
--    carA=true, carB=true
--    carA=true, carB=true
+@@ -85,12 +71,8 @@
      carA=true, carB=true
      carA=true, carB=true
      carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+  when carA=true, greenA=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
++    carA=true, carB=true
++    carA=true, carB=true
+   when carA=true, greenA=false
    eventually greenA=true
    within_steps 10
-   require_closed_obligations true
 
 codex
-The plan compiled successfully to JSON. I’m also writing the compiler diagnostics JSON so the artifact directory has an explicit success record.
+The DSL compiled cleanly to JSON. I’m also writing the standard diagnostics JSON so the artifact directory has a machine-readable compile status.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\\test-plan.rtest' --check --diagnostics-json 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\\dsl-diagnostics.json'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 1141ms:
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\\test-plan.rtest\" --check --diagnostics-json \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\\dsl-diagnostics.json\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1138ms:
 diff --git a/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
-index 9719abae133499b900370e4df79b5e8cee789f09..7aea13c8eb814487251f9b52793c45d884e40c0d
+index 7aea13c8eb814487251f9b52793c45d884e40c0d..e9f33122438d16d9614c590166ed01e785e8a3b8
 --- a/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
 @@ -1,6 +1,6 @@
--controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
-+controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
+-controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
  spec_name TrafficL4
--spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
-+spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
+-spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
  environment carA, carB
  system greenA, greenB
  
-@@ -24,12 +24,10 @@
+@@ -9,7 +9,7 @@
+   env carA, carB
+   sys greenA, greenB
+ 
+-test exhaustive_never_both_green:
++test never_both_green_exhaustive:
+   kind mutual_exclusion
+   requirement "The system must never allow both greenA and greenB to be true simultaneously."
+   mode exhaustive
+@@ -20,17 +20,7 @@
+     carB false, true
+   variables greenA, greenB
+ 
+-test idle_inputs_never_both_green:
+-  kind exclusion
+-  requirement "The system must never allow both greenA and greenB to be true simultaneously."
+-  trace:
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-  forbidden greenA=true, greenB=true
+-
+-test simultaneous_cars_never_both_green:
++test never_both_green_persistent_demands:
    kind exclusion
    requirement "The system must never allow both greenA and greenB to be true simultaneously."
    trace:
--    carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
--    carA=false, carB=false
-   forbidden greenA=true, greenB=true
- 
- test simultaneous_cars_never_both_green:
-@@ -44,19 +42,19 @@
+@@ -42,19 +32,19 @@
      carA=true, carB=true
    forbidden greenA=true, greenB=true
  
--test delayed_carB_assumption_boundary_safety:
-+test boundary_b_arrival_never_both_green:
+-test boundary_b_arrival_never_both_green:
++test never_both_green_boundary_b_response:
    kind exclusion
--  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and both green lights must never be true simultaneously."
-+  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
+-  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
++  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and the system must never allow both green lights simultaneously."
    trace:
      carA=true, carB=false
      carA=true, carB=false
      carA=true, carB=false
      carA=true, carB=true
--    carA=false, carB=true
-+    carA=true, carB=true
-     carA=false, carB=false
+     carA=true, carB=true
+-    carA=false, carB=false
++    carA=false, carB=true
    forbidden greenA=true, greenB=true
  
--test persistent_A_request_eventually_greenA:
-+test persistent_a_request_gets_greenA:
+-test persistent_a_request_gets_greenA:
++test greenA_eventually_after_persistent_block:
    kind eventually_response
    requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
    trace:
-@@ -66,28 +64,34 @@
+@@ -64,18 +54,14 @@
      carA=true, carB=true
      carA=true, carB=true
      carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+  when carA=true, greenA=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
++    carA=true, carB=true
++    carA=true, carB=true
+   when carA=true, greenA=false
    eventually greenA=true
    within_steps 10
    require_closed_obligations true
  
--test delayed_carB_then_persistent_A_eventually_greenA:
-+test delayed_b_arrival_a_request_gets_greenA:
+-test delayed_b_arrival_a_request_gets_greenA:
++test greenA_eventually_after_boundary_b_delay:
    kind eventually_response
    requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
    trace:
-     carA=true, carB=false
-     carA=true, carB=false
-     carA=true, carB=false
--    carA=true, carB=true
--    carA=true, carB=true
+@@ -85,12 +71,8 @@
      carA=true, carB=true
      carA=true, carB=true
      carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+  when carA=true, greenA=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
++    carA=true, carB=true
++    carA=true, carB=true
+   when carA=true, greenA=false
    eventually greenA=true
    within_steps 10
-   require_closed_obligations true
 
-codex
-Compilation diagnostics were written successfully. I’m doing one quick artifact check so the final response can report exact outputs and test count.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Path 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\\dsl-diagnostics.json'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
-exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\\test-plan.rtest' -Pattern '"'^test '"' | Measure-Object | Select-Object -ExpandProperty Count" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 971ms:
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\\dsl-diagnostics.json\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 803ms:
 {
   "status": "success",
   "tool": "controller_tests.compile_test_plan",
   "file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\L4_triggers\\TrafficL4\\model=qwen3\\8a4a6b4b5739630643a85c9b\\branches\\independent_test\\round-00\\test-writer\\test-plan.rtest",
   "errors": [],
-  "compiled_tests": 7
+  "compiled_tests": 6
 }
 
- succeeded in 987ms:
-7
 
 diff --git a/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
-index 9719abae133499b900370e4df79b5e8cee789f09..7aea13c8eb814487251f9b52793c45d884e40c0d
+index 7aea13c8eb814487251f9b52793c45d884e40c0d..e9f33122438d16d9614c590166ed01e785e8a3b8
 --- a/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
 @@ -1,6 +1,6 @@
--controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
-+controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
+-controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
  spec_name TrafficL4
--spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
-+spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
+-spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
  environment carA, carB
  system greenA, greenB
  
-@@ -24,12 +24,10 @@
+@@ -9,7 +9,7 @@
+   env carA, carB
+   sys greenA, greenB
+ 
+-test exhaustive_never_both_green:
++test never_both_green_exhaustive:
+   kind mutual_exclusion
+   requirement "The system must never allow both greenA and greenB to be true simultaneously."
+   mode exhaustive
+@@ -20,17 +20,7 @@
+     carB false, true
+   variables greenA, greenB
+ 
+-test idle_inputs_never_both_green:
+-  kind exclusion
+-  requirement "The system must never allow both greenA and greenB to be true simultaneously."
+-  trace:
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-  forbidden greenA=true, greenB=true
+-
+-test simultaneous_cars_never_both_green:
++test never_both_green_persistent_demands:
    kind exclusion
    requirement "The system must never allow both greenA and greenB to be true simultaneously."
    trace:
--    carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
--    carA=false, carB=false
-   forbidden greenA=true, greenB=true
- 
- test simultaneous_cars_never_both_green:
-@@ -44,19 +42,19 @@
+@@ -42,19 +32,19 @@
      carA=true, carB=true
    forbidden greenA=true, greenB=true
  
--test delayed_carB_assumption_boundary_safety:
-+test boundary_b_arrival_never_both_green:
+-test boundary_b_arrival_never_both_green:
++test never_both_green_boundary_b_response:
    kind exclusion
--  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and both green lights must never be true simultaneously."
-+  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
+-  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
++  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and the system must never allow both green lights simultaneously."
    trace:
      carA=true, carB=false
      carA=true, carB=false
      carA=true, carB=false
      carA=true, carB=true
--    carA=false, carB=true
-+    carA=true, carB=true
-     carA=false, carB=false
+     carA=true, carB=true
+-    carA=false, carB=false
++    carA=false, carB=true
    forbidden greenA=true, greenB=true
  
--test persistent_A_request_eventually_greenA:
-+test persistent_a_request_gets_greenA:
+-test persistent_a_request_gets_greenA:
++test greenA_eventually_after_persistent_block:
    kind eventually_response
    requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
    trace:
-@@ -66,28 +64,34 @@
+@@ -64,18 +54,14 @@
      carA=true, carB=true
      carA=true, carB=true
      carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+  when carA=true, greenA=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
++    carA=true, carB=true
++    carA=true, carB=true
+   when carA=true, greenA=false
    eventually greenA=true
    within_steps 10
    require_closed_obligations true
  
--test delayed_carB_then_persistent_A_eventually_greenA:
-+test delayed_b_arrival_a_request_gets_greenA:
+-test delayed_b_arrival_a_request_gets_greenA:
++test greenA_eventually_after_boundary_b_delay:
    kind eventually_response
    requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
    trace:
-     carA=true, carB=false
-     carA=true, carB=false
-     carA=true, carB=false
--    carA=true, carB=true
--    carA=true, carB=true
+@@ -85,12 +71,8 @@
      carA=true, carB=true
      carA=true, carB=true
      carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+  when carA=true, greenA=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
++    carA=true, carB=true
++    carA=true, carB=true
+   when carA=true, greenA=false
    eventually greenA=true
    within_steps 10
-   require_closed_obligations true
 
 codex
 test_plan_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\independent_test\round-00\test-writer\test-plan.rtest
 compiled_test_plan_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\independent_test\round-00\test-writer\test-plan.json
 dsl_diagnostics_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\independent_test\round-00\test-writer\dsl-diagnostics.json
-tests_planned: 7
-untestable_requirements: 1
+tests_planned: 6
+untestable_requirements: 0
 artifact_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\independent_test\round-00\test-writer
-
-Compiled successfully. The untestable requirement count reflects the unbounded “eventually” portion of the liveness guarantee; the plan includes bounded response probes for it.
 diff --git a/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
-index 9719abae133499b900370e4df79b5e8cee789f09..7aea13c8eb814487251f9b52793c45d884e40c0d
+index 7aea13c8eb814487251f9b52793c45d884e40c0d..e9f33122438d16d9614c590166ed01e785e8a3b8
 --- a/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/spectra-tutorial/L4_triggers/TrafficL4/model=qwen3/8a4a6b4b5739630643a85c9b/branches/independent_test/round-00/test-writer/test-plan.rtest
 @@ -1,6 +1,6 @@
--controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
-+controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
+-controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
  spec_name TrafficL4
--spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
-+spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
+-spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
  environment carA, carB
  system greenA, greenB
  
-@@ -24,12 +24,10 @@
+@@ -9,7 +9,7 @@
+   env carA, carB
+   sys greenA, greenB
+ 
+-test exhaustive_never_both_green:
++test never_both_green_exhaustive:
+   kind mutual_exclusion
+   requirement "The system must never allow both greenA and greenB to be true simultaneously."
+   mode exhaustive
+@@ -20,17 +20,7 @@
+     carB false, true
+   variables greenA, greenB
+ 
+-test idle_inputs_never_both_green:
+-  kind exclusion
+-  requirement "The system must never allow both greenA and greenB to be true simultaneously."
+-  trace:
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-  forbidden greenA=true, greenB=true
+-
+-test simultaneous_cars_never_both_green:
++test never_both_green_persistent_demands:
    kind exclusion
    requirement "The system must never allow both greenA and greenB to be true simultaneously."
    trace:
--    carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
-     carA=false, carB=false
--    carA=false, carB=false
-   forbidden greenA=true, greenB=true
- 
- test simultaneous_cars_never_both_green:
-@@ -44,19 +42,19 @@
+@@ -42,19 +32,19 @@
      carA=true, carB=true
    forbidden greenA=true, greenB=true
  
--test delayed_carB_assumption_boundary_safety:
-+test boundary_b_arrival_never_both_green:
+-test boundary_b_arrival_never_both_green:
++test never_both_green_boundary_b_response:
    kind exclusion
--  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and both green lights must never be true simultaneously."
-+  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
+-  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
++  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and the system must never allow both green lights simultaneously."
    trace:
      carA=true, carB=false
      carA=true, carB=false
      carA=true, carB=false
      carA=true, carB=true
--    carA=false, carB=true
-+    carA=true, carB=true
-     carA=false, carB=false
+     carA=true, carB=true
+-    carA=false, carB=false
++    carA=false, carB=true
    forbidden greenA=true, greenB=true
  
--test persistent_A_request_eventually_greenA:
-+test persistent_a_request_gets_greenA:
+-test persistent_a_request_gets_greenA:
++test greenA_eventually_after_persistent_block:
    kind eventually_response
    requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
    trace:
-@@ -66,28 +64,34 @@
+@@ -64,18 +54,14 @@
      carA=true, carB=true
      carA=true, carB=true
      carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+  when carA=true, greenA=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
++    carA=true, carB=true
++    carA=true, carB=true
+   when carA=true, greenA=false
    eventually greenA=true
    within_steps 10
    require_closed_obligations true
  
--test delayed_carB_then_persistent_A_eventually_greenA:
-+test delayed_b_arrival_a_request_gets_greenA:
+-test delayed_b_arrival_a_request_gets_greenA:
++test greenA_eventually_after_boundary_b_delay:
    kind eventually_response
    requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
    trace:
-     carA=true, carB=false
-     carA=true, carB=false
-     carA=true, carB=false
--    carA=true, carB=true
--    carA=true, carB=true
+@@ -85,12 +71,8 @@
      carA=true, carB=true
      carA=true, carB=true
      carA=true, carB=true
--    carA=true, carB=true
--    carA=true, carB=true
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+    carA=false, carB=false
-+  when carA=true, greenA=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
+-    carA=false, carB=false
++    carA=true, carB=true
++    carA=true, carB=true
+   when carA=true, greenA=false
    eventually greenA=true
    within_steps 10
-   require_closed_obligations true
 
 tokens used
-31.866
+20.356

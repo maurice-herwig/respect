@@ -132,6 +132,7 @@ def flatten_artifact(run_file: Path, payload: dict[str, Any], artifact: dict[str
     """Flatten one artifact entry into a compact row."""
     validation = artifact.get("validation") or {}
     distance = artifact.get("distance") or {}
+    bounded = distance.get("bounded_semantic_distance") or {}
     run = payload.get("run") or {}
     evaluation = payload.get("evaluation") or {}
     return {
@@ -152,7 +153,11 @@ def flatten_artifact(run_file: Path, payload: dict[str, Any], artifact: dict[str
         "cli_status": validation.get("cli_status"),
         "distance_status": distance.get("status"),
         "distance": distance.get("distance"),
-        "bounded_semantic_distance": distance.get("bounded_semantic_distance"),
+        "bounded_semantic_distance": bounded.get("mismatch_rate") if isinstance(bounded, dict) else None,
+        "bounded_jaccard_distance": bounded.get("jaccard_distance") if isinstance(bounded, dict) else None,
+        "bounded_false_negative_rate": bounded.get("false_negative_rate") if isinstance(bounded, dict) else None,
+        "bounded_false_positive_rate": bounded.get("false_positive_rate") if isinstance(bounded, dict) else None,
+        "bounded_total_prefixes": bounded.get("total_prefixes") if isinstance(bounded, dict) else None,
         "repair_loops": artifact.get("repair_loops"),
         "syntax_repair_loops": artifact.get("syntax_repair_loops"),
         "unrealizable_repair_loops": artifact.get("unrealizable_repair_loops"),

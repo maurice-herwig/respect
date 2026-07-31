@@ -39,6 +39,7 @@ DEFAULT_OUTPUT_ROOT = REPO_ROOT / "evaluation" / "buchi" / "distance_results"
 STATE_RE = re.compile(r"^State:\s+(\d+)(?:\s+\[(.*)\])?(?:\s+(\{[^}]*\}))?\s*$")
 EDGE_RE = re.compile(r"^\[(.*)\]\s+(\d+)(?:\s+(\{[^}]*\}))?\s*$")
 STATES_RE = re.compile(r"^States:\s+(\d+)\s*$")
+AP_RE = re.compile(r"^AP:\s+(\d+)\s+(.*)$")
 PROPERTIES_RE = re.compile(r"^properties:\s+(.*)$")
 ACCEPTANCE_RE = re.compile(r"^Acceptance:\s+(\d+)\s+(.*)$")
 
@@ -314,12 +315,120 @@ def normalize_condition(condition: str | None) -> str:
     return condition.strip()
 
 
+def parse_hoa_ap_names(line: str) -> list[str] | None:
+    """Parse a single-line HOA AP declaration."""
+    match = AP_RE.match(line)
+    if not match:
+        return None
+    return re.findall(r'"(?:\\.|[^"])*"', match.group(2))
+
+
+def is_internal_hoa_ap(ap_name: str) -> bool:
+    """Return whether an AP belongs to Spectra's internal monitor state."""
+    stripped = ap_name[1:-1] if len(ap_name) >= 2 and ap_name[0] == '"' and ap_name[-1] == '"' else ap_name
+    variable = stripped.split("=", 1)[0]
+    return variable.startswith("sfa_states_")
+
+
+def project_condition_indices(condition: str, index_mapping: dict[int, int], removed_indices: set[int]) -> str:
+    """Project a HOA Boolean condition to the kept AP indices."""
+
+    def replace(match: re.Match[str]) -> str:
+        negated = bool(match.group(1))
+        old_index = int(match.group(2))
+        if old_index in removed_indices:
+            # Existentially project internal monitor APs away. Both `x` and
+            # `!x` become unconstrained under the external input alphabet.
+            return "t"
+        new_index = index_mapping.get(old_index)
+        if new_index is None:
+            return match.group(0)
+        return f"!{new_index}" if negated else str(new_index)
+
+    return re.sub(r"(!)?\b(\d+)\b", replace, condition)
+
+
+def project_hoa_internal_aps(input_path: Path, output_path: Path, *, force: bool) -> dict[str, Any]:
+    """Remove Spectra-internal APs such as `sfa_states_*` from a HOA file.
+
+    The Spectra HOA exporter includes auxiliary state variables for trigger/SFA
+    monitors. They are not part of the controller interface and should not force
+    LLM signature mapping or alter the external-alphabet distance.
+    """
+    if output_path.exists() and not force:
+        return {
+            "status": "reused",
+            "input": repo_relative_or_absolute(input_path),
+            "output": repo_relative_or_absolute(output_path),
+            "output_size_bytes": output_path.stat().st_size,
+        }
+
+    lines = input_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    ap_line_index: int | None = None
+    ap_names: list[str] | None = None
+    for index, line in enumerate(lines):
+        parsed = parse_hoa_ap_names(line)
+        if parsed is not None:
+            ap_line_index = index
+            ap_names = parsed
+            break
+    if ap_line_index is None or ap_names is None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return {
+            "status": "no_ap_line",
+            "input": repo_relative_or_absolute(input_path),
+            "output": repo_relative_or_absolute(output_path),
+            "output_size_bytes": output_path.stat().st_size,
+            "removed_ap_count": 0,
+        }
+
+    kept: list[tuple[int, str]] = [(index, name) for index, name in enumerate(ap_names) if not is_internal_hoa_ap(name)]
+    removed_indices = {index for index, name in enumerate(ap_names) if is_internal_hoa_ap(name)}
+    index_mapping = {old_index: new_index for new_index, (old_index, _name) in enumerate(kept)}
+
+    rewritten: list[str] = []
+    for index, line in enumerate(lines):
+        if index == ap_line_index:
+            rewritten.append(f"AP: {len(kept)} " + " ".join(name for _old, name in kept))
+            continue
+
+        def replace_bracket(match: re.Match[str]) -> str:
+            return "[" + project_condition_indices(match.group(1), index_mapping, removed_indices) + "]"
+
+        rewritten.append(re.sub(r"\[(.*?)\]", replace_bracket, line))
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(rewritten) + "\n", encoding="utf-8")
+    return {
+        "status": "projected" if removed_indices else "unchanged",
+        "input": repo_relative_or_absolute(input_path),
+        "output": repo_relative_or_absolute(output_path),
+        "output_size_bytes": output_path.stat().st_size,
+        "ap_count_before": len(ap_names),
+        "ap_count_after": len(kept),
+        "removed_ap_count": len(removed_indices),
+        "removed_ap_names": [ap_names[index] for index in sorted(removed_indices)],
+    }
+
+
 def missing_condition(conditions: list[str]) -> str:
     if not conditions:
         return "t"
     if len(conditions) == 1:
         return f"!({conditions[0]})"
     return "!(" + " | ".join(f"({condition})" for condition in conditions) + ")"
+
+
+def conjoin_conditions(left: str | None, right: str | None) -> str:
+    """Return a HOA condition that requires both input conditions."""
+    normalized_left = normalize_condition(left)
+    normalized_right = normalize_condition(right)
+    if normalized_left == "t":
+        return normalized_right
+    if normalized_right == "t":
+        return normalized_left
+    return f"({normalized_left}) & ({normalized_right})"
 
 
 def normalize_properties(line: str) -> str:
@@ -363,7 +472,7 @@ def transform_hoa_state_labels_to_transitions(input_text: str, *, add_rejecting_
 
     state_labels: dict[int, str] = {}
     state_acceptance: dict[int, str | None] = {}
-    transitions: dict[int, list[tuple[int, str | None]]] = {}
+    transitions: dict[int, list[tuple[int, str, str | None]]] = {}
     state_order: list[int] = []
     current_state: int | None = None
 
@@ -382,13 +491,31 @@ def transform_hoa_state_labels_to_transitions(input_text: str, *, add_rejecting_
         if edge_match:
             if current_state is None:
                 raise ValueError(f"Transition before first state: {line}")
-            transitions.setdefault(current_state, []).append((int(edge_match.group(2)), edge_match.group(3)))
+            transitions.setdefault(current_state, []).append(
+                (int(edge_match.group(2)), normalize_condition(edge_match.group(1)), edge_match.group(3))
+            )
             continue
         raise ValueError(f"Unsupported HOA body line: {line}")
 
-    missing_targets = sorted({target for edges in transitions.values() for target, _ in edges} - set(state_labels))
+    missing_targets = sorted({target for edges in transitions.values() for target, _condition, _acceptance in edges} - set(state_labels))
     if missing_targets:
         raise ValueError(f"Transitions reference missing states: {missing_targets}")
+    if not state_order:
+        final_header = [
+            normalize_properties(line) if PROPERTIES_RE.match(line) else line
+            for line in header
+        ]
+        return "\n".join(final_header + ["--BODY--"] + body + footer) + "\n", {
+            "states_in": 0,
+            "states_out": 0,
+            "sink_added": False,
+            "sink_state": None,
+            "sink_edges_added": 0,
+            "sink_acceptance_set": None,
+            "sink_rejecting_acceptance_added": False,
+            "transition_label_source": "none",
+            "acceptance_source": "none",
+        }
 
     declared_states = None
     for line in header:
@@ -433,8 +560,8 @@ def transform_hoa_state_labels_to_transitions(input_text: str, *, add_rejecting_
     for state in state_order:
         output_body.append(f"State: {state}")
         edge_conditions: list[str] = []
-        for target, edge_acceptance in transitions.get(state, []):
-            condition = state_labels[target]
+        for target, edge_condition, edge_acceptance in transitions.get(state, []):
+            condition = conjoin_conditions(edge_condition, state_labels[target])
             acceptance = edge_acceptance or state_acceptance.get(target)
             suffix = f" {acceptance}" if acceptance else ""
             output_body.append(f"[{condition}] {target}{suffix}")
@@ -459,6 +586,127 @@ def transform_hoa_state_labels_to_transitions(input_text: str, *, add_rejecting_
         "acceptance_source": "target_state_acceptance",
     }
     return "\n".join(final_header + ["--BODY--"] + output_body + footer) + "\n", metadata
+
+
+def complete_transition_labeled_hoa(input_text: str) -> tuple[str, dict[str, Any]]:
+    """Add a rejecting sink to an already transition-labeled HOA automaton."""
+    lines = input_text.splitlines()
+    body_index = lines.index("--BODY--")
+    end_index = lines.index("--END--")
+    header = lines[:body_index]
+    body = lines[body_index + 1 : end_index]
+    footer = lines[end_index:]
+
+    states: list[int] = []
+    transitions: dict[int, list[str]] = {}
+    current_state: int | None = None
+    for line in body:
+        if not line.strip():
+            continue
+        state_match = STATE_RE.match(line)
+        if state_match:
+            current_state = int(state_match.group(1))
+            states.append(current_state)
+            transitions.setdefault(current_state, [])
+            continue
+        edge_match = EDGE_RE.match(line)
+        if edge_match:
+            if current_state is None:
+                raise ValueError(f"Transition before first state: {line}")
+            transitions.setdefault(current_state, []).append(normalize_condition(edge_match.group(1)))
+            continue
+        raise ValueError(f"Unsupported HOA body line: {line}")
+
+    if not states:
+        raise ValueError("Cannot complete HOA without states.")
+
+    sink_state = max(states) + 1
+    sink_acceptance_set: int | None = None
+    for line in header:
+        acceptance_match = ACCEPTANCE_RE.match(line)
+        if acceptance_match:
+            sink_acceptance_set = int(acceptance_match.group(1))
+            break
+    if sink_acceptance_set is None:
+        sink_acceptance_set = 0
+
+    declared_states = None
+    for line in header:
+        states_match = STATES_RE.match(line)
+        if states_match:
+            declared_states = int(states_match.group(1))
+            break
+    output_state_count = max(declared_states or 0, sink_state + 1)
+
+    final_header: list[str] = []
+    inserted_states = False
+    for line in header:
+        if STATES_RE.match(line):
+            final_header.append(f"States: {output_state_count}")
+            inserted_states = True
+        elif ACCEPTANCE_RE.match(line):
+            final_header.append(add_rejecting_sink_acceptance(line, sink_acceptance_set))
+        elif PROPERTIES_RE.match(line):
+            final_header.append(normalize_properties(line))
+        else:
+            final_header.append(line)
+    if not inserted_states:
+        final_header.append(f"States: {output_state_count}")
+
+    output_body: list[str] = []
+    current_state = None
+    added_sink_edges = 0
+    for line in body:
+        state_match = STATE_RE.match(line)
+        if state_match:
+            if current_state is not None:
+                output_body.append(f"[{missing_condition(transitions.get(current_state, []))}] {sink_state}")
+                added_sink_edges += 1
+            current_state = int(state_match.group(1))
+            output_body.append(f"State: {current_state}")
+            continue
+        output_body.append(line)
+    if current_state is not None:
+        output_body.append(f"[{missing_condition(transitions.get(current_state, []))}] {sink_state}")
+        added_sink_edges += 1
+
+    output_body.append(f"State: {sink_state}")
+    acceptance_suffix = f" {{{sink_acceptance_set}}}" if sink_acceptance_set is not None else ""
+    output_body.append(f"[t] {sink_state}{acceptance_suffix}")
+
+    metadata = {
+        "states_in": len(states),
+        "states_out": output_state_count,
+        "sink_added": True,
+        "sink_state": sink_state,
+        "sink_edges_added": added_sink_edges,
+        "sink_acceptance_set": sink_acceptance_set,
+        "sink_rejecting_acceptance_added": True,
+        "transition_label_source": "existing_transition_label",
+        "acceptance_source": "existing_transition_acceptance",
+    }
+    return "\n".join(final_header + ["--BODY--"] + output_body + footer) + "\n", metadata
+
+
+def complete_transition_labeled_hoa_file(input_path: Path, output_path: Path, force: bool) -> dict[str, Any]:
+    """Write a completed transition-labeled HOA file with a rejecting sink."""
+    if output_path.exists() and not force:
+        return {
+            "status": "reused",
+            "input": repo_relative_or_absolute(input_path),
+            "output": repo_relative_or_absolute(output_path),
+            "output_size_bytes": output_path.stat().st_size,
+        }
+    transformed, metadata = complete_transition_labeled_hoa(input_path.read_text(encoding="utf-8", errors="replace"))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(transformed, encoding="utf-8")
+    return {
+        "status": "completed",
+        "input": repo_relative_or_absolute(input_path),
+        "output": repo_relative_or_absolute(output_path),
+        "output_size_bytes": output_path.stat().st_size,
+        **metadata,
+    }
 
 
 def normalize_hoa_file(input_path: Path, output_path: Path, add_rejecting_sink: bool, force: bool) -> dict[str, Any]:
@@ -620,8 +868,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--add-rejecting-sink",
         action=argparse.BooleanOptionalAction,
-        default=True,
-        help="During normalization, add a rejecting sink for missing valuations.",
+        default=False,
+        help=(
+            "During normalization, add a rejecting sink for missing valuations. "
+            "Disabled by default; the main omega-distance uses a substochastic Markov chain."
+        ),
     )
     parser.add_argument(
         "--determinize",
@@ -664,7 +915,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--bounded-semantic-distance",
         action=argparse.BooleanOptionalAction,
-        default=False,
+        default=True,
         help="Also compute bounded prefix-viability semantic distance.",
     )
     parser.add_argument("--bounded-depth", type=int, default=10)
@@ -769,6 +1020,13 @@ def result_pair_key(record: dict[str, Any]) -> tuple[Any, ...] | None:
     return ("buchi_distance", baseline_sha, generated_sha, json.dumps(settings, sort_keys=True))
 
 
+def distance_semantics(add_rejecting_sink: bool) -> str:
+    """Return the metric semantics identifier for result metadata."""
+    if add_rejecting_sink:
+        return "omega_total_bscc_with_rejecting_sink_v1"
+    return "omega_substochastic_bscc_no_sink_v1"
+
+
 def current_pair_key(record: dict[str, Any], args: argparse.Namespace, jar_path: Path) -> tuple[Any, ...]:
     baseline_spectra = resolve_input_path(str(record["source_spectra_file"]))
     generated_spectra_value = selected_generated_spectra_value(record, args.spectra_stage)
@@ -783,7 +1041,7 @@ def current_pair_key(record: dict[str, Any], args: argparse.Namespace, jar_path:
         "normalize_hoa": args.normalize_hoa,
         "add_rejecting_sink": args.add_rejecting_sink,
         "determinize": args.determinize,
-        "distance_semantics": "relative_bscc_raw_valid_letter_mean_coverage_v1",
+        "distance_semantics": distance_semantics(args.add_rejecting_sink),
         "bounded_semantic_distance": args.bounded_semantic_distance,
         "bounded_depth": args.bounded_depth if args.bounded_semantic_distance else None,
         "bounded_mode": args.bounded_mode if args.bounded_semantic_distance else None,
@@ -873,7 +1131,7 @@ def timeout_result_for_run(
                 "normalize_hoa": args.normalize_hoa,
                 "add_rejecting_sink": args.add_rejecting_sink,
                 "determinize": args.determinize,
-                "distance_semantics": "relative_bscc_raw_valid_letter_mean_coverage_v1",
+                "distance_semantics": distance_semantics(args.add_rejecting_sink),
                 "bounded_semantic_distance": args.bounded_semantic_distance,
                 "bounded_depth": args.bounded_depth if args.bounded_semantic_distance else None,
                 "bounded_mode": args.bounded_mode if args.bounded_semantic_distance else None,
@@ -1054,7 +1312,7 @@ def evaluate_one_run(
                 "normalize_hoa": args.normalize_hoa,
                 "add_rejecting_sink": args.add_rejecting_sink,
                 "determinize": args.determinize,
-                "distance_semantics": "relative_bscc_raw_valid_letter_mean_coverage_v1",
+                "distance_semantics": distance_semantics(args.add_rejecting_sink),
                 "bounded_semantic_distance": args.bounded_semantic_distance,
                 "bounded_depth": args.bounded_depth if args.bounded_semantic_distance else None,
                 "bounded_mode": args.bounded_mode if args.bounded_semantic_distance else None,
@@ -1196,11 +1454,14 @@ def evaluate_one_run(
             result["status"] = incompatibility
             result["error"] = f"Cannot compute distance: {incompatibility}"
             return result
-        result["distance"] = buchi_distance.compute_buchi_distance(
+        raw_distance = buchi_distance.compute_buchi_distance(
             baseline_automaton,
             generated_automaton,
             debug=args.debug_distance,
         )
+        result["raw_distance"] = raw_distance
+        result["distance"] = min(1.0, max(0.0, raw_distance))
+        result["distance_saturated"] = result["distance"] >= 1.0
         if args.bounded_semantic_distance:
             result["bounded_semantic_distance"] = bounded_semantic_distance.compute_bounded_semantic_distance(
                 baseline_automaton,

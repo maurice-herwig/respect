@@ -35,12 +35,14 @@ from evaluation.buchi.evaluate_reconstruction_distances import (
     apply_hoa_ap_mapping,
     automata_are_structurally_compatible,
     automaton_summary,
+    complete_transition_labeled_hoa_file,
     export_hoa,
     generated_to_baseline,
     get_or_create_llm_mapping,
     maybe_determinize_automata,
     normalize_hoa_file,
     parse_spectra_signature,
+    project_hoa_internal_aps,
 )
 from evaluation.buchi.evaluate_reconstruction_distances import (
     DEFAULT_JAR as DEFAULT_HOA_JAR,
@@ -73,6 +75,18 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--artifact-limit", type=int, default=None, help="Debug option: evaluate at most N Spectra artifacts per run.")
+    parser.add_argument(
+        "--artifact-stage",
+        action="append",
+        default=None,
+        help="Only evaluate artifacts with this stage, e.g. final or 00_initial. Can be passed multiple times.",
+    )
+    parser.add_argument(
+        "--artifact-branch",
+        action="append",
+        default=None,
+        help="Only evaluate artifacts from this branch, e.g. core or self_test. Can be passed multiple times.",
+    )
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--cli-wrapper", default=str(DEFAULT_CLI_WRAPPER))
     parser.add_argument("--spectra-cli-jar", default=str(DEFAULT_SPECTRA_CLI_JAR))
@@ -89,7 +103,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-states", type=int, default=100_000)
     parser.add_argument("--jtlv", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--normalize-hoa", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--add-rejecting-sink", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--add-rejecting-sink",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Complete HOA automata with an explicit rejecting sink for missing valuations. "
+            "Disabled by default; the main omega-distance uses a substochastic Markov chain."
+        ),
+    )
     parser.add_argument("--determinize", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--signature-mapping", choices=("strict", "llm"), default="llm")
     parser.add_argument(
@@ -110,7 +132,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--force-signature-mapping", action="store_true")
     parser.add_argument("--include-raw-output", action="store_true")
     parser.add_argument("--raw-output-tail-chars", type=int, default=1000)
-    parser.add_argument("--bounded-semantic-distance", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--bounded-semantic-distance", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--bounded-depth", type=int, default=10)
     parser.add_argument("--bounded-mode", choices=("random", "exhaustive"), default="random")
     parser.add_argument("--bounded-samples", type=int, default=1000)
@@ -534,8 +556,12 @@ def evaluate_distance(
     """Compute the Buchi/Markov-chain distance for one generated Spectra file."""
     baseline_hoa = output_dir / "baseline.hoa"
     generated_hoa = output_dir / "generated.hoa"
-    baseline_distance_hoa = output_dir / "baseline.normalized.hoa"
-    generated_distance_hoa = output_dir / "generated.normalized.hoa"
+    baseline_normalized_hoa = output_dir / "baseline.normalized.no_sink.hoa"
+    generated_normalized_hoa = output_dir / "generated.normalized.no_sink.hoa"
+    baseline_projected_hoa = output_dir / "baseline.projected.no_sink.hoa"
+    generated_projected_hoa = output_dir / "generated.projected.no_sink.hoa"
+    baseline_distance_hoa = output_dir / "baseline.projected.hoa"
+    generated_distance_hoa = output_dir / "generated.projected.hoa"
     generated_mapped_hoa = output_dir / "generated.normalized.mapped.hoa"
     result: dict[str, Any] = {
         "status": "started",
@@ -551,8 +577,30 @@ def evaluate_distance(
             "normalize_hoa": settings.normalize_hoa,
             "add_rejecting_sink": settings.add_rejecting_sink,
             "determinize": settings.determinize,
-            "distance_semantics": "relative_bscc_raw_valid_letter_mean_coverage_v1",
+            "distance_semantics": (
+                "omega_substochastic_bscc_no_sink_v1"
+                if not settings.add_rejecting_sink
+                else "omega_total_bscc_with_rejecting_sink_v1"
+            ),
             "signature_mapping": settings.signature_mapping,
+            "bounded_semantic_distance": settings.bounded_semantic_distance,
+            "bounded_depth": settings.bounded_depth if settings.bounded_semantic_distance else None,
+            "bounded_mode": settings.bounded_mode if settings.bounded_semantic_distance else None,
+            "bounded_samples": (
+                settings.bounded_samples
+                if settings.bounded_semantic_distance and settings.bounded_mode == "random"
+                else None
+            ),
+            "bounded_seed": (
+                settings.bounded_seed
+                if settings.bounded_semantic_distance and settings.bounded_mode == "random"
+                else None
+            ),
+            "bounded_max_prefixes": (
+                settings.bounded_max_prefixes
+                if settings.bounded_semantic_distance and settings.bounded_mode == "exhaustive"
+                else None
+            ),
         },
     }
     try:
@@ -601,19 +649,44 @@ def evaluate_distance(
         if settings.normalize_hoa:
             result["baseline_normalization"] = normalize_hoa_file(
                 baseline_hoa,
-                baseline_distance_hoa,
-                add_rejecting_sink=settings.add_rejecting_sink,
+                baseline_normalized_hoa,
+                add_rejecting_sink=False,
                 force=args.force,
             )
             result["generated_normalization"] = normalize_hoa_file(
                 generated_hoa,
-                generated_distance_hoa,
-                add_rejecting_sink=settings.add_rejecting_sink,
+                generated_normalized_hoa,
+                add_rejecting_sink=False,
                 force=args.force,
             )
         else:
-            baseline_distance_hoa = baseline_hoa
-            generated_distance_hoa = generated_hoa
+            baseline_normalized_hoa = baseline_hoa
+            generated_normalized_hoa = generated_hoa
+
+        result["baseline_projection"] = project_hoa_internal_aps(
+            baseline_normalized_hoa,
+            baseline_projected_hoa,
+            force=args.force,
+        )
+        result["generated_projection"] = project_hoa_internal_aps(
+            generated_normalized_hoa,
+            generated_projected_hoa,
+            force=args.force,
+        )
+        if settings.add_rejecting_sink:
+            result["baseline_completion"] = complete_transition_labeled_hoa_file(
+                baseline_projected_hoa,
+                baseline_distance_hoa,
+                force=args.force,
+            )
+            result["generated_completion"] = complete_transition_labeled_hoa_file(
+                generated_projected_hoa,
+                generated_distance_hoa,
+                force=args.force,
+            )
+        else:
+            baseline_distance_hoa = baseline_projected_hoa
+            generated_distance_hoa = generated_projected_hoa
 
         spot = buchi_distance.require_spot()
         baseline_automaton = spot.automaton(str(baseline_distance_hoa))
@@ -627,32 +700,37 @@ def evaluate_distance(
             baseline_signature = parse_spectra_signature(source_spectra)
             generated_signature = parse_spectra_signature(generated_spectra)
             if baseline_signature.get("status") == "success" and generated_signature.get("status") == "success":
-                mapping_record = get_or_create_llm_mapping(
-                    baseline_signature=baseline_signature,
-                    generated_signature=generated_signature,
-                    mapping_file=resolve_repo_path(settings.signature_mapping_file),
-                    model=settings.mapping_model,
-                    base_url=settings.mapping_base_url,
-                    timeout=settings.mapping_timeout,
-                    force=settings.force_signature_mapping,
-                )
-                result["signature_mapping_record"] = {
-                    "mapping_key": mapping_record.get("mapping_key"),
-                    "api_status": mapping_record.get("api_status"),
-                    "model": mapping_record.get("model"),
-                    "usable": mapping_record.get("usable"),
-                    "validation_errors": mapping_record.get("validation_errors"),
-                }
-                result["signature_mapping_usable"] = bool(mapping_record.get("usable"))
-                result["signature_mapping"] = mapping_record.get("mapping")
-                if mapping_record.get("usable"):
-                    mapped_text = apply_hoa_ap_mapping(
-                        generated_distance_hoa.read_text(encoding="utf-8", errors="replace"),
-                        generated_to_baseline(mapping_record["mapping"]),
+                try:
+                    mapping_record = get_or_create_llm_mapping(
+                        baseline_signature=baseline_signature,
+                        generated_signature=generated_signature,
+                        mapping_file=resolve_repo_path(settings.signature_mapping_file),
+                        model=settings.mapping_model,
+                        base_url=settings.mapping_base_url,
+                        timeout=settings.mapping_timeout,
+                        force=settings.force_signature_mapping,
                     )
-                    generated_mapped_hoa.write_text(mapped_text, encoding="utf-8")
-                    generated_distance_hoa = generated_mapped_hoa
-                    result["signature_mapping_used"] = True
+                    result["signature_mapping_record"] = {
+                        "mapping_key": mapping_record.get("mapping_key"),
+                        "api_status": mapping_record.get("api_status"),
+                        "model": mapping_record.get("model"),
+                        "usable": mapping_record.get("usable"),
+                        "validation_errors": mapping_record.get("validation_errors"),
+                    }
+                    result["signature_mapping_usable"] = bool(mapping_record.get("usable"))
+                    result["signature_mapping"] = mapping_record.get("mapping")
+                    if mapping_record.get("usable"):
+                        mapped_text = apply_hoa_ap_mapping(
+                            generated_distance_hoa.read_text(encoding="utf-8", errors="replace"),
+                            generated_to_baseline(mapping_record["mapping"]),
+                        )
+                        generated_mapped_hoa.write_text(mapped_text, encoding="utf-8")
+                        generated_distance_hoa = generated_mapped_hoa
+                        result["signature_mapping_used"] = True
+                except Exception as exc:
+                    result["signature_mapping_usable"] = False
+                    result["signature_mapping_error"] = f"{type(exc).__name__}: {exc}"
+                    LOGGER.warning("Signature mapping failed; continuing with raw alphabets: %s", exc)
 
         baseline_automaton = spot.automaton(str(baseline_distance_hoa))
         generated_automaton = spot.automaton(str(generated_distance_hoa))
@@ -687,11 +765,16 @@ def evaluate_distance(
             result["error"] = f"Cannot compute distance: {incompatibility}"
             return result
 
-        result["distance"] = buchi_distance.compute_buchi_distance(
+        raw_distance = buchi_distance.compute_buchi_distance(
             baseline_automaton,
             generated_automaton,
             debug=settings.debug_distance,
         )
+        # Floating-point solving can produce tiny overshoots such as
+        # 1.0000000000000002. Keep the JSON metric in the mathematical range.
+        result["raw_distance"] = raw_distance
+        result["distance"] = min(1.0, max(0.0, raw_distance))
+        result["distance_saturated"] = result["distance"] >= 1.0
         if settings.bounded_semantic_distance:
             result["bounded_semantic_distance"] = bounded_semantic_distance.compute_bounded_semantic_distance(
                 baseline_automaton,
@@ -853,6 +936,12 @@ def evaluate_one_branched_run(record: dict[str, Any], args: argparse.Namespace, 
     settings = distance_settings(args, jar_path)
     started = time.perf_counter()
     artifacts = collect_spectra_records(record)
+    if args.artifact_stage:
+        allowed_stages = set(args.artifact_stage)
+        artifacts = [artifact for artifact in artifacts if str(artifact.get("stage")) in allowed_stages]
+    if args.artifact_branch:
+        allowed_branches = set(args.artifact_branch)
+        artifacts = [artifact for artifact in artifacts if str(artifact.get("branch")) in allowed_branches]
     if args.artifact_limit is not None:
         artifacts = artifacts[: args.artifact_limit]
     LOGGER.info(

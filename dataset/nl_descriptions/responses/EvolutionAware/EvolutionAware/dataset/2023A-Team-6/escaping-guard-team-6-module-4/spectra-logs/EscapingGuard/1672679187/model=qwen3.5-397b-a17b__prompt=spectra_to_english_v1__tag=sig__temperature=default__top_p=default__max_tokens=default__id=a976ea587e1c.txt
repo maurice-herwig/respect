@@ -1,0 +1,32 @@
+
+
+Specification name: EscapingGuard
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- guardX: Dim
+- guardY: Dim
+
+System variables:
+- robotX: Dim
+- robotY: Dim
+
+**Requirements Description**
+
+This specification defines a reactive system involving a robot and a guard operating on a two-dimensional grid. The grid coordinates for both the robot and the guard are integers ranging from 0 to 7 (where D=7). The environment controls the guard's position (`guardX`, `guardY`), while the system controls the robot's position (`robotX`, `robotY`).
+
+**Turn Logic**
+The system operates in a repeating cycle of three turns, tracked by an internal turn counter `turnNum` which cycles through values 0, 1, and 2. The counter initializes at 0 and increments by 1 each step, resetting to 0 after reaching 2.
+
+**Environment Assumptions**
+The environment is assumed to behave according to the following rules regarding the guard's movement:
+1.  **Turns 0 and 1:** During these turns, the guard must remain stationary. Both `guardX` and `guardY` must remain unchanged in the next state.
+2.  **Turn 2:** During this turn, the guard's movement is constrained based on the robot's position relative to the guard:
+    *   If the robot's X coordinate is strictly greater than the guard's X coordinate plus 1, the guard's X coordinate must increase by 1 in the next state.
+    *   If the robot's Y coordinate is strictly greater than the guard's Y coordinate plus 1, the guard's Y coordinate must increase by 1 in the next state.
+
+**System Guarantees**
+The system must ensure the following safety requirement regarding the robot's position relative to the guard:
+*   **Collision Avoidance:** At all times, the robot must not touch the guard. Specifically, the robot's position (`robotX`, `robotY`) must never coincide with any of the four coordinates forming the 2x2 square defined by the guard's top-left corner (`guardX`, `guardY`). The forbidden positions are (`guardX`, `guardY`), (`guardX`+1, `guardY`), (`guardX`, `guardY`+1), and (`guardX`+1, `guardY`+1).

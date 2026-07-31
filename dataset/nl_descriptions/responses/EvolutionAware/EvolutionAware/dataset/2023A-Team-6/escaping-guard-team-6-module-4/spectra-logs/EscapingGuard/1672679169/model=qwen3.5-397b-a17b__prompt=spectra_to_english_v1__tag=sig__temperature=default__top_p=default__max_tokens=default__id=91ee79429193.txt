@@ -1,0 +1,37 @@
+
+
+Specification name: EscapingGuard
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- guardX: Dim
+- guardY: Dim
+
+System variables:
+- robotX: Dim
+- robotY: Dim
+
+**Requirements Description**
+
+The system controls the position of a robot on a grid, while the environment controls the position of a guard. The grid coordinates for both the robot and the guard are integers ranging from 0 to 7 (where D equals 7).
+
+**Internal Timing**
+The specification defines an internal cycle counter, `turnNum`, which operates over the values 0, 1, and 2. This counter initializes to 0. At each step, the counter increments by 1, cycling back to 0 after reaching 2 (0 → 1 → 2 → 0).
+
+**Environment Assumptions**
+The environment manages the guard's movement according to the internal cycle counter:
+1.  **Turns 0 and 1:** The guard remains stationary. Both the guard's X and Y coordinates must remain unchanged during these turns.
+2.  **Turn 2:** The guard moves towards the robot based on specific relative position conditions:
+    *   If the robot's X coordinate is greater than the guard's X coordinate plus 1, the guard's X coordinate increases by 1.
+    *   If the robot's Y coordinate is greater than the guard's Y coordinate plus 1, the guard's Y coordinate increases by 1.
+    *   If the robot's X coordinate is less than the guard's X coordinate, the guard's X coordinate decreases by 1.
+    *   If the robot's X coordinate is less than the guard's Y coordinate, the guard's Y coordinate decreases by 1.
+
+**System Guarantees**
+The system must ensure that the robot never touches the guard. At all times, the robot's position must not overlap with the 2x2 area defined by the guard's top-left corner. Specifically, the robot's coordinates must not equal any of the following four positions relative to the guard:
+*   (guardX, guardY)
+*   (guardX + 1, guardY)
+*   (guardX, guardY + 1)
+*   (guardX + 1, guardY + 1)

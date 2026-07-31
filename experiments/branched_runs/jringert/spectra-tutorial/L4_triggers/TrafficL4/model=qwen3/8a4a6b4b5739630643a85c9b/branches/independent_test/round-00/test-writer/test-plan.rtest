@@ -1,6 +1,6 @@
-controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit"
+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\synthesis\jit
 spec_name TrafficL4
-spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra"
+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\core\skill_artifacts\final.spectra
 environment carA, carB
 system greenA, greenB
 
@@ -9,7 +9,7 @@ test declared_variables:
   env carA, carB
   sys greenA, greenB
 
-test exhaustive_never_both_green:
+test never_both_green_exhaustive:
   kind mutual_exclusion
   requirement "The system must never allow both greenA and greenB to be true simultaneously."
   mode exhaustive
@@ -20,17 +20,7 @@ test exhaustive_never_both_green:
     carB false, true
   variables greenA, greenB
 
-test idle_inputs_never_both_green:
-  kind exclusion
-  requirement "The system must never allow both greenA and greenB to be true simultaneously."
-  trace:
-    carA=false, carB=false
-    carA=false, carB=false
-    carA=false, carB=false
-    carA=false, carB=false
-  forbidden greenA=true, greenB=true
-
-test simultaneous_cars_never_both_green:
+test never_both_green_persistent_demands:
   kind exclusion
   requirement "The system must never allow both greenA and greenB to be true simultaneously."
   trace:
@@ -42,19 +32,19 @@ test simultaneous_cars_never_both_green:
     carA=true, carB=true
   forbidden greenA=true, greenB=true
 
-test boundary_b_arrival_never_both_green:
+test never_both_green_boundary_b_response:
   kind exclusion
-  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps; the system must never allow both greenA and greenB to be true simultaneously."
+  requirement "Whenever carA is true, carB must be true within 0 to 3 time steps, and the system must never allow both green lights simultaneously."
   trace:
     carA=true, carB=false
     carA=true, carB=false
     carA=true, carB=false
     carA=true, carB=true
     carA=true, carB=true
-    carA=false, carB=false
+    carA=false, carB=true
   forbidden greenA=true, greenB=true
 
-test persistent_a_request_gets_greenA:
+test greenA_eventually_after_persistent_block:
   kind eventually_response
   requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
   trace:
@@ -64,18 +54,14 @@ test persistent_a_request_gets_greenA:
     carA=true, carB=true
     carA=true, carB=true
     carA=true, carB=true
-    carA=false, carB=false
-    carA=false, carB=false
-    carA=false, carB=false
-    carA=false, carB=false
-    carA=false, carB=false
-    carA=false, carB=false
+    carA=true, carB=true
+    carA=true, carB=true
   when carA=true, greenA=false
   eventually greenA=true
   within_steps 10
   require_closed_obligations true
 
-test delayed_b_arrival_a_request_gets_greenA:
+test greenA_eventually_after_boundary_b_delay:
   kind eventually_response
   requirement "If carA is true while greenA is false for 4 consecutive time steps, the system must eventually set greenA to true."
   trace:
@@ -85,12 +71,8 @@ test delayed_b_arrival_a_request_gets_greenA:
     carA=true, carB=true
     carA=true, carB=true
     carA=true, carB=true
-    carA=false, carB=false
-    carA=false, carB=false
-    carA=false, carB=false
-    carA=false, carB=false
-    carA=false, carB=false
-    carA=false, carB=false
+    carA=true, carB=true
+    carA=true, carB=true
   when carA=true, greenA=false
   eventually greenA=true
   within_steps 10

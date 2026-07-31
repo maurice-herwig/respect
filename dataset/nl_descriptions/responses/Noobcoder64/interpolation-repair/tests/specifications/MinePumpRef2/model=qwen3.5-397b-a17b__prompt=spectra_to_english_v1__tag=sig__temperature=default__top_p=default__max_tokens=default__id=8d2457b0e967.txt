@@ -1,0 +1,17 @@
+
+
+Specification name: MinePump
+
+Environment variables:
+- h: boolean
+- m: boolean
+
+System variables:
+- p: boolean
+- prev_p: boolean
+
+The MinePump specification describes a reactive system where the environment provides boolean inputs `h` and `m`, and the system controls boolean outputs `p` and `prev_p`.
+
+The environment behavior is restricted by two assumptions. First, `h` and `m` are never true at the same time. Second, if the pump output `p` is currently true and was also true in the previous step (indicated by `prev_p` being true), then `h` must not become true in the next step.
+
+The system must satisfy the following guarantees. Initially, `prev_p` is false. In every step, the system ensures that the value of `prev_p` in the next state is equivalent to the current value of `p`, effectively causing `prev_p` to track the previous value of `p`. Regarding the pump control `p`, if `h` is true, the system must set `p` to true in the next step. If `m` is true, the system must set `p` to false in the next step.

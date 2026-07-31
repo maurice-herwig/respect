@@ -1,0 +1,28 @@
+
+
+Specification name: Patrolling
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+
+Environment variables:
+- A_X: DimX
+- A_Y: DimY
+- B_X: DimX
+- B_Y: DimY
+- C_X: DimX
+- C_Y: DimY
+- BlockedA: boolean
+- BlockedB: boolean
+- BlockedC: boolean
+
+System variables:
+- robotX: DimX
+- robotY: DimY
+
+The system controls the robot's position on a grid using the variables `robotX` and `robotY`, which range from 0 to 4. The environment provides the coordinates for three targets (A, B, and C) via `A_X`, `A_Y`, `B_X`, `B_Y`, `C_X`, and `C_Y`, and signals whether each target is inaccessible using the boolean inputs `BlockedA`, `BlockedB`, and `BlockedC`.
+
+Initially, the robot is located at position (0, 0). The environment ensures that initially, none of the targets are located at the robot's starting position (0, 0). Additionally, the environment guarantees that each target's blocked status is temporary; specifically, each of `BlockedA`, `BlockedB`, and `BlockedC` will become false infinitely often throughout the system's operation.
+
+The system must satisfy safety constraints regarding blocked targets. At all times, if a target is marked as blocked (i.e., its corresponding boolean variable is true), the robot must not be located at that target's coordinates. For instance, if `BlockedA` is true, the robot's position (`robotX`, `robotY`) must not equal (`A_X`, `A_Y`). This requirement applies similarly to targets B and C.

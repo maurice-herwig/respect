@@ -1,0 +1,21 @@
+
+
+Specification name: Minepump
+
+Environment variables:
+- highwater: boolean
+- methane: boolean
+
+System variables:
+- pump: boolean
+
+The system controls the `pump` output based on the environment inputs `highwater` and `methane`. The following requirements define the assumed behavior of the environment and the guaranteed behavior of the system.
+
+**Environment Assumptions**
+It is assumed that whenever the `highwater` signal is true, the `pump` is not on continuously. Specifically, whenever `highwater` is true, either `pump` is false in the current step or `pump` was false in the previous step.
+
+**System Guarantees**
+The system must satisfy the following conditions at every step of the interaction:
+
+1.  If `methane` is false and `highwater` is true, the system must set `pump` to true in the next step.
+2.  If `methane` is true, the system must set `pump` to false in the next step.
