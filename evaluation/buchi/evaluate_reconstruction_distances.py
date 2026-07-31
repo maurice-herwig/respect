@@ -24,7 +24,6 @@ if str(REPO_ROOT) not in sys.path:
 
 from evaluation.buchi import buchi_distance
 from evaluation.buchi import bounded_semantic_distance
-from evaluation.summarize_reconstruction_runs import extract_model_label
 from evaluation.signature_mapping import (
     DEFAULT_MAPPING_FILE,
     apply_hoa_ap_mapping,
@@ -119,6 +118,27 @@ def resolve_repo_path(path_value: str | Path) -> Path:
     if path.is_absolute():
         return path
     return REPO_ROOT / path
+
+
+def extract_model_label(record: dict[str, Any]) -> str | None:
+    """Return the model label stored directly or encoded in legacy run paths."""
+    agent_model = record.get("agent_model")
+    if isinstance(agent_model, str) and agent_model:
+        return agent_model
+
+    candidates = [
+        record.get("description_relative_stem"),
+        record.get("run_dir"),
+        record.get("description_file"),
+        record.get("agent_prompt_file"),
+    ]
+    for candidate in candidates:
+        if not isinstance(candidate, str):
+            continue
+        match = re.search(r"(?:^|[\\/])model=([^\\/]+)", candidate)
+        if match:
+            return match.group(1)
+    return None
 
 
 def safe_path_part(value: str, max_length: int = 120) -> str:
