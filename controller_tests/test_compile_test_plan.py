@@ -81,6 +81,28 @@ class RTestCompilerTests(unittest.TestCase):
             ],
         )
 
+    def test_accepts_empty_top_level_environment(self):
+        """Specifications without environment variables still declare ownership explicitly."""
+
+        source = textwrap.dedent("""
+        controller_dir generated/out/jit
+        spec_name BotV0
+        spectra_file generated/BotV0.spectra
+        environment:
+        system leftM, rightM
+
+        test declared:
+          kind variable_ownership
+        """)
+
+        plan = compile_rtest(source)
+
+        self.assertEqual(plan["environment"], [])
+        self.assertEqual(plan["system"], ["leftM", "rightM"])
+        self.assertEqual(plan["outputs"], ["leftM", "rightM"])
+        self.assertEqual(plan["tests"][0]["env"], [])
+        self.assertEqual(plan["tests"][0]["sys"], ["leftM", "rightM"])
+
     def test_accepts_unquoted_windows_paths_with_drive_colon(self):
         """Drive-letter colons in Windows paths are part of the value, not key separators."""
 

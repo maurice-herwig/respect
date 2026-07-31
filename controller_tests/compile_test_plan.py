@@ -533,7 +533,11 @@ def validate_test(test: dict[str, Any], line_number: int) -> None:
 def validate_plan(plan: dict[str, Any]) -> None:
     """Validate top-level fields required by ReSpect and the Java runner."""
 
-    missing = [key for key in ("controller_dir", "spec_name", "spectra_file", "environment", "system") if not plan.get(key)]
+    missing = [
+        key
+        for key in ("controller_dir", "spec_name", "spectra_file", "environment", "system")
+        if key not in plan or plan[key] is None or (key != "environment" and not plan[key])
+    ]
     if missing:
         raise DslError(
             f"Missing required top-level field(s): {', '.join(missing)}.",

@@ -786,6 +786,17 @@ def test_counts(result_file: Path) -> tuple[int, int, int]:
     return total, passed, total - passed
 
 
+def is_environment_safety_execution_error(result: dict[str, Any]) -> bool:
+    """Detect controller-test cases whose inputs violate environment assumptions."""
+    details = result.get("details") if isinstance(result.get("details"), dict) else {}
+    if result.get("passed") is not False:
+        return False
+    if details.get("failure_code") != "test_execution_error":
+        return False
+    message = str(details.get("message") or "").lower()
+    return "safety violation for the environment" in message
+
+
 def independent_terminal_status(rounds: list[dict[str, Any]]) -> str:
     """Map the final independent-test stop reason to an evaluation-safe status."""
     if not rounds:
@@ -1032,8 +1043,9 @@ def process_independent_branch(
 
         compiled_test_plans.append((round_index, compiled_file))
         aggregate_results: list[dict[str, Any]] = []
+        ignored_invalid_tests: list[dict[str, Any]] = []
         replay_records: list[dict[str, Any]] = []
-        tests_total = tests_passed = tests_failed = 0
+        raw_tests_total = raw_tests_passed = raw_tests_failed = 0
         for source_round, source_plan in compiled_test_plans:
             replay_plan = test_dir / f"replay-plan-round-{source_round:02d}.json"
             result_file = test_dir / f"test-results-round-{source_round:02d}.json"
@@ -1048,15 +1060,19 @@ def process_independent_branch(
             write_text(test_dir / f"test-run-round-{source_round:02d}.stdout.txt", run_result.stdout)
             write_text(test_dir / f"test-run-round-{source_round:02d}.stderr.txt", run_result.stderr)
             plan_total, plan_passed, plan_failed = test_counts(result_file)
-            tests_total += plan_total
-            tests_passed += plan_passed
-            tests_failed += plan_failed
+            raw_tests_total += plan_total
+            raw_tests_passed += plan_passed
+            raw_tests_failed += plan_failed
             payload = load_json(result_file) if result_file.is_file() else {}
             for result in payload.get("results") or payload.get("tests") or []:
                 annotated = dict(result)
                 annotated["source_test_round"] = source_round
                 annotated["source_result_file"] = str(result_file)
-                aggregate_results.append(annotated)
+                if is_environment_safety_execution_error(annotated):
+                    annotated["ignored_reason"] = "environment_safety_violation"
+                    ignored_invalid_tests.append(annotated)
+                else:
+                    aggregate_results.append(annotated)
             replay_records.append(
                 {
                     "source_test_round": source_round,
@@ -1069,6 +1085,17 @@ def process_independent_branch(
                 }
             )
 
+        tests_total = len(aggregate_results)
+        tests_passed = sum(1 for item in aggregate_results if item.get("passed") is True)
+        tests_failed = sum(1 for item in aggregate_results if item.get("passed") is False)
+        if ignored_invalid_tests:
+            LOGGER.info(
+                "Ignored invalid independent tests at round %s: ignored=%s raw_failed=%s active_failed=%s",
+                round_index,
+                len(ignored_invalid_tests),
+                raw_tests_failed,
+                tests_failed,
+            )
         aggregate_file = test_dir / "test-results-aggregate.json"
         write_json(
             aggregate_file,
@@ -1077,6 +1104,11 @@ def process_independent_branch(
                 "total": tests_total,
                 "passed": tests_passed,
                 "failed": tests_failed,
+                "raw_total": raw_tests_total,
+                "raw_passed": raw_tests_passed,
+                "raw_failed": raw_tests_failed,
+                "ignored_invalid_test_count": len(ignored_invalid_tests),
+                "ignored_invalid_tests": ignored_invalid_tests,
                 "replayed_test_plans": replay_records,
                 "results": aggregate_results,
             },
@@ -1088,11 +1120,21 @@ def process_independent_branch(
                 "tests_total": tests_total,
                 "tests_passed": tests_passed,
                 "tests_failed": tests_failed,
+                "raw_tests_total": raw_tests_total,
+                "raw_tests_passed": raw_tests_passed,
+                "raw_tests_failed": raw_tests_failed,
+                "ignored_invalid_test_count": len(ignored_invalid_tests),
+                "ignored_invalid_tests": ignored_invalid_tests,
             }
         )
         if tests_failed == 0:
             round_record["stop_reason"] = "tests_passed"
-            LOGGER.info("Independent tests passed at round %s: total=%s", round_index, tests_total)
+            LOGGER.info(
+                "Independent tests passed at round %s: total=%s ignored_invalid=%s",
+                round_index,
+                tests_total,
+                len(ignored_invalid_tests),
+            )
             break
         if round_index >= args.max_feedback_rounds:
             round_record["stop_reason"] = "max_feedback_rounds_reached"

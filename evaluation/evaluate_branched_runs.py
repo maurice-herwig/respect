@@ -380,11 +380,28 @@ def branch_status_summary(record: dict[str, Any]) -> dict[str, dict[str, Any]]:
         rounds = branch.get("rounds")
         if terminal_reason is None and isinstance(rounds, list) and rounds:
             terminal_reason = rounds[-1].get("stop_reason")
-        summary[name] = {
+        branch_summary = {
             "status": branch.get("status"),
             "terminal_reason": terminal_reason,
             "complete_for_evaluation": branch.get("status") in COMPLETE_BRANCH_STATUSES,
         }
+        if isinstance(rounds, list):
+            branch_summary.update(
+                {
+                    "round_count": len(rounds),
+                    "tests_total": sum(int(round_item.get("tests_total") or 0) for round_item in rounds if isinstance(round_item, dict)),
+                    "tests_passed": sum(int(round_item.get("tests_passed") or 0) for round_item in rounds if isinstance(round_item, dict)),
+                    "tests_failed": sum(int(round_item.get("tests_failed") or 0) for round_item in rounds if isinstance(round_item, dict)),
+                    "raw_tests_total": sum(int(round_item.get("raw_tests_total") or 0) for round_item in rounds if isinstance(round_item, dict)),
+                    "raw_tests_failed": sum(int(round_item.get("raw_tests_failed") or 0) for round_item in rounds if isinstance(round_item, dict)),
+                    "ignored_invalid_test_count": sum(
+                        int(round_item.get("ignored_invalid_test_count") or 0)
+                        for round_item in rounds
+                        if isinstance(round_item, dict)
+                    ),
+                }
+            )
+        summary[name] = branch_summary
     return summary
 
 
