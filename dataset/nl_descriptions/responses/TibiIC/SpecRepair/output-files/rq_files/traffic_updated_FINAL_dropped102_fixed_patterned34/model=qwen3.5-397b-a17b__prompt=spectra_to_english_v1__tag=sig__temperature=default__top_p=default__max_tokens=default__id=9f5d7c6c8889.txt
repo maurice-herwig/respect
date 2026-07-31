@@ -1,0 +1,32 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+This specification describes a reactive traffic light control system. The environment provides inputs indicating the presence of cars in lane A (`cara`) and lane B (`carb`), as well as an `emergency` signal. The system controls the traffic lights `greena` and `greenb`, indicating whether the light for lane A or lane B is green, respectively.
+
+**Environment Assumptions**
+The environment is assumed to behave according to the following constraints:
+*   **Car A Idling:** Always, if the emergency signal is inactive and the emergency signal is active simultaneously, then car A must be present in the next step.
+*   **Car B Idling:** Always, if the emergency signal is active, then at least one of the following must hold: car B is present in the next step, the emergency signal is active, light B is green, or car B is not present.
+*   **Car A Moving:** Always, if the emergency signal is inactive and the emergency signal is active simultaneously, then at least one of the following must hold: car A is not present, car A is not present in the next step, or light A is not green.
+*   **Car B Moving:** Always, if the emergency signal is active, then at least one of the following must hold: the emergency signal is active, car B is not present, car B is not present in the next step, or light B is not green.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+*   **Light Status:** Always, at least one of the following must hold: the emergency signal is inactive, the emergency signal is active, or light B is not green.
+*   **Emergency Red Light:** Always, at least one of the following must hold: the emergency signal is inactive, the emergency signal is active, or both light A and light B are not green.
+*   **Car A Response:** Whenever car A is present, the system must eventually ensure that either light B is not green or light A is green. This response requirement initializes in a state ready to detect the presence of car A.
+*   **Car B Response:** Whenever car B is present, the system must eventually ensure that light B is green. This response requirement initializes in a state ready to detect the presence of car B.
+
+**Initial Conditions and Liveness**
+*   The response mechanisms for car presence initialize in a state indicating no pending response is required.
+*   For the car response requirements, the system must infinitely often return to a state where no stimulus is pending a response, ensuring that requested light changes are not indefinitely postponed.
