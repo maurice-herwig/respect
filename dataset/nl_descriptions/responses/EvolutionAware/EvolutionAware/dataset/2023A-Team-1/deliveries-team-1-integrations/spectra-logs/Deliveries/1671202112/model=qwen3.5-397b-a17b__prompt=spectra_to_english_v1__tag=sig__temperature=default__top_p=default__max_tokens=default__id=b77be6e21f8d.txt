@@ -1,0 +1,39 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+- deliveriesX: DimX [2]
+- deliveriesY: DimY [2]
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**Requirements Description**
+
+The system manages two robots, Robot 0 and Robot 1, operating within a grid defined by the dimensions DimX and DimY (ranging from 0 to 5). The environment controls the vertical position of an elevator and provides delivery location data via `deliveriesX` and `deliveriesY`.
+
+**Environment Assumptions**
+The environment controls the variable `elevatorY`. The elevator's vertical position changes by at most one unit per step. Additionally, the elevator must visit floor 0 and floor 5 infinitely often.
+
+**System Guarantees**
+The system controls the horizontal and vertical positions of both robots (`robotX0`, `robotY0`, `robotX1`, `robotY1`).
+
+*Initial Conditions:*
+Both Robot 0 and Robot 1 must start at vertical position 5.
+
+*Safety Requirements:*
+1.  **Movement Granularity:** In every step, the horizontal and vertical coordinates of both robots must change by at most one unit.
+2.  **Elevator Interaction:** A robot may change its vertical position only if it is currently located at horizontal position 0 and its vertical position matches the elevator's current vertical position (`elevatorY`). During any step where the vertical position changes, the robot must remain at horizontal position 0.
+
+*Liveness Requirements:*
+Both Robot 0 and Robot 1 must visit floor 0 and floor 5 infinitely often.

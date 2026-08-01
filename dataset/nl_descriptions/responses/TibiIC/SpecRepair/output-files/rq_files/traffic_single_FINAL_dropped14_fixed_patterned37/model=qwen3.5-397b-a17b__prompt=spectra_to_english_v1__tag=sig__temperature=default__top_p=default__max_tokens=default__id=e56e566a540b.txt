@@ -1,0 +1,28 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Environment Assumptions**
+The environment must satisfy the following conditions:
+1.  **Police Signal:** The `police` signal must be false infinitely often.
+2.  **Car Presence Constraint:** At every step, at least one of the following must hold: a car will be present in the next step (`next(car=true)`), an emergency is currently active (`emergency=true`), or the traffic light is currently green (`green=true`).
+3.  **Car Movement on Green:** Whenever the traffic light is green (`green=true`), a car must not be present in the next step (`next(car=false)`).
+
+**System Guarantees**
+The system must satisfy the following requirements regarding the `green` light in response to the `car` signal:
+
+1.  **Initial Condition:** The system's response mechanism starts in an idle state.
+2.  **Safety and Next-State Behavior:**
+    *   If the system is in the idle state, it remains idle if either no car is present (`car=false`) or if a car is present while the light is already green (`car=true` and `green=true`).
+    *   If the system is in the idle state and a car is present while the light is not green (`car=true` and `green=false`), the system transitions to a pending state.
+    *   If the system is in the pending state, it remains in the pending state as long as the light is not green (`green=false`).
+    *   If the system is in the pending state and the light becomes green (`green=true`), the system returns to the idle state.
+3.  **Liveness Requirement:** The system must return to the idle state infinitely often. Combined with the safety behavior, this ensures that whenever a car is present while the light is not green, the light must eventually turn green.

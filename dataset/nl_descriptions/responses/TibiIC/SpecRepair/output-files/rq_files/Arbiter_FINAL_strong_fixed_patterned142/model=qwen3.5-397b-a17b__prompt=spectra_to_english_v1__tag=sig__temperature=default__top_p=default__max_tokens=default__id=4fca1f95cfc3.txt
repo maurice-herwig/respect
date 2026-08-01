@@ -1,0 +1,33 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The system defines a reactive interaction between the environment and the system controlled variables.
+
+**Assumptions on the Environment**
+The environment satisfies the following condition:
+- Always, if `a` is true, then `a` is true.
+
+**Guarantees Required from the System**
+The system must satisfy the following requirements:
+
+*Initial Conditions*
+- Regarding the response tracking logic, the system initially starts in a ready state indicating no pending responses.
+
+*Safety and Next-State Requirements*
+- Always, if `a` is false, then either `a` is false or both `g1` and `g2` are false.
+- Always, at least one of the variables `r2`, `g1`, or `g2` must be false.
+- For the response behaviors described below, the system maintains an internal state. If a stimulus occurs without the corresponding response condition being met, the system transitions to a pending state. The system remains in the pending state until the response condition is met, at which point it returns to the ready state.
+
+*Liveness Requirements*
+- Whenever `r1` is true, the system must ensure that eventually either `r2` is false or `g1` is true. The system must return to the ready state infinitely often.
+- Whenever `r2` is true, the system must ensure that eventually `g2` becomes true. The system must return to the ready state infinitely often.

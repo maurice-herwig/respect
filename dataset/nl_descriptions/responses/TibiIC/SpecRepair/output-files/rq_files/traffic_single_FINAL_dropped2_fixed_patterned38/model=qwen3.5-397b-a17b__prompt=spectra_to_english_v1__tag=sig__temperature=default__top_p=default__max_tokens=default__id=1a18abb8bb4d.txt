@@ -1,0 +1,26 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Requirements Description**
+
+This specification defines the behavior of a traffic light system interacting with an environment containing vehicles and emergency conditions. The system controls the `green` light signal, while the environment controls the `car` presence signal, the `emergency` signal, and the `police` signal.
+
+**Environment Assumptions**
+The environment is assumed to adhere to the following constraints regarding the `car` signal:
+1.  **Car Presence Stability:** If the car was present in the previous step and is present in the current step without an emergency occurring, then the car must remain present in the next step. Essentially, if the car has been present for two consecutive steps without an emergency, it cannot disappear in the immediate next step.
+2.  **Car Movement on Green:** Whenever the car is present and the green light is on, the car must be absent in the next step. This ensures that the car leaves the intersection when the light is green.
+
+**System Guarantees**
+The system must satisfy the following requirements regarding the `green` light:
+1.  **Initial Condition:** The system's internal response monitor starts in a satisfied state.
+2.  **Response Safety:** If the car is present while the green light is off, the system enters a pending state. While in this pending state, the system remains in the pending state unless the green light turns on. If the green light turns on, the system returns to the satisfied state. If the car is not present, or if the car is present and the green light is already on, the system remains in or returns to the satisfied state.
+3.  **Response Liveness:** The system must return to the satisfied state infinitely often. This implies that whenever the system enters the pending state (because the car is present and the light is not green), the green light must eventually turn on to allow the system to return to the satisfied state.

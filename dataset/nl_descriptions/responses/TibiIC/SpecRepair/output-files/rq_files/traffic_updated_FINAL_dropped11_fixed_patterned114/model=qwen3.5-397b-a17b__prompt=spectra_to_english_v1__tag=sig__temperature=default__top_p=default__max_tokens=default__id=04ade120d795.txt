@@ -1,0 +1,31 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+**Requirements Description**
+
+This specification defines a reactive traffic light control system for two lanes, A and B. The environment provides inputs indicating the presence of cars in each lane (`cara`, `carb`) and an emergency signal (`emergency`). The system controls the green light outputs for each lane (`greena`, `greenb`).
+
+**Environment Assumptions**
+The environment must satisfy the following constraints:
+1.  **Emergency Signal Liveness:** The emergency signal must be inactive (false) infinitely often; it cannot remain active forever.
+2.  **Car A Behavior During Emergency Transition:** Whenever the emergency signal is set to become active in the next step, one of the following must hold: the emergency signal is already active, green light A is currently active, car A is currently absent, or car A will be present in the next step.
+3.  **Car B Behavior During Emergency Transition:** Whenever the emergency signal is set to become active in the next step, one of the following must hold: the emergency signal is already active, green light B is currently active, or car B will be present in the next step.
+4.  **Car A Movement During Emergency Transition:** Whenever the emergency signal is set to become active in the next step, one of the following must hold: the emergency signal is already active, green light A is currently inactive, or car A will be absent in the next step.
+5.  **Car B Movement During Emergency Transition:** Whenever the emergency signal is set to become active in the next step, one of the following must hold: the emergency signal is already active, car B is currently absent, car B will be absent in the next step, or green light B is currently inactive.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+1.  **Mutual Exclusion:** It is never the case that both green light A and green light B are active simultaneously. At least one light must be inactive at all times.
+2.  **Emergency Safety:** Whenever the emergency signal is active, both green light A and green light B must be inactive.
+3.  **Car A Response:** Whenever car A is present, the system must eventually activate green light A.
+4.  **Car B Response:** Whenever car B is present, the system must eventually activate green light B.

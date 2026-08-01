@@ -1,0 +1,35 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+- deliveriesX: DimX [2]
+- deliveriesY: DimY [2]
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+The system controls two robots, Robot 0 and Robot 1, operating on a grid where coordinates range from 0 to 5 on both axes. The environment provides the target delivery locations for both robots via the arrays `deliveriesX` and `deliveriesY`.
+
+The environment must ensure that the Y-coordinates for both delivery locations (`deliveriesY[0]` and `deliveriesY[1]`) are never equal to 5.
+
+The system must satisfy the following liveness requirements:
+- Robot 0 must infinitely often reach the location specified by `deliveriesX[0]` and `deliveriesY[0]`.
+- Robot 1 must infinitely often reach the location specified by `deliveriesX[1]` and `deliveriesY[1]`.
+- Robot 0 must infinitely often return to the coordinates (5, 5).
+- Robot 1 must infinitely often return to the coordinates (5, 5).
+
+The system maintains two counters, `packagesDeliveredByRobot0` and `packagesDeliveredByRobot1`, both initialized to 0. 
+- The counter `packagesDeliveredByRobot0` increments when Robot 0 is at the location `deliveriesX[0]`, `deliveriesY[0]`. It resets to 0 when Robot 0 is at coordinates (5, 5).
+- The counter `packagesDeliveredByRobot1` increments when Robot 1 is at the location `deliveriesX[1]`, `deliveriesY[1]`. It resets to 0 when Robot 1 is at coordinates (5, 5).
+
+Regarding safety constraints on these counters, the system must ensure that the value of `packagesDeliveredByRobot0` always remains strictly less than 4.

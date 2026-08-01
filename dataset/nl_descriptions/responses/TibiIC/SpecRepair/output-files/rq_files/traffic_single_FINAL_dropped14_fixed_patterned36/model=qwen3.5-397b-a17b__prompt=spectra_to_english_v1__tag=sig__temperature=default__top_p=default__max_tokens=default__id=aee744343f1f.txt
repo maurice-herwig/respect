@@ -1,0 +1,30 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The system manages the traffic light signal `green` in response to environment inputs indicating vehicle presence `car`, emergency status `emergency`, and police activity `police`.
+
+**Environment Assumptions**
+The environment is assumed to adhere to the following behavioral constraints:
+1. The `police` signal is false infinitely often.
+2. At every moment, either the `car` will be present in the next moment, or an `emergency` is currently active, or the `green` light is currently on.
+3. If the `car` is not present, it remains not present in the next moment.
+
+**System Guarantees**
+The system must satisfy a response requirement ensuring the `green` light activates appropriately when the `car` is present. This behavior is governed by an internal response state that begins in a ready condition.
+
+1. **Initial Condition:** The system starts in the ready state.
+2. **State Transitions:**
+   - While in the ready state, if the `car` is present and the `green` light is off, the system transitions to a waiting state.
+   - While in the ready state, if the `car` is absent or the `green` light is on, the system remains in the ready state.
+   - While in the waiting state, if the `green` light turns on, the system returns to the ready state.
+   - While in the waiting state, if the `green` light remains off, the system stays in the waiting state.
+3. **Liveness:** The system must infinitely often return to the ready state. Consequently, whenever the system enters the waiting state because the `car` is present while the `green` light is off, the system must eventually turn the `green` light on.

@@ -1,0 +1,27 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The system controls the `green` traffic light signal based on inputs from the environment, which include `car` presence, `police` presence, and an `emergency` signal.
+
+**Environment Assumptions**
+The environment is assumed to satisfy the following behaviors:
+1.  **Police Presence:** Infinitely often, there is no police presence (`police` is false).
+2.  **Car Idle Behavior:** Globally, if there is no car, then either a car arrives in the next step, the light is currently green, or there is no car.
+3.  **Car Movement:** Globally, if there is no police, a car is present, and the light is green, then the car must not be present in the next step (i.e., the car moves).
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Response to Cars:** The system must ensure that infinitely often, it is in a ready state. Initially, the system starts in this ready state. If a car is present and the light is not green, the system enters a waiting state. While in the waiting state, the system must eventually turn the light green to return to the ready state. Consequently, whenever a car is present while the light is not green, the light must eventually turn green.
+2.  **Car Absence:** The system guarantees that infinitely often, there is no car.
+
+**Initial Conditions**
+The system's internal response state is initialized to the ready state.

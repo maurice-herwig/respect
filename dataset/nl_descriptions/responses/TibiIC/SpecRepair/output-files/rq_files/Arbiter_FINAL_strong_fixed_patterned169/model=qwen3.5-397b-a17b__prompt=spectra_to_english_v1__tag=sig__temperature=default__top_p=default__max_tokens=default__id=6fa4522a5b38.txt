@@ -1,0 +1,29 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The system interacts with an environment that controls the boolean input signals `a`, `r1`, and `r2`. The system controls the boolean output signals `g1` and `g2`.
+
+**Environment Assumptions**
+The environment is assumed to adhere to the following safety requirement throughout operation:
+*   Always, if the request signal `r1` is false, then the signal `a` must be true.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies the assumptions:
+
+*   **Request-Response Protocol:** The system implements a response protocol for designated request signals. This protocol begins in an initial idle state. Safety constraints dictate that if a request is active while the corresponding response condition is not met, the protocol transitions to a pending state. While in the pending state, the system must eventually satisfy the response condition to return to the idle state. Additionally, the system must return to the idle state infinitely often.
+    *   For the request signal `r1`, the required response condition is that `g1` is false or `g1` is true.
+    *   For the request signal `r2`, the required response condition is that either `a` is false or `g2` is true.
+
+*   **Global Safety Constraints:**
+    *   Always, if `a` is false, then either `r1` is true or both `g1` and `g2` are false.
+    *   Always, at least one of the following signals must be false: `a`, `g1`, or `g2`.

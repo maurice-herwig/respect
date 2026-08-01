@@ -1,0 +1,25 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- cara: boolean
+- carb: boolean
+- emergency: boolean
+
+System variables:
+- greena: boolean
+- greenb: boolean
+
+The system controls two traffic lights, greena and greenb, based on car detection inputs cara and carb, and an emergency signal. The environment provides the boolean inputs cara, carb, and emergency, while the system determines the boolean outputs greena and greenb.
+
+The system must satisfy the following guarantees:
+1.  **Light Mutual Exclusion:** At all times, at least one of the lights greena or greenb must be inactive. Specifically, it is never the case that both greena and greenb are active simultaneously.
+2.  **Response to Car A:** Whenever the car presence signal cara becomes active, the light greena must eventually become active.
+3.  **Response to Car B:** Whenever the car presence signal carb becomes active, the light greenb must eventually become active.
+
+The system behavior assumes the environment adheres to the following constraints:
+1.  **Emergency and Car A:** Whenever the emergency signal is active, it is assumed that either the light greena is active or the car presence signal cara is inactive.
+2.  **Emergency and Car B:** Whenever the emergency signal is active, it is assumed that either the emergency signal is active or the light greenb is active.
+3.  **Car A Movement:** It is assumed that it is never the case that the emergency signal is inactive, the light greena is active, and the car presence signal cara remains active for two consecutive steps.
+4.  **Car B Movement:** It is assumed that it is never the case that the emergency signal is inactive and the car presence signal carb remains active for two consecutive steps.

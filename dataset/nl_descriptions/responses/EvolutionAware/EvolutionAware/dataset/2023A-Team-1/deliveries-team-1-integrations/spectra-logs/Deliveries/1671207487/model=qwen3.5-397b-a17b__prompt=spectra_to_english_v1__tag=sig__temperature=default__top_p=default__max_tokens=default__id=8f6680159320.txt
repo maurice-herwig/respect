@@ -1,0 +1,47 @@
+
+
+Specification name: Deliveries
+
+Named domains:
+- DimX: Int(0..DX)
+- DimY: Int(0..DY)
+- Coord: Int(0..DY)
+
+Environment variables:
+- elevatorY: DimY
+- deliveriesX: DimX [2]
+- deliveriesY: DimY [2]
+
+System variables:
+- robotX0: DimX
+- robotY0: DimY
+- robotX1: DimX
+- robotY1: DimY
+
+**System Overview**
+This specification defines a reactive system controlling two delivery robots, Robot 0 and Robot 1, operating within a grid coordinate space. The system manages the positions of the robots to satisfy delivery requirements while adhering to specific counting and safety constraints.
+
+**Environment Assumptions**
+The environment provides the target delivery coordinates for both robots. It is assumed that the delivery locations are never situated at the Y-coordinate 5. Specifically, the Y-coordinate for the first delivery target (`deliveriesY[0]`) and the second delivery target (`deliveriesY[1]`) must always differ from 5.
+
+**System Guarantees**
+The system must control the robot positions and internal counters to satisfy the following requirements:
+
+*Robot Movement and Delivery*
+1.  **Robot 0 Delivery:** Robot 0 must infinitely often reach the coordinates specified by `deliveriesX[0]` and `deliveriesY[0]`.
+2.  **Robot 1 Delivery:** Robot 1 must infinitely often reach the coordinates specified by `deliveriesX[1]` and `deliveriesY[1]`.
+3.  **Return to Corner:** Both Robot 0 and Robot 1 must infinitely often return to the coordinates (5, 5).
+
+*Counter Logic*
+The system maintains two counters, `packagesDeliveredByRobot0` and `packagesDeliveredByRobot1`, each ranging from 0 to 4.
+1.  **Initialization:** Both counters start at 0.
+2.  **Increment:**
+    *   `packagesDeliveredByRobot0` increments when Robot 0 is at the location (`deliveriesX[0]`, `deliveriesY[0]`).
+    *   `packagesDeliveredByRobot1` increments when Robot 1 is at the location (`deliveriesX[1]`, `deliveriesY[1]`).
+3.  **Reset:**
+    *   `packagesDeliveredByRobot0` resets to 0 when Robot 0 is at coordinates (5, 5).
+    *   `packagesDeliveredByRobot1` resets to 0 when Robot 1 is at coordinates (5, 5).
+
+*Counter Constraints*
+1.  **Robot 0 Liveness:** The counter `packagesDeliveredByRobot0` must infinitely often equal 3.
+2.  **Robot 0 Safety:** The counter `packagesDeliveredByRobot0` must always remain strictly less than 4.

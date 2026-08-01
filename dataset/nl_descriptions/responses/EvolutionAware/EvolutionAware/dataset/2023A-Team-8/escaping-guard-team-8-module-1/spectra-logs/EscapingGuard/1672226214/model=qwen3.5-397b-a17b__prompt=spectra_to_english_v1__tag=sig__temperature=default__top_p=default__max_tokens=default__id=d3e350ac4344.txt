@@ -1,0 +1,32 @@
+
+
+Specification name: EscapingGuard
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- none
+
+System variables:
+- robotX: Dim
+- robotY: Dim
+
+**Requirements Description**
+
+The system controls the movement of a robot on a two-dimensional grid. The robot's position is defined by coordinates `robotX` and `robotY`, where both values are integers ranging from 0 to 7 (inclusive).
+
+**Initial Conditions**
+Upon startup, the robot is positioned at `robotX = 7` and `robotY = 0`.
+
+**Movement Dynamics**
+The robot's movement is constrained by an internal timing cycle. Every third step, the robot must remain stationary; specifically, if the internal move counter is at its initial phase, both `robotX` and `robotY` must remain unchanged in the next state. During the other steps in the cycle, the robot may move to an adjacent cell or remain stationary. In these allowed steps, each coordinate may change by at most 1 (increment, decrement, or stay the same), permitting horizontal, vertical, or diagonal movement within the grid bounds.
+
+**Obstacle Avoidance**
+The robot must never occupy the following coordinates at any time: (2, 2), (2, 3), (2, 4), or (2, 5).
+
+**Goal Visitation**
+The robot is required to visit the position (0, 0) infinitely often. Additionally, the robot is required to visit the position (0, 7) infinitely often.
+
+**Visitation Ordering**
+There is a specific ordering constraint between target visits. Once the robot visits the position (0, 0), it is prohibited from visiting the position (0, 7) until it has subsequently visited the position (7, 7). Visiting (7, 7) resets this constraint, allowing the robot to visit (0, 7) again after the next visit to (0, 0).

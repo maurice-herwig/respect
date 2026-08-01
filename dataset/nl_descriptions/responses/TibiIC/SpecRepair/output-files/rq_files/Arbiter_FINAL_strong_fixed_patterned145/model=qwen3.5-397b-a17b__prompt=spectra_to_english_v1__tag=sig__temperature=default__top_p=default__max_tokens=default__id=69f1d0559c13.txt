@@ -1,0 +1,32 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The Arbiter system manages two grant outputs, `g1` and `g2`, in response to environment inputs `r1`, `r2`, and `a`. The environment controls the input variables `a`, `r1`, and `r2`, while the system controls the output variables `g1` and `g2`.
+
+**Environment Assumptions**
+The environment must satisfy the following condition:
+- Whenever `r1` is true, `a` must also be true.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+
+*Responsiveness Requirements*
+The system employs a response pattern to ensure requests are eventually answered. This pattern initializes in a ready state. If a trigger condition occurs without the corresponding response condition, the system enters a waiting state and remains there until the response condition occurs. The system must infinitely often return to the ready state, ensuring that pending responses are eventually completed.
+
+1.  **Response to `r1`:** Whenever `r1` is true, `g1` must eventually become true. If `r1` is true and `g1` is not true at that moment, the system waits until `g1` becomes true.
+2.  **Response to `r2`:** Whenever `r2` is true, eventually either `r1` must be false or `g2` must be true. If `r2` is true and neither `r1` is false nor `g2` is true, the system waits until one of these conditions becomes true.
+
+*Safety Constraints*
+The system must adhere to the following logical constraints at all times:
+- Whenever `a` is false, it must be the case that either `a` is false or both `g1` and `g2` are false.
+- At least one of `r1`, `g1`, or `g2` must be false. It is never the case that `r1`, `g1`, and `g2` are all true simultaneously.
