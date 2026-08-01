@@ -1,0 +1,30 @@
+
+
+Specification name: Simple_Arbiter_V1
+
+Environment variables:
+- r_0: boolean
+- r_1: boolean
+
+System variables:
+- g_0: boolean
+- g_1: boolean
+
+The specification defines a reactive system that interacts with an environment through boolean input signals `r_0` and `r_1` and boolean output signals `g_0` and `g_1`. The behavior is constrained by a set of assumptions. There are no explicit guarantee statements declared in the specification.
+
+**Assumptions**
+The specification imposes the following assumptions on the interaction and system behavior:
+
+1.  **Mutual Exclusion:** It is assumed that the system outputs `g_0` and `g_1` are never true simultaneously. At any point in time, at least one of them must be false.
+2.  **Conditional Joint Grant:** It is assumed that whenever input `r_0` is true in the current step and input `r_1` becomes true in the next step, then both outputs `g_0` and `g_1` must become true in the next step.
+3.  **Request-Response Protocol:** It is assumed that the system adheres to a response pattern for both the (`r_0`, `g_0`) pair and the (`r_1`, `g_1`) pair. This pattern governs the relationship between requests (inputs) and grants (outputs) using an internal state machine with two states, S0 (idle) and S1 (pending).
+    *   **Initial Condition:** The protocol begins in the idle state (S0).
+    *   **Safety Requirements:**
+        *   If the system is in the idle state and a request occurs without a corresponding grant (e.g., `r_0` is true and `g_0` is false), the protocol transitions to the pending state (S1).
+        *   If the system is in the idle state and no request occurs, or both the request and grant occur simultaneously, the protocol remains in the idle state.
+        *   If the system is in the pending state and the grant occurs (e.g., `g_0` is true), the protocol transitions back to the idle state.
+        *   If the system is in the pending state and the grant does not occur, the protocol remains in the pending state.
+    *   **Liveness Requirements:** The protocol must return to the idle state (S0) infinitely often. This implies that if a request is made without an immediate grant, the corresponding grant must eventually occur to allow the system to return to the idle state.
+
+**System Guarantees**
+The specification does not contain explicit guarantee statements. All behavioral constraints are defined within the assumptions.

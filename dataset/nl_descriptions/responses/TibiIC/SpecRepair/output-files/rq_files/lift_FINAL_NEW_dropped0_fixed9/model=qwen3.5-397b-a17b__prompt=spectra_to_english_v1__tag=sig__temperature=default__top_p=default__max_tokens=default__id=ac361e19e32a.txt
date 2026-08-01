@@ -1,0 +1,43 @@
+
+
+Specification name: Lift
+
+Environment variables:
+- b1: boolean
+- b2: boolean
+- b3: boolean
+- c: boolean
+
+System variables:
+- f1: boolean
+- f2: boolean
+- f3: boolean
+
+The Lift specification describes a reactive system controlling a lift mechanism across three floors. The environment provides input signals representing floor call buttons and a control signal, while the system outputs signals indicating the current floor of the lift.
+
+**Assumptions**
+The specification operates under the following assumptions regarding the environment and context:
+
+*   **Initial Button State:** Initially, all call buttons (b1, b2, b3) are off (false).
+*   **Button Release Constraints:**
+    *   If button 1 (b1) is pressed and the lift is at floor 1 (f1), button 1 must be released (become false) in the next step.
+    *   If button 2 (b2) is pressed and the lift is at floor 2 (f2), button 2 must be released in the next step.
+    *   If button 3 (b3) is pressed and the lift is at floor 3 (f3), button 3 must be released in the next step.
+*   **Button Persistence:**
+    *   Button 1 remains pressed in the next step unless signal c is true.
+    *   Button 2 remains pressed in the next step unless signal c is true, the lift is at floor 2 (f2), or button 2 is already released.
+    *   Button 3 remains pressed in the next step unless signal c is true.
+*   **Floor State Constraints:**
+    *   If the lift is not at floor 2 (f2 is false), it is assumed to be at floor 1 or floor 3.
+    *   If the lift is not at floor 2, it is assumed not to be at floor 3.
+    *   It is assumed that the lift is never at floor 1 and never at floor 3 (f1 and f3 are always false).
+    *   If the lift is at floor 3, it is assumed not to be at floor 1 and not at floor 2.
+
+**Guarantees**
+The system must satisfy the following guarantees whenever the assumptions hold:
+
+*   **Initial State:** Initially, the lift is at floor 1 (f1 is true), and not at floor 2 or floor 3 (f2 and f3 are false).
+*   **Transition Logic:**
+    *   **From Floor 1:** If the lift is at floor 1, it moves to floor 2 in the next step if button 2 is pressed. Otherwise, if signal c is true, or if neither button 2 nor button 3 is pressed, the lift remains at floor 1.
+    *   **From Floor 2:** If the lift is at floor 2, it moves to floor 1 in the next step if button 1 is pressed, or moves to floor 3 if button 3 is pressed. Otherwise, if signal c is true, or if neither button 1 nor button 3 is pressed, the lift remains at floor 2.
+    *   **From Floor 3:** If the lift is at floor 3, it moves to floor 2 in the next step if button 1 or button 2 is pressed. Otherwise, if signal c is true, or if neither button 1 nor button 2 is pressed, the lift remains at floor 3.

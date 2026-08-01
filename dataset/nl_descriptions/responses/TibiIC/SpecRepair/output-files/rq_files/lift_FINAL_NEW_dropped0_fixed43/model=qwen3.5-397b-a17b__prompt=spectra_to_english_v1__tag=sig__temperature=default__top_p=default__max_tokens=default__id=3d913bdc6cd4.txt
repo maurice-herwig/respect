@@ -1,0 +1,53 @@
+
+
+Specification name: Lift
+
+Environment variables:
+- b1: boolean
+- b2: boolean
+- b3: boolean
+- c: boolean
+
+System variables:
+- f1: boolean
+- f2: boolean
+- f3: boolean
+
+**Requirements Description**
+
+This specification defines the behavior of a lift system interacting with an environment. The environment controls four boolean input variables: **b1**, **b2**, **b3**, and **c**. The system controls three boolean output variables: **f1**, **f2**, and **f3**, representing the lift's floor status.
+
+**Environment Assumptions**
+The system operates under the following assumptions regarding the environment's behavior and the state of the variables:
+
+*   **Initial Button State:** Initially, all button inputs **b1**, **b2**, and **b3** are false.
+*   **Button Clearing:** If the lift is at a specific floor (indicated by **f1**, **f2**, or **f3** being true), the corresponding button input (**b1**, **b2**, or **b3** respectively) cannot remain true in the next state if it is currently true.
+*   **Button Persistence:**
+    *   For **b1**: In every step, either **b1** becomes true in the next state, or **c** is true in the current state.
+    *   For **b2**: If **b2** is true, **c** is false, and the lift is not at floor 2 (**f2** is false), then **b2** must remain true in the next state.
+    *   For **b3**: If **b3** is true and **c** is false, then **b3** must remain true in the next state.
+*   **Floor State Constraints:** The following conditions regarding the floor variables are assumed to hold globally:
+    *   Either **f1** is true or **f3** is true.
+    *   If **f3** is false, then **f2** must be false.
+    *   If **f3** is false, then **f1** must be false.
+    *   If **f3** is true, then both **f1** and **f2** must be false.
+
+**System Guarantees**
+The system must satisfy the following guarantees whenever the environment satisfies the assumptions:
+
+*   **Initial State:** Initially, the lift is at floor 1 (**f1** is true), and not at floor 2 or floor 3 (**f2** and **f3** are false).
+*   **Transition Rules:** The system must adhere to the following next-state relationships based on the current floor:
+    *   **If at Floor 1 (**f1** is true):**
+        *   Move to floor 2 in the next state (**next(f2)** is true) if **b2** is true; or
+        *   Remain at floor 1 in the next state (**next(f1)** is true) if **c** is true; or
+        *   Remain at floor 1 in the next state (**next(f1)** is true) if both **b2** and **b3** are false.
+    *   **If at Floor 2 (**f2** is true):**
+        *   Move to floor 1 in the next state (**next(f1)** is true) if **b1** is true; or
+        *   Move to floor 3 in the next state (**next(f3)** is true) if **b3** is true; or
+        *   Remain at floor 2 in the next state (**next(f2)** is true) if **c** is true; or
+        *   Remain at floor 2 in the next state (**next(f2)** is true) if both **b1** and **b3** are false.
+    *   **If at Floor 3 (**f3** is true):**
+        *   Move to floor 2 in the next state (**next(f2)** is true) if **b1** is true; or
+        *   Move to floor 2 in the next state (**next(f2)** is true) if **b2** is true; or
+        *   Remain at floor 3 in the next state (**next(f3)** is true) if **c** is true; or
+        *   Remain at floor 3 in the next state (**next(f3)** is true) if both **b1** and **b2** are false.

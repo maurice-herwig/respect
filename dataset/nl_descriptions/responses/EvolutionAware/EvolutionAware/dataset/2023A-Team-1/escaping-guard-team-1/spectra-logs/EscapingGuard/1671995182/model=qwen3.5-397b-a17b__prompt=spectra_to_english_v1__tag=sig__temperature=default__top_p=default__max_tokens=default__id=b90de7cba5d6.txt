@@ -1,0 +1,27 @@
+
+
+Specification name: EscapingGuard
+
+Named domains:
+- Dim: Int(0..D)
+
+Environment variables:
+- guardX: Dim
+- guardY: Dim
+
+System variables:
+- robotX: Dim
+- robotY: Dim
+
+The system manages a robot navigating a grid where coordinates are integers defined by the domain Dim (ranging from 0 to 7). The environment controls the position of a guard on the same grid.
+
+**Environment Assumptions**
+The environment is assumed to keep the guard stationary. The guard is initially positioned at coordinates (0, 0) and its position does not change throughout the operation.
+
+**System Guarantees**
+The system must control the robot to satisfy the following requirements:
+
+1.  **Movement Constraint:** In each step, the robot's X and Y coordinates may each change by at most 1 unit.
+2.  **Guard Avoidance:** The robot must always remain outside the 2x2 square region anchored at the guard's position. Specifically, the robot is forbidden from occupying any position where its X coordinate is between `guardX` and `guardX + 1` (inclusive) AND its Y coordinate is between `guardY` and `guardY + 1` (inclusive). Given the guard is fixed at (0, 0), the robot cannot occupy positions (0, 0), (0, 1), (1, 0), or (1, 1).
+3.  **Static Obstacle Avoidance:** The robot must never occupy a position where the X coordinate is 2 and the Y coordinate is any value in the set {2, 3, 4, 5}.
+4.  **Turn-Based Stop:** A cyclic turn counter progresses through values 1, 2, and 3. Whenever the counter value is 3, the robot must remain stationary (its coordinates must not change).

@@ -1,0 +1,23 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**Environment Assumptions**
+The environment is assumed to behave according to the following constraints:
+1.  The `police` signal is false infinitely often.
+2.  The `car` signal must remain true in the next step if it is currently true, provided there is no `emergency` and the `green` light is not active.
+3.  If there is no `emergency`, the `green` light is active, and a `car` is present, the `car` signal must become false in the next step.
+4.  If an `emergency` status becomes active in the next step, and currently the `green` light is active and a `car` is present, the `car` signal must become false in the next step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Response Requirement:** Whenever the `car` signal is true while the `green` signal is false, the system must eventually set the `green` signal to true. This ensures that the system does not allow a car to wait indefinitely at a non-green light.
+2.  **Frequency Requirement:** The system guarantees that the `car` signal is false infinitely often.

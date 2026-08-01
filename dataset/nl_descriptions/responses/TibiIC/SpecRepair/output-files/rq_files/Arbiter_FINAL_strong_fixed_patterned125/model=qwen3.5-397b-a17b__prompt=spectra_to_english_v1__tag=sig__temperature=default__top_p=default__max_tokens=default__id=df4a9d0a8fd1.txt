@@ -1,0 +1,31 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+**Requirements Description**
+
+The system operates as an Arbiter, interacting continuously with an environment through boolean input signals `a`, `r1`, and `r2`, and controlling boolean output signals `g1` and `g2`.
+
+**Environment Assumptions**
+The environment is assumed to satisfy the following condition:
+- Always, if input `r1` is false, then input `a` must be true.
+
+**System Guarantees**
+The system must satisfy the following guarantees:
+
+1.  **Response Pattern for `r1`:** The system implements a response pattern for the request `r1` with the response condition that `g1` is false or `g1` is true. The system maintains an internal state for this pattern, initially set to S0. The system must infinitely often return to state S0. If `r1` is true while the response condition is false, the system enters a waiting state S1 and must return to S0 once the response condition becomes true.
+
+2.  **Response Pattern for `r2`:** The system implements a response pattern for the request `r2` with the response condition that `a` is false or `g2` is true. The system maintains an internal state for this pattern, initially set to S0. The system must infinitely often return to state S0. If `r2` is true while the response condition is false, the system enters a waiting state S1 and must return to S0 once the response condition becomes true.
+
+3.  **Safety Condition on `a`, `g1`, and `g2`:** Always, if `a` is false, then either `a` is false or both `g1` and `g2` are false.
+
+4.  **Safety Condition on `r1`, `g1`, and `g2`:** Always, at least one of the following holds: `r1` is true, `g1` is false, or `g2` is false.

@@ -1,0 +1,34 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+**System Overview**
+The system controls the `green` traffic light signal based on inputs from the environment, which include the `car` presence signal, the `emergency` signal, and the `police` presence signal. The behavior is defined by assumptions on the environment and guarantees required from the system.
+
+**Environment Assumptions**
+The environment must satisfy the following constraints:
+1.  **Police Signal Frequency:** The `police` signal must be false infinitely often.
+2.  **Car Behavior When Police Was Absent:** If the `police` signal was false in the previous step, then at the current step, either the `car` is absent, the `green` light is on, or the `car` will be present in the next step.
+3.  **Car Movement Relative to Light:** At every step, at least one of the following conditions must hold: the `police` signal is true, the `car` is currently absent, the `car` will be absent in the next step, or the `green` light is off.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Car Signal Frequency:** The system guarantees that the `car` signal is false infinitely often.
+2.  **Response to Car Presence:** The system must ensure that whenever the `car` is present, the `green` light eventually turns on. This is enforced by an internal monitoring state machine with the following rules:
+    *   **Initial Condition:** The internal state starts in state S0.
+    *   **Safety Rules:**
+        *   If the internal state is S0:
+            *   If the `car` is absent, or if the `car` is present and the `green` light is on, the state remains S0.
+            *   If the `car` is present and the `green` light is off, the state transitions to S1.
+        *   If the internal state is S1:
+            *   If the `green` light is on, the state transitions to S0.
+            *   If the `green` light is off, the state remains S1.
+    *   **Liveness Requirement:** The internal state must be S0 infinitely often. This ensures the system cannot remain in state S1 indefinitely, forcing the `green` light to turn on whenever the `car` is present and the light is off.

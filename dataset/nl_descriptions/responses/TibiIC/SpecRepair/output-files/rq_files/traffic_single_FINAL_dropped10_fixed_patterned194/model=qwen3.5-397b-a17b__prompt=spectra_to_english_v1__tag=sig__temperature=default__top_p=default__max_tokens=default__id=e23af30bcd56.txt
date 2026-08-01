@@ -1,0 +1,27 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The TrafficE2 specification describes a reactive system that controls a traffic light signal based on environmental inputs. The environment provides three boolean inputs: `car`, indicating the presence of a vehicle; `emergency`, indicating an emergency status; and `police`, indicating police presence. The system controls one boolean output: `green`, representing the state of the traffic light.
+
+**Environment Assumptions**
+The specification assumes the following behaviors from the environment:
+1.  **Police Presence:** Infinitely often, the `police` input is false. Police presence is not permanent.
+2.  **Car Behavior During Emergency:** Globally, if `emergency` was true in the previous step, then either `emergency` remains true, `car` is currently false, or `car` will be true in the next step. This restricts the environment from clearing an emergency while a car is present unless the car remains present in the subsequent step.
+3.  **Car Movement Without Police:** Globally, if `police` is false and `car` is true, then `car` must be false in the next step. When police are absent, a present car must leave in the immediately following step.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Car Frequency:** The system guarantees that infinitely often, the `car` input is false.
+2.  **Green Light Response:** The system ensures a response relationship between the `car` input and the `green` output using a stateful protocol. Initially, this protocol starts in a satisfied state. While in the satisfied state, if `car` is true, `green` must be true to remain satisfied; otherwise, the protocol transitions to a pending state. While in the pending state, the system must eventually set `green` to true to return to the satisfied state. The system guarantees that the satisfied state is visited infinitely often, ensuring the green light activates appropriately when cars are present.
+
+**Initial Conditions**
+Upon system start, the internal state of the green light response protocol is initialized to the satisfied state.

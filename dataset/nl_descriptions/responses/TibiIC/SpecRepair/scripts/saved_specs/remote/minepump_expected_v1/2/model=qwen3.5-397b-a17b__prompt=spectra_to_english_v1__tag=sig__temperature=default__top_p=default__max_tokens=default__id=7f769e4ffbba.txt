@@ -1,0 +1,27 @@
+
+
+Specification name: Minepump
+
+Environment variables:
+- highwater: boolean
+- methane: boolean
+
+System variables:
+- pump: boolean
+
+**Requirements Description**
+
+This specification defines the behavior of a mine pump control system. The environment provides inputs regarding water levels and methane presence, while the system controls the pump output.
+
+**Initial Conditions**
+At the start of operation, the environment signals indicate that the water level is not high (`highwater` is false) and methane is not detected (`methane` is false). The system must initialize with the pump turned off (`pump` is false).
+
+**System Guarantees**
+The system must satisfy the following behavioral requirements at all times:
+1. If the `highwater` signal is true, the system must set the `pump` to true in the next step.
+2. If the `highwater` signal is false and the `methane` signal is true, the system must set the `pump` to false in the next step.
+
+**Environment Assumptions**
+The environment is expected to adhere to the following constraints:
+1. If the `pump` was true in the previous step and remains true in the current step, the environment must ensure that `highwater` becomes false in the next step.
+2. Whenever the `highwater` signal is false, it must hold that either `highwater` is false or `methane` is false.

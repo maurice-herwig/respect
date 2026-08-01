@@ -1,0 +1,27 @@
+
+
+Specification name: TrafficE2
+
+Environment variables:
+- car: boolean
+- emergency: boolean
+- police: boolean
+
+System variables:
+- green: boolean
+
+The system controls the `green` traffic light signal based on inputs from the environment regarding vehicle presence, emergency status, and police presence.
+
+**Environment Assumptions**
+The environment is assumed to adhere to the following constraints:
+1.  **Police Presence:** The `police` signal is not permanently active; infinitely often, `police` must be false.
+2.  **Car Behavior with Police:** When `police` is true, if a `car` is currently present and there is no `emergency`, the `car` must remain present in the next time step. Essentially, cars do not leave immediately when police are present unless an emergency occurs.
+3.  **Car Behavior without Police:** When `police` is false, if a `car` is currently present, it must be absent in the next time step. Cars must move immediately when no police are present.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+1.  **Car Response:** The system must respond to the presence of a car by eventually turning the green light on. Specifically, whenever `car` is true, `green` must become true at some point in the future.
+2.  **Car Frequency:** The system guarantees that the condition where `car` is false occurs infinitely often.
+
+**Initial Conditions and State Logic**
+The response logic for the car signal initializes in a state indicating no pending car request. The system maintains a safety condition tracking whether a car request is pending or granted. A liveness requirement ensures that the system infinitely often returns to the state where no car request is pending, which enforces that every car presence is eventually met with a green light.

@@ -1,0 +1,33 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+The system operates as an arbiter that manages two grant signals, `g1` and `g2`, in response to two request signals, `r1` and `r2`, controlled by the environment. The environment also controls an signal `a`. The system must satisfy specific guarantees whenever the environment satisfies the stated assumptions.
+
+**Environment Assumptions**
+The environment is assumed to adhere to the following constraints regarding the variable `a`:
+1. It is always the case that `a` is true and `a` is false.
+2. It is infinitely often the case that `a` is true and `a` is false.
+
+**System Guarantees**
+The system must satisfy the following requirements:
+
+1. **Enable Constraint:** Always, if the environment signal `a` is false, then both system grants `g1` and `g2` must be false.
+
+2. **Response Protocols:** The system must implement a response protocol for each request-grant pair (`r1`, `g1`) and (`r2`, `g2`). For each pair, denoted generally as request `s` and grant `p`, the system maintains an internal state variable that begins in state `S0`. The behavior of this protocol is defined as follows:
+    *   **Initial Condition:** The internal state is initially `S0`.
+    *   **Safety and Transition Rules:**
+        *   If the state is `S0` and either the request `s` is false or both the request `s` and grant `p` are true, the next state remains `S0`.
+        *   If the state is `S0` and the request `s` is true while the grant `p` is false, the next state becomes `S1`.
+        *   If the state is `S1` and the grant `p` is true, the next state becomes `S0`.
+        *   If the state is `S1` and the grant `p` is false, the next state remains `S1`.
+    *   **Liveness Requirement:** The system must ensure that the internal state is `S0` infinitely often. This implies that if the system enters state `S1` due to a request without an immediate grant, it must eventually assert the grant `p` to return to state `S0`.

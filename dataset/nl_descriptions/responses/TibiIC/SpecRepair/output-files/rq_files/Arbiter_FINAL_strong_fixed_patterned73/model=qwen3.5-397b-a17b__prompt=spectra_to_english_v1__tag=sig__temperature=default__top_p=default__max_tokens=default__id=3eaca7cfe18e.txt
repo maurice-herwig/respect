@@ -1,0 +1,34 @@
+
+
+Specification name: Arbiter
+
+Environment variables:
+- a: boolean
+- r1: boolean
+- r2: boolean
+
+System variables:
+- g1: boolean
+- g2: boolean
+
+**Requirements Description**
+
+The Arbiter system manages two grant outputs, `g1` and `g2`, in response to two environment request inputs, `r1` and `r2`, and an environment signal `a`.
+
+**Environment Assumptions**
+The environment must satisfy the following condition:
+- Always, if request `r1` is false, then signal `a` must be true.
+
+**System Guarantees**
+The system must satisfy the following requirements whenever the environment satisfies its assumptions:
+
+*Initial Conditions*
+- The system initializes its internal request-tracking logic in a default ready state.
+
+*Safety Requirements*
+- Always, if `a` is false, then either `a` is false or both grants `g1` and `g2` are false.
+- Always, at least one of the following must hold: request `r1` is true, grant `g1` is false, or grant `g2` is false.
+
+*Liveness Requirements*
+- Whenever request `r1` is true, the system must ensure that eventually either `a` becomes false or grant `g1` becomes true.
+- Whenever request `r2` is true, the system must ensure that eventually either `a` becomes false or grant `g2` becomes true.
