@@ -1,0 +1,75 @@
+{
+  "tests": [
+    {
+      "name": "declared_variables",
+      "kind": "variable_ownership",
+      "env": [
+        "highwater",
+        "methane"
+      ],
+      "sys": [
+        "pump"
+      ]
+    },
+    {
+      "name": "pump_always_false",
+      "kind": "invariant",
+      "requirement": "The pump variable is assumed false at all times, which is enforced by the system-owned pump output.",
+      "mode": "exhaustive",
+      "max_depth": 4,
+      "max_paths": 64,
+      "env": {
+        "highwater": [
+          "false",
+          "true"
+        ],
+        "methane": [
+          "false",
+          "true"
+        ]
+      },
+      "condition": {
+        "pump": "false"
+      }
+    },
+    {
+      "name": "methane_keeps_next_pump_off",
+      "kind": "eventually_response",
+      "requirement": "At all times, if methane is true, then pump must be false in the next state.",
+      "mode": "exhaustive",
+      "max_depth": 4,
+      "max_paths": 64,
+      "env": {
+        "highwater": [
+          "false",
+          "true"
+        ],
+        "methane": [
+          "false",
+          "true"
+        ]
+      },
+      "when": {
+        "methane": "true"
+      },
+      "eventually": {
+        "pump": "false"
+      },
+      "within_steps": 1,
+      "require_closed_obligations": true
+    }
+  ],
+  "controller_dir": "C:/Users/mauri/OneDrive/Desktop/Repos/respect/experiments/branched_runs/TibiIC/SpecRepair/output-files/dropped/minepump_fixed1_normalised_dropped8/model=qwen3/2bbcf860ee2205e5ad577beb/branches/self_test/synthesis/jit",
+  "spec_name": "Minepump",
+  "spectra_file": "C:/Users/mauri/OneDrive/Desktop/Repos/respect/experiments/branched_runs/TibiIC/SpecRepair/output-files/dropped/minepump_fixed1_normalised_dropped8/model=qwen3/2bbcf860ee2205e5ad577beb/branches/self_test/specs/00_from_core.spectra",
+  "environment": [
+    "highwater",
+    "methane"
+  ],
+  "system": [
+    "pump"
+  ],
+  "outputs": [
+    "pump"
+  ]
+}

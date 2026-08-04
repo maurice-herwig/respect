@@ -57,7 +57,7 @@ start/end, artifact archiving, timeouts, and manifest locations.
 Run the currently implemented branches:
 
 ```powershell
-python experiments\branched_reconstruction.py --signature-root dataset\signatures --branches no_test self_test independent_test --limit 1 --log-file experiments\branched_runs\batch.log --max-feedback-rounds 3
+python experiments\branched_reconstruction.py --signature-root dataset\signatures --branches no_test self_test independent_test --limit 20 --log-file experiments\branched_runs\batch.log --max-feedback-rounds 3
 ```
 
 Generated artifacts are written to `experiments/branched_runs/`. The batch

@@ -1,0 +1,21 @@
+controller_dir C:/Users/mauri/OneDrive/Desktop/Repos/respect/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/self_test/synthesis/jit
+spec_name BotV1naive
+spectra_file C:/Users/mauri/OneDrive/Desktop/Repos/respect/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/self_test/specs/00_from_core.spectra
+environment distance
+system leftM, rightM
+
+test no_forward_after_distance_zero:
+  kind exclusion
+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state the system must not be in the forward condition."
+  trace:
+    distance=0
+    distance=21
+  forbidden distance=21, leftM=FWD, rightM=FWD
+
+test no_forward_after_distance_twenty:
+  kind exclusion
+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state the system must not be in the forward condition."
+  trace:
+    distance=20
+    distance=100
+  forbidden distance=100, leftM=FWD, rightM=FWD

@@ -1,0 +1,71 @@
+Use $respect-test-writer.
+
+Write independent controller tests in the controller_tests .rtest DSL.
+
+Output directory: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-02\test-writer
+Required test plan path: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-02\test-writer\test-plan.rtest
+Agent timeout budget seconds: 7200.0
+
+Fixed env/sys signature JSON:
+
+```json
+{
+  "environment": [
+    {
+      "name": "distance",
+      "type": "Int(0..100)"
+    }
+  ],
+  "spec_name": "BotV1naive",
+  "system": [
+    {
+      "name": "leftM",
+      "type": "MotorCmd"
+    },
+    {
+      "name": "rightM",
+      "type": "MotorCmd"
+    }
+  ],
+  "type_definitions": [
+    {
+      "domain": "{FWD, BWD, STP}",
+      "name": "MotorCmd"
+    }
+  ]
+}
+```
+
+Controller metadata:
+- spec_name: BotV1naive
+- controller_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\spec-repair\synthesis\jit
+- spectra_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\spec-repair\skill_artifacts\final.spectra
+
+Important boundaries:
+- Do not open or inspect the generated Spectra file. Use spectra_file only as a DSL path.
+- Do not read core_context.full.json, repair logs, source Spectra, benchmark oracles, or distance results.
+- Derive expected behavior only from the natural-language requirements and fixed signature.
+- Use the same generous timeout budget as the other branches; do not stop early
+  unless a nested command reports its own timeout.
+
+Natural-language requirements:
+
+
+
+Specification name: BotV1naive
+
+Named domains:
+- MotorCmd: {FWD, BWD, STP}
+
+Environment variables:
+- distance: Int(0..100)
+
+System variables:
+- leftM: MotorCmd
+- rightM: MotorCmd
+
+The system controls two motors via the output variables `leftM` and `rightM`. Each motor command must be selected from the set {FWD, BWD, STP}, representing forward, backward, and stop respectively. The environment provides an input variable `distance`, which is an integer value ranging from 0 to 100.
+
+The specification defines the condition "forward" as occurring when both `leftM` and `rightM` are set to FWD simultaneously.
+
+The system must satisfy the following guarantee regarding proximity safety: At all times, if the current `distance` value is less than or equal to 20, then in the immediately next state, the system must not be in the "forward" condition. This means that whenever the measured distance is 20 or less, the subsequent motor commands cannot have both `leftM` and `rightM` set to FWD.

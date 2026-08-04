@@ -1,0 +1,13 @@
+spec BotV1naive
+
+type MotorCmd = {FWD, BWD, STP};
+
+env Int(0..100) distance;
+
+sys MotorCmd leftM;
+sys MotorCmd rightM;
+
+define forward := leftM = FWD & rightM = FWD;
+
+gar proximity_safety:
+  G (distance <= 20 -> !(next(leftM) = FWD & next(rightM) = FWD));

@@ -1,0 +1,1542 @@
+OpenAI Codex v0.146.0
+--------
+workdir: C:\Users\mauri\OneDrive\Desktop\Repos\respect
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: medium
+reasoning summaries: none
+session id: 019fc863-4b93-7422-9aa5-27186311ed34
+--------
+user
+Use $respect-test-writer.
+
+Write independent controller tests in the controller_tests .rtest DSL.
+
+Output directory: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-03\test-writer
+Required test plan path: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-03\test-writer\test-plan.rtest
+Agent timeout budget seconds: 7200.0
+
+Fixed env/sys signature JSON:
+
+```json
+{
+  "environment": [
+    {
+      "name": "highwater",
+      "type": "boolean"
+    },
+    {
+      "name": "methane",
+      "type": "boolean"
+    }
+  ],
+  "spec_name": "Minepump",
+  "system": [
+    {
+      "name": "pump",
+      "type": "boolean"
+    }
+  ],
+  "type_definitions": []
+}
+```
+
+Controller metadata:
+- spec_name: Minepump
+- controller_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\spec-repair\synthesis\jit
+- spectra_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\spec-repair\skill_artifacts\final.spectra
+
+Important boundaries:
+- Do not open or inspect the generated Spectra file. Use spectra_file only as a DSL path.
+- Do not read core_context.full.json, repair logs, source Spectra, benchmark oracles, or distance results.
+- Derive expected behavior only from the natural-language requirements and fixed signature.
+- Use the same generous timeout budget as the other branches; do not stop early
+  unless a nested command reports its own timeout.
+
+Natural-language requirements:
+
+
+
+Specification name: Minepump
+
+Environment variables:
+- highwater: boolean
+- methane: boolean
+
+System variables:
+- pump: boolean
+
+The Minepump system controls a pump based on environmental inputs. The environment provides the boolean signals `highwater` and `methane`, while the system controls the boolean output `pump`.
+
+The specification includes an assumption regarding the operation of the `pump`: it is assumed that the `pump` is never on for two consecutive steps. At any point in time, either the `pump` is currently off or it was off in the previous step.
+
+The system must satisfy the following guarantees regarding the next state of the `pump`:
+1. Whenever `methane` is false and `highwater` is true, the `pump` must be on in the next step.
+2. Whenever `methane` is true, the `pump` must be off in the next step.
+
+These requirements hold globally throughout the system's operation.
+
+codex
+I’ll use `respect-test-writer` and keep the tests independent of the generated Spectra contents. First I’m reading only the skill instructions and the controller test DSL, then I’ll write the `.rtest` plan in the requested directory.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\.agents\\skills\\respect-test-writer\\SKILL.md'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\controller_tests\\DSL.md'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 794ms:
+---
+name: respect-test-writer
+description: Independent ReSpect controller-test writer. Generate controller_tests .rtest plans from natural-language requirements plus a fixed env/sys signature and controller metadata, without reading generated Spectra contents or the specification agent's reasoning. Use for independent-test experiments that reduce self-testing bias.
+---
+
+# ReSpect Test Writer
+
+## Research Role
+
+This skill writes independent bounded controller tests for a generated controller:
+
+- Input: natural-language requirements, fixed environment/system signature, `spec_name`, `controller_dir`, `spectra_file` path, and output directory.
+- Output: `.rtest` controller-test DSL plan plus optional DSL compile diagnostics.
+- Allowed sources: the natural-language requirements, fixed signature, controller metadata, and `controller_tests/DSL.md`.
+- Not allowed: reading generated Spectra contents, source/reference Spectra files, the specification agent's stdout/reasoning, repair logs, benchmark oracles, mutation checks, equivalence checks, or distance results.
+
+The goal is to test the natural-language requirements independently of the generated implementation.
+
+## Workflow
+
+1. Read `controller_tests/DSL.md`.
+2. Read the fixed signature from the prompt. Use exactly those environment and system variables.
+3. Derive tests only from the natural-language requirements.
+4. Use `spectra_file` only as a top-level DSL path. Do not open or inspect its contents.
+5. Prefer adversarial tests that could expose incomplete, over-permissive, over-restrictive, wrongly initialized, or unfair controllers. Do not write only happy-path tests.
+6. Include a `variable_ownership` test. Write it explicitly with `env ...` and
+   `sys ...` lists copied from the fixed signature, even though the DSL can infer
+   them from top-level `environment` and `system`. Avoid the compact form
+   `test declared_variables: kind variable_ownership` because it is hard for
+   humans to review.
+7. For every runtime test, include `requirement "<quote or close paraphrase from the NL description>"`.
+8. Use bounded trace, random, or exhaustive modes with conservative bounds. Prefer `max_depth <= 6`, `max_paths <= 256`, `runs <= 50`, and `within_steps <= 10` unless the description gives a bound.
+9. Save the plan as `test-plan.rtest` in the output directory supplied by the prompt.
+10. If asked to compile, run `python controller_tests\compile_test_plan.py <rtest> -o <json>` and repair only DSL/test-plan issues, not Spectra.
+
+## Test Selection
+
+Cover each clearly testable requirement at least once:
+
+- Ownership/signature declarations.
+- Initial output requirements.
+- Safety exclusions and invariants.
+- Immediate implications.
+- Bounded evidence for response/liveness requirements.
+- Small exhaustive exploration for Boolean or small finite input domains.
+
+Do not limit the plan to traces where the controller is expected to behave nicely. Include stress cases when supported by the natural-language requirements, such as simultaneous requests, no requests, persistent one-sided requests, alternating requests, rapid input changes, boundary enum values, and inputs that could reveal over-permissive behavior. Do not turn an unbounded liveness requirement into a hard bounded deadline unless the natural-language text gives that deadline.
+
+If a requirement cannot be tested soundly with bounded controller tests, record it in the final response under `untestable_requirements`.
+
+## Final Response Format
+
+Return a final JSON object or key-value block with:
+
+```text
+test_plan_file: <path>
+compiled_test_plan_file: <path or none>
+dsl_diagnostics_file: <path or none>
+tests_planned: <number>
+untestable_requirements: <number>
+artifact_dir: <path>
+```
+
+ succeeded in 863ms:
+# ReSpect Controller-Test DSL
+
+This document defines the `.rtest` language used to write Method-3 controller
+test plans. The DSL is a human- and agent-facing format. It compiles to the JSON
+plan consumed by the Java controller-test runner.
+
+Compile a DSL file:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest -o path\to\plan.json
+```
+
+Validate without writing JSON:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest --check
+```
+
+Write machine-readable diagnostics for humans or LLM repair loops:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest --check --diagnostics-json path\to\dsl-diagnostics.json
+```
+
+Require referenced runtime artifacts to already exist:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest --check --strict-files
+```
+
+## Design Goals
+
+- Keep test plans readable for humans and LLM agents.
+- Make variable ownership explicit through top-level `environment` and `system`
+  declarations.
+- Preserve the existing Java runner by compiling to its JSON format.
+- Fail early on misspelled keys, missing fields, and unsupported test kinds.
+- Keep the DSL bounded and black-box: tests execute finite controller traces and
+  are not full Spectra equivalence proofs.
+
+## File Structure
+
+An `.rtest` file contains required top-level metadata followed by one or more
+test blocks:
+
+```text
+controller_dir assets/examples/E2_execution/out/jit
+spec_name TrafficE2
+spectra_file assets/examples/E2_execution/TrafficE2.spectra
+environment carA, carB
+system greenA, greenB
+
+test declared_variables:
+  kind variable_ownership
+
+test never_both_green:
+  kind exclusion
+  trace:
+    carA=true, carB=false
+    carA=false, carB=true
+  forbidden greenA=true, greenB=true
+```
+
+## Lexical Rules
+
+- Files are UTF-8 text.
+- Indentation uses spaces. Tabs are rejected.
+- Empty lines are ignored.
+- Comments start with `#` and continue to the end of the line.
+- `#` inside single or double quotes is treated as part of the value.
+- Statements are either `key value` or `key: value`.
+- Block statements use `key:` with no value and an indented body.
+- Values may be unquoted or quoted with single or double quotes.
+- Boolean and numeric values in valuations compile to strings because the Java
+  runner compares controller values as strings.
+
+## Grammar
+
+The grammar below is descriptive. The compiler also performs semantic
+validation after parsing.
+
+```text
+plan            ::= top_level_stmt+ test_block+
+
+top_level_stmt  ::= controller_dir_stmt
+                  | spec_name_stmt
+                  | spectra_file_stmt
+                  | environment_stmt
+                  | system_stmt
+
+controller_dir_stmt ::= "controller_dir" scalar
+spec_name_stmt      ::= "spec_name" scalar
+spectra_file_stmt   ::= "spectra_file" scalar
+environment_stmt    ::= "environment" variable_list
+system_stmt         ::= "system" variable_list
+
+test_block      ::= "test" test_name ":" indented_test_stmt+
+
+indented_test_stmt ::= kind_stmt
+                     | mode_stmt
+                     | scalar_test_stmt
+                     | map_test_stmt
+                     | list_test_stmt
+                     | trace_block
+                     | expect_block
+                     | domains_block
+
+kind_stmt       ::= "kind" test_kind
+test_kind       ::= "variable_ownership"
+                  | "initial_condition"
+                  | "exclusion"
+                  | "always_implication"
+                  | "eventually_response"
+                  | "mutual_exclusion"
+                  | "one_hot"
+                  | "invariant"
+                  | "state_sequence"
+                  | "persistence"
+                  | "response_absence"
+
+mode_stmt       ::= "mode" exploration_mode
+exploration_mode ::= "trace" | "random" | "exhaustive"
+
+scalar_test_stmt ::= ("max_depth" | "max_paths" | "runs" | "seed"
+                    | "within_steps" | "for_steps") integer
+                   | "require_closed_obligations" boolean
+                   | ("requirement" | "active_value") scalar
+
+list_test_stmt  ::= ("env" | "sys" | "environment" | "system"
+                    | "variables") variable_list
+
+map_test_stmt   ::= ("forbidden" | "when" | "then" | "eventually"
+                    | "expected" | "inputs" | "initial_inputs"
+                    | "condition" | "maintain" | "until"
+                    | "absent") valuation
+
+trace_block     ::= "trace:" indented_valuation+
+expect_block    ::= "expect:" indented_valuation+
+domains_block   ::= "domains:" indented_domain+
+
+indented_valuation ::= valuation
+indented_domain    ::= variable value_list
+
+variable_list   ::= variable ("," variable)*
+value_list      ::= value ("," value)*
+valuation       ::= variable "=" value ("," variable "=" value)*
+```
+
+## Required Top-Level Fields
+
+Every `.rtest` file must define:
+
+- `controller_dir`: path to the synthesized JIT controller directory.
+- `spec_name`: Spectra module/spec name used by Syntech.
+- `spectra_file`: generated Spectra file used by static tests.
+- `environment`: comma-separated environment-controlled input variables.
+- `system`: comma-separated system-controlled output variables.
+
+The compiler writes `system` to the JSON field `outputs`, because the Java
+runner currently reads system outputs from that field.
+
+Top-level `outputs` is accepted as a legacy alias for `system`, but new DSL files
+should use `system`.
+
+## Test Blocks
+
+A test block starts with `test <name>:`. The name must start with a letter or
+underscore and may contain letters, digits, underscores, and hyphens.
+
+Each test block must contain a `kind` statement. Supported kinds are described
+below.
+
+Method-3 test plans should also include a `requirement` statement for every
+runtime test. The value should quote or closely paraphrase the natural-language
+requirement that justifies the test:
+
+```text
+test never_both_green:
+  kind mutual_exclusion
+  requirement "The two traffic lights must never be green at the same time."
+  variables greenA, greenB
+```
+
+Do not add tests that cannot be justified by a natural-language requirement.
+
+### variable_ownership
+
+Checks the generated Spectra file statically. It verifies that variables are
+declared with the expected ownership.
+
+```text
+test declared_variables:
+  kind variable_ownership
+```
+
+If `env` and `sys` are omitted, the compiler fills them from top-level
+`environment` and `system`.
+
+You may override them explicitly:
+
+```text
+test selected_variables:
+  kind variable_ownership
+  env request, cancel
+  sys grant
+```
+
+### initial_condition
+
+Runs one initial controller step and checks the expected valuation.
+
+```text
+test starts_closed:
+  kind initial_condition
+  inputs request=false
+  expected door=CLOSED
+```
+
+Required field:
+
+- `expected`: valuation that must hold after the initial step.
+
+Optional field:
+
+- `inputs`: input valuation for the initial step.
+
+### exclusion
+
+Fails if a forbidden valuation appears in any explored step.
+
+```text
+test never_both_green:
+  kind exclusion
+  trace:
+    carA=true, carB=false
+    carA=false, carB=true
+  forbidden greenA=true, greenB=true
+```
+
+Required field:
+
+- `forbidden`: valuation that must never be reached.
+
+### always_implication
+
+Checks an immediate safety implication. Whenever `when` matches a step, `then`
+must match the same step.
+
+```text
+test grant_only_on_request:
+  kind always_implication
+  mode exhaustive
+  max_depth 4
+  max_paths 256
+  domains:
+    request false, true
+  when request=false
+  then grant=false
+```
+
+Required field:
+
+- `then`: valuation that must hold when the trigger matches.
+
+Optional field:
+
+- `when`: trigger valuation. An empty `when` is allowed by the underlying runner,
+  but should normally be avoided unless the intended meaning is global.
+
+### eventually_response
+
+Checks bounded response behavior. When `when` is observed, `eventually` must
+match within `within_steps`.
+
+```text
+test request_eventually_granted:
+  kind eventually_response
+  trace:
+    request=true
+    request=true
+    request=true
+  when request=true
+  eventually grant=true
+  within_steps 3
+```
+
+Required field:
+
+- `eventually`: valuation that must occur within the response window.
+
+Optional fields:
+
+- `when`: trigger valuation. If omitted, the response window starts immediately.
+- `within_steps`: response bound. Defaults to `10`.
+- `require_closed_obligations`: if `true`, a trace ending before the response is
+  observed fails. Defaults to `false`.
+
+### mutual_exclusion
+
+Checks that at most one variable from a group is active at every explored step.
+
+```text
+test never_two_modes:
+  kind mutual_exclusion
+  trace:
+    request=true
+  variables idle, moving, charging
+```
+
+Required field:
+
+- `variables`: variables in the mutually exclusive group.
+
+Optional field:
+
+- `active_value`: value considered active. Defaults to `true`.
+
+### one_hot
+
+Checks that exactly one variable from a group is active at every explored step.
+
+```text
+test exactly_one_mode:
+  kind one_hot
+  trace:
+    request=false
+  variables idle, moving, charging
+```
+
+Required field:
+
+- `variables`: variables in the one-hot group.
+
+Optional field:
+
+- `active_value`: value considered active. Defaults to `true`.
+
+### invariant
+
+Checks that a valuation holds at every explored step.
+
+```text
+test reset_implies_idle:
+  kind invariant
+  trace:
+    reset=true
+  condition reset=true, idle=true
+```
+
+Required field:
+
+- `condition`: valuation that must match every step.
+
+### state_sequence
+
+Replays a concrete `trace:` and checks an `expect:` valuation for each step.
+
+```text
+test startup_sequence:
+  kind state_sequence
+  trace:
+    start=true
+    start=false
+  expect:
+    ready=false
+    ready=true
+```
+
+Required fields:
+
+- `trace`: concrete input sequence.
+- `expect`: expected valuations. It must have exactly one entry per trace step.
+
+Use this only when the natural-language requirement defines a concrete sequence;
+otherwise it can overconstrain underspecified controllers.
+
+### persistence
+
+After `when` matches, `maintain` must keep matching until `until` matches. If
+`until` is omitted, the maintained valuation must hold to the end of each trace.
+
+```text
+test alarm_persists_until_reset:
+  kind persistence
+  trace:
+    fault=true, reset=false
+    fault=false, reset=false
+    fault=false, reset=true
+  when alarm=true
+  maintain alarm=true
+  until reset=true
+```
+
+Required field:
+
+- `maintain`: valuation that must persist after the trigger.
+
+Optional fields:
+
+- `when`: trigger valuation. If omitted, the trigger is effectively immediate.
+- `until`: valuation that closes the persistence obligation.
+
+### response_absence
+
+After `when` matches, `absent` must not match for `for_steps` steps.
+
+```text
+test no_grant_during_reset:
+  kind response_absence
+  trace:
+    reset=true
+    reset=false
+  when reset=true
+  absent grant=true
+  for_steps 2
+```
+
+Required field:
+
+- `absent`: valuation that must not occur in the absence window.
+
+Optional fields:
+
+- `when`: trigger valuation. If omitted, the trigger is effectively immediate.
+- `for_steps`: absence-window length. Defaults to `1`.
+
+## Exploration Modes
+
+Controller tests replay concrete input traces against fresh controller
+instances.
+
+### trace
+
+`trace` is the default mode. It requires a `trace:` block for runtime tests such
+as `exclusion`, `always_implication`, and `eventually_response`.
+
+```text
+test concrete_case:
+  kind exclusion
+  trace:
+    a=false, b=false
+    a=true, b=false
+  forbidden x=true, y=true
+```
+
+### random
+
+Generates deterministic random traces from finite environment domains.
+
+```text
+test random_safety:
+  kind exclusion
+  mode random
+  runs 50
+  max_depth 10
+  seed 1
+  domains:
+    request false, true
+    reset false, true
+  forbidden error=true
+```
+
+Required field:
+
+- `domains`: finite input domains.
+
+Defaults:
+
+- `runs`: `100`
+- `max_depth`: `10`
+- `seed`: `1`
+
+### exhaustive
+
+Enumerates the bounded input tree from finite environment domains.
+
+```text
+test exhaustive_safety:
+  kind exclusion
+  mode exhaustive
+  max_depth 4
+  max_paths 256
+  domains:
+    carA false, true
+    carB false, true
+  forbidden greenA=true, greenB=true
+```
+
+Required field:
+
+- `domains`: finite input domains.
+
+Defaults:
+
+- `max_depth`: `6`
+- `max_paths`: `10000`
+
+Use exhaustive mode only for small domains and shallow depths.
+
+## Valuations
+
+A valuation is a comma-separated list of `variable=value` pairs:
+
+```text
+request=true, mode=ACTIVE, level=2
+```
+
+The compiler emits values as strings in JSON:
+
+```json
+{"request": "true", "mode": "ACTIVE", "level": "2"}
+```
+
+This matches the Java runner's comparison behavior.
+
+## Compilation Output
+
+The DSL:
+
+```text
+environment carA, carB
+system greenA, greenB
+```
+
+compiles to JSON containing:
+
+```json
+{
+  "environment": ["carA", "carB"],
+  "system": ["greenA", "greenB"],
+  "outputs": ["greenA", "greenB"]
+}
+```
+
+The `outputs` field exists for Java runner compatibility. The DSL-level source
+of truth is `system`.
+
+## Validation Rules
+
+The compiler rejects:
+
+- tabs,
+- unknown keys,
+- missing required top-level fields,
+- files without tests,
+- unsupported test kinds,
+- `variable_ownership` without any environment or system variables,
+- `initial_condition` without `expected`,
+- `exclusion` without `forbidden`,
+- `always_implication` without `then`,
+- `eventually_response` without `eventually`,
+- `mutual_exclusion` or `one_hot` without `variables`,
+- `invariant` without `condition`,
+- `state_sequence` without `expect`,
+- `persistence` without `maintain`,
+- `response_absence` without `absent`,
+- `random` or `exhaustive` tests without `domains:`,
+- trace-mode runtime tests without a `trace:` block.
+
+The compiler also performs semantic validation:
+
+- top-level `environment` and `system` variables must be unique,
+- a variable may not appear in both `environment` and `system`,
+- every test name must be unique,
+- all referenced variables must be declared in top-level `environment` or
+  `system`,
+- `trace:`, `inputs`, and `initial_inputs` may assign only environment
+  variables,
+- `domains:` may define only environment variables,
+- `expected`, `then`, `eventually`, `when`, and `forbidden` may reference known
+  environment or system variables because tests match the combined input/output
+  valuation observed at each step,
+- `condition`, `maintain`, `until`, `absent`, `expect`, and `variables` may also
+  reference known environment or system variables,
+- `trace:` must not be combined with `mode random` or `mode exhaustive`,
+- `domains:` must not be used with default trace mode,
+- `max_depth`, `max_paths`, `runs`, `seed`, and `within_steps` must be positive
+  when present,
+- domain values must not contain duplicates.
+
+With `--strict-files`, the compiler additionally requires `spectra_file` to be
+an existing file and `controller_dir` to be an existing directory. This check is
+optional because Method-3 agents may create plans before final runtime artifacts
+are available.
+
+## Diagnostics JSON
+
+`compile_test_plan.py` can write structured diagnostics with
+`--diagnostics-json`. On success, the file has this shape:
+
+```json
+{
+  "status": "success",
+  "tool": "controller_tests.compile_test_plan",
+  "file": "tests/test-plan-1.rtest",
+  "errors": [],
+  "compiled_tests": 3
+}
+```
+
+On failure, the status is `dsl_syntax_error` and the first compiler error is
+reported with a stable code, source context, and repair hint:
+
+```json
+{
+  "status": "dsl_syntax_error",
+  "tool": "controller_tests.compile_test_plan",
+  "file": "tests/test-plan-1.rtest",
+  "errors": [
+    {
+      "code": "missing_required_field",
+      "line": 8,
+      "column": null,
+      "message": "Line 8: exclusion requires forbidden.",
+      "hint": "Add `forbidden <valuation>` to this exclusion test.",
+      "context": [
+        {"line": 8, "text": "test never_both_green:", "is_error_line": true}
+      ]
+    }
+  ],
+  "repair_instruction": "Repair only the .rtest test-plan syntax and structure..."
+}
+```
+
+Diagnostic codes include:
+
+- `indentation_error`
+- `invalid_statement`
+- `unknown_key`
+- `invalid_block_syntax`
+- `invalid_valuation`
+- `invalid_domain`
+- `empty_block`
+- `invalid_integer`
+- `invalid_boolean`
+- `missing_top_level_field`
+- `missing_test_block`
+- `missing_test_kind`
+- `unsupported_test_kind`
+- `missing_required_field`
+- `invalid_exploration`
+- `duplicate_variable`
+- `variable_owner_conflict`
+- `duplicate_test_name`
+- `unknown_variable`
+- `wrong_variable_owner`
+- `unsupported_exploration_mode`
+- `conflicting_exploration_fields`
+- `invalid_bound`
+- `duplicate_domain_value`
+- `sequence_length_mismatch`
+- `missing_file`
+- `missing_controller_dir`
+
+These diagnostics are intended for `.rtest` repair only. A DSL compile failure
+must not be treated as evidence that the generated Spectra specification is
+wrong.
+
+## DSL Repair Loop
+
+ReSpect agents should repair invalid `.rtest` files before running the Java
+controller tests:
+
+1. Write `tests/test-plan-<n>.rtest`.
+2. Run the compiler with `--diagnostics-json`.
+3. If compilation fails, send the diagnostics JSON, the current `.rtest` file,
+   and this DSL reference to the LLM.
+4. Ask the LLM to repair only the `.rtest` syntax and structure.
+5. Save the repaired file as a new attempt.
+6. Retry compilation.
+7. Stop after at most three DSL repair attempts.
+
+Only after the `.rtest` file compiles should the generated JSON plan be passed
+to `respect.controller_tests.TestRunner`.
+
+## ReSpect Guidance
+
+For the ReSpect controller-test workflow, tests must be derived only from:
+
+- the natural-language requirement,
+- the generated Spectra file,
+- synthesized controller metadata.
+
+Do not derive `.rtest` files from the original benchmark Spectra file or from an
+oracle controller.
+
+Prefer a small set of tests that are clearly justified by the natural-language
+requirements:
+
+- one `variable_ownership` test,
+- safety tests for explicit "never" or "always" requirements,
+- bounded response tests for explicit request/response requirements,
+- shallow exhaustive exploration for small Boolean input domains,
+- seeded random exploration for larger finite domains.
+
+Do not assert a concrete output strategy when the natural-language requirement
+allows multiple valid strategies.
+
+codex
+The DSL supports exact trace expectations, but the requirements are phrased over the next pump state. I’m checking existing `.rtest` examples only for DSL idioms, not for this case’s oracle behavior.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg --files -g '*.rtest'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg \"state_sequence|eventually_response|response_absence\" -n controller_tests experiments -g '*.rtest'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1056ms:
+experiments\branched_runs\TibiIC\SpecRepair\tests\test_debug\hongbo_helper_files\strong_spec\model=qwen3\4afe01caa32d61e526f7fe90\branches\self_test\tests\test-plan-0.rtest
+experiments\branched_runs\TibiIC\SpecRepair\output-files\dropped\minepump_fixed1_normalised_dropped8\model=qwen3\2bbcf860ee2205e5ad577beb\branches\self_test\tests\test-plan-2.rtest
+experiments\branched_runs\TibiIC\SpecRepair\output-files\dropped\minepump_fixed1_normalised_dropped8\model=qwen3\2bbcf860ee2205e5ad577beb\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\TibiIC\SpecRepair\tests\test_debug\hongbo_helper_files\strong_spec\model=qwen3\4afe01caa32d61e526f7fe90\branches\self_test\skill_artifacts\tests\test-plan-0.rtest
+experiments\branched_runs\TibiIC\SpecRepair\output-files\dropped\minepump_fixed1_normalised_dropped8\model=qwen3\2bbcf860ee2205e5ad577beb\branches\self_test\skill_artifacts\tests\test-plan-2.rtest
+experiments\branched_runs\TibiIC\SpecRepair\output-files\dropped\minepump_fixed1_normalised_dropped8\model=qwen3\2bbcf860ee2205e5ad577beb\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\self_test\tests\test-plan-2.rtest
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\self_test\tests\test-plan-0.rtest
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\TibiIC\SpecRepair\tests\test_debug\hongbo_helper_files\strong_spec\model=qwen3\4afe01caa32d61e526f7fe90\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\TibiIC\SpecRepair\output-files\dropped\minepump_fixed1_normalised_dropped8\model=qwen3\2bbcf860ee2205e5ad577beb\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\self_test\skill_artifacts\tests\test-plan-2.rtest
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\self_test\skill_artifacts\tests\test-plan-0.rtest
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\self_test\tests\test-plan-2.rtest
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-03\test-writer\test-plan.rtest
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-02\test-writer\test-plan.rtest
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\test-writer\test-plan.rtest
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\self_test\skill_artifacts\tests\test-plan-2.rtest
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-01\test-writer\test-plan.rtest
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-01\test-writer\test-plan.rtest
+experiments\branched_runs\jringert\spectra-tutorial\A3_wellseparation\TrafficA3a\model=qwen3\3931c86e63554e8fb281cc5c\branches\self_test\tests\test-plan-2.rtest
+experiments\branched_runs\jringert\spectra-tutorial\A3_wellseparation\TrafficA3a\model=qwen3\3931c86e63554e8fb281cc5c\branches\self_test\tests\test-plan-1.rtest
+controller_tests\examples\traffic_e2_plan.rtest
+controller_tests\examples\traffic_e2_new_kinds_plan.rtest
+experiments\branched_runs\jringert\spectra-tutorial\A3_wellseparation\TrafficA3a\model=qwen3\3931c86e63554e8fb281cc5c\branches\self_test\skill_artifacts\tests\test-plan-2.rtest
+experiments\branched_runs\jringert\spectra-tutorial\A3_wellseparation\TrafficA3a\model=qwen3\3931c86e63554e8fb281cc5c\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\jringert\spectra-tutorial\A3_wellseparation\TrafficA3a\model=qwen3\3931c86e63554e8fb281cc5c\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\tests\test-plan-3.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\tests\test-plan-2.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\self_test\tests\test-plan-0.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\skill_artifacts\tests\test-plan-3.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\skill_artifacts\tests\test-plan-2.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\TibiIC\SpecRepair\input-files\examples\simpletest\model=qwen3\200a6390d21cdad917234fa5\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\self_test\skill_artifacts\tests\test-plan-0.rtest
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-03\test-writer\test-plan.rtest
+experiments\branched_runs\TibiIC\SpecRepair\input-files\examples\simpletest\model=qwen3\200a6390d21cdad917234fa5\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\TibiIC\SpecRepair\input-files\examples\simpletest\model=qwen3\200a6390d21cdad917234fa5\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer\test-plan.rtest
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-03\test-writer\test-plan.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\test-writer\test-plan.rtest
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-02\test-writer\test-plan.rtest
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV0\model=llama-3\39c8817443100cc4b0852fba\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV0\model=llama-3\39c8817443100cc4b0852fba\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV0\model=llama-3\39c8817443100cc4b0852fba\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-6\escaping-guard-team-6-module-5\spectra-logs\EscapingGuard\1673730655\model=qwen3\a8a3ca9f0b68533ccf1d2f0e\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-6\escaping-guard-team-6-module-5\spectra-logs\EscapingGuard\1673730655\model=qwen3\a8a3ca9f0b68533ccf1d2f0e\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-6\escaping-guard-team-6-module-5\spectra-logs\EscapingGuard\1673730655\model=qwen3\a8a3ca9f0b68533ccf1d2f0e\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-11\patrolling-11\spectra-logs\Patrolling\1670274193\model=qwen3\65bc66932a38b06cdcab2e30\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-11\patrolling-11\spectra-logs\Patrolling\1670274193\model=qwen3\65bc66932a38b06cdcab2e30\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-11\patrolling-11\spectra-logs\Patrolling\1670274193\model=qwen3\65bc66932a38b06cdcab2e30\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-11\deliveries-11\deliveries-team-11-module-2\deliveries-team-11-module-2\spectra-logs\Deliveries\1671271547\model=qwen3\0467d58744ac6709c2fe5f5b\branches\self_test\tests\test-plan-0.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-11\deliveries-11\deliveries-team-11-module-2\deliveries-team-11-module-2\spectra-logs\Deliveries\1671271547\model=qwen3\0467d58744ac6709c2fe5f5b\branches\self_test\skill_artifacts\tests\test-plan-0.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-11\deliveries-11\deliveries-team-11-module-2\deliveries-team-11-module-2\spectra-logs\Deliveries\1671271547\model=qwen3\0467d58744ac6709c2fe5f5b\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-10\escaping-guard-team-10-module-2\spectra-logs\EscapingGuard\1672082077\model=qwen3\576089e183e2881a79b78d53\branches\self_test\tests\test-plan-2.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-10\escaping-guard-team-10-module-2\spectra-logs\EscapingGuard\1672082077\model=qwen3\576089e183e2881a79b78d53\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-1\escaping-guard-team-1\spectra-logs\EscapingGuard\1672323010\model=qwen3\1b26f187612c445fdf3ce909\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-10\escaping-guard-team-10-module-2\spectra-logs\EscapingGuard\1672082077\model=qwen3\576089e183e2881a79b78d53\branches\self_test\skill_artifacts\tests\test-plan-2.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-10\escaping-guard-team-10-module-2\spectra-logs\EscapingGuard\1672082077\model=qwen3\576089e183e2881a79b78d53\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-10\escaping-guard-team-10-module-2\spectra-logs\EscapingGuard\1672082077\model=qwen3\576089e183e2881a79b78d53\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-1\escaping-guard-team-1\spectra-logs\EscapingGuard\1672323010\model=qwen3\1b26f187612c445fdf3ce909\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-1\escaping-guard-team-1\spectra-logs\EscapingGuard\1672323010\model=qwen3\1b26f187612c445fdf3ce909\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-1\escaping-guard-team-1\spectra-logs\EscapingGuard\1672322691\model=qwen3\b163a982c4431760aed35f7f\branches\self_test\tests\test-plan-1.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-1\escaping-guard-team-1\spectra-logs\EscapingGuard\1672322691\model=qwen3\b163a982c4431760aed35f7f\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-1\escaping-guard-team-1\spectra-logs\EscapingGuard\1672322691\model=qwen3\b163a982c4431760aed35f7f\branches\self_test\skill_artifacts\tests\test-plan-1.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-10\catching-intruder-team-10\spectra-logs\CatchingIntruder\1673249487\model=qwen3\d4e4f761ca8a7fbbca06ea8f\branches\self_test\tests\test-plan-0.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-10\catching-intruder-team-10\spectra-logs\CatchingIntruder\1673249487\model=qwen3\d4e4f761ca8a7fbbca06ea8f\branches\independent_test\round-00\test-writer\test-plan.rtest
+experiments\branched_runs\EvolutionAware\EvolutionAware\dataset\2023A-Team-10\catching-intruder-team-10\spectra-logs\CatchingIntruder\1673249487\model=qwen3\d4e4f761ca8a7fbbca06ea8f\branches\self_test\skill_artifacts\tests\test-plan-0.rtest
+
+ succeeded in 1036ms:
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\self_test\tests\test-plan-1.rtest:11:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\self_test\tests\test-plan-1.rtest:21:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\self_test\tests\test-plan-1.rtest:31:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\self_test\tests\test-plan-1.rtest:41:  kind state_sequence
+controller_tests\examples\traffic_e2_plan.rtest:22:  kind eventually_response
+controller_tests\examples\traffic_e2_new_kinds_plan.rtest:32:  kind state_sequence
+controller_tests\examples\traffic_e2_new_kinds_plan.rtest:48:  kind response_absence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\self_test\skill_artifacts\tests\test-plan-1.rtest:11:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\self_test\skill_artifacts\tests\test-plan-1.rtest:21:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\self_test\skill_artifacts\tests\test-plan-1.rtest:31:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\self_test\skill_artifacts\tests\test-plan-1.rtest:41:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\self_test\tests\test-plan-0.rtest:11:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\self_test\tests\test-plan-0.rtest:21:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\self_test\tests\test-plan-0.rtest:31:  kind state_sequence
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\self_test\tests\test-plan-1.rtest:34:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\output-files\dropped\minepump_fixed1_normalised_dropped8\model=qwen3\2bbcf860ee2205e5ad577beb\branches\self_test\tests\test-plan-2.rtest:21:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\self_test\tests\test-plan-2.rtest:22:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\self_test\tests\test-plan-2.rtest:35:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\self_test\skill_artifacts\tests\test-plan-0.rtest:11:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\self_test\skill_artifacts\tests\test-plan-0.rtest:21:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\self_test\skill_artifacts\tests\test-plan-0.rtest:31:  kind state_sequence
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\self_test\skill_artifacts\tests\test-plan-1.rtest:34:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\self_test\tests\test-plan-1.rtest:22:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\self_test\tests\test-plan-1.rtest:36:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\self_test\tests\test-plan-2.rtest:23:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\test-writer\test-plan.rtest:37:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\test-writer\test-plan.rtest:51:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\test-writer\test-plan.rtest:65:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\test-writer\test-plan.rtest:75:test methane_response_absence_after_detection:
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\test-writer\test-plan.rtest:76:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\test-writer\test-plan.rtest:88:  kind state_sequence
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\self_test\tests\test-plan-1.rtest:27:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\output-files\dropped\minepump_fixed1_normalised_dropped8\model=qwen3\2bbcf860ee2205e5ad577beb\branches\independent_test\round-00\test-writer\test-plan.rtest:50:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\output-files\dropped\minepump_fixed1_normalised_dropped8\model=qwen3\2bbcf860ee2205e5ad577beb\branches\independent_test\round-00\test-writer\test-plan.rtest:60:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\output-files\dropped\minepump_fixed1_normalised_dropped8\model=qwen3\2bbcf860ee2205e5ad577beb\branches\self_test\tests\test-plan-1.rtest:22:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-01\test-writer\test-plan.rtest:37:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-01\test-writer\test-plan.rtest:51:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-01\test-writer\test-plan.rtest:67:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-01\test-writer\test-plan.rtest:80:  kind response_absence
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-02\test-writer\test-plan.rtest:49:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\self_test\skill_artifacts\tests\test-plan-2.rtest:22:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\self_test\skill_artifacts\tests\test-plan-2.rtest:35:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\self_test\tests\test-plan-0.rtest:22:  kind eventually_response
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-01\test-writer\test-plan.rtest:50:  kind eventually_response
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-01\test-writer\test-plan.rtest:64:  kind eventually_response
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-01\test-writer\test-plan.rtest:79:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-03\test-writer\test-plan.rtest:13:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-03\test-writer\test-plan.rtest:23:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-03\test-writer\test-plan.rtest:33:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-03\test-writer\test-plan.rtest:43:  kind response_absence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-03\test-writer\test-plan.rtest:55:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-03\test-writer\test-plan.rtest:68:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-03\test-writer\test-plan.rtest:86:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\self_test\skill_artifacts\tests\test-plan-1.rtest:22:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\branches\self_test\skill_artifacts\tests\test-plan-1.rtest:36:  kind eventually_response
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\test-writer\test-plan.rtest:13:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\test-writer\test-plan.rtest:24:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\test-writer\test-plan.rtest:35:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\test-writer\test-plan.rtest:47:  kind response_absence
+experiments\branched_runs\TibiIC\SpecRepair\output-files\dropped\minepump_fixed1_normalised_dropped8\model=qwen3\2bbcf860ee2205e5ad577beb\branches\self_test\skill_artifacts\tests\test-plan-2.rtest:21:  kind eventually_response
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-03\test-writer\test-plan.rtest:13:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-03\test-writer\test-plan.rtest:23:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-03\test-writer\test-plan.rtest:33:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-03\test-writer\test-plan.rtest:44:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-03\test-writer\test-plan.rtest:58:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-03\test-writer\test-plan.rtest:70:  kind response_absence
+experiments\branched_runs\TibiIC\SpecRepair\output-files\dropped\minepump_fixed1_normalised_dropped8\model=qwen3\2bbcf860ee2205e5ad577beb\branches\self_test\skill_artifacts\tests\test-plan-1.rtest:22:  kind eventually_response
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest:13:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest:23:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest:33:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest:43:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest:57:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest:71:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest:84:  kind response_absence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-00\test-writer\test-plan.rtest:13:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-00\test-writer\test-plan.rtest:25:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-00\test-writer\test-plan.rtest:39:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-00\test-writer\test-plan.rtest:49:  kind response_absence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-00\test-writer\test-plan.rtest:61:  kind response_absence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-00\test-writer\test-plan.rtest:74:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-00\test-writer\test-plan.rtest:88:  kind state_sequence
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer\test-plan.rtest:50:  kind eventually_response
+experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer\test-plan.rtest:64:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\independent_test\round-00\test-writer\test-plan.rtest:48:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\independent_test\round-00\test-writer\test-plan.rtest:65:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\test-writer\test-plan.rtest:37:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\test-writer\test-plan.rtest:49:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\test-writer\test-plan.rtest:61:  kind response_absence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\test-writer\test-plan.rtest:71:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer\test-plan.rtest:13:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer\test-plan.rtest:25:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer\test-plan.rtest:85:  kind state_sequence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-02\test-writer\test-plan.rtest:13:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-02\test-writer\test-plan.rtest:24:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-02\test-writer\test-plan.rtest:35:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-02\test-writer\test-plan.rtest:46:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-02\test-writer\test-plan.rtest:58:  kind response_absence
+experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-02\test-writer\test-plan.rtest:72:  kind response_absence
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\self_test\skill_artifacts\tests\test-plan-0.rtest:22:  kind eventually_response
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\self_test\skill_artifacts\tests\test-plan-2.rtest:23:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-00\test-writer\test-plan.rtest:13:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-00\test-writer\test-plan.rtest:23:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-00\test-writer\test-plan.rtest:33:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-00\test-writer\test-plan.rtest:43:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-00\test-writer\test-plan.rtest:55:  kind state_sequence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\tests\test-plan-1.rtest:22:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\tests\test-plan-1.rtest:33:  kind response_absence
+experiments\branched_runs\jringert\spectra-tutorial\L4_triggers\TrafficL4\model=qwen3\8a4a6b4b5739630643a85c9b\branches\self_test\skill_artifacts\tests\test-plan-1.rtest:27:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\tests\test-plan-3.rtest:11:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\tests\test-plan-3.rtest:22:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\tests\test-plan-2.rtest:11:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\tests\test-plan-2.rtest:22:  kind response_absence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\skill_artifacts\tests\test-plan-2.rtest:11:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\skill_artifacts\tests\test-plan-2.rtest:22:  kind response_absence
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\skill_artifacts\tests\test-plan-3.rtest:11:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\skill_artifacts\tests\test-plan-3.rtest:22:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\skill_artifacts\tests\test-plan-1.rtest:22:  kind eventually_response
+experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\skill_artifacts\tests\test-plan-1.rtest:33:  kind response_absence
+
+codex
+I’ve got enough DSL context. I’m going to write a bounded plan with explicit ownership, exact next-step traces for the two pump update rules, a methane-priority case, and a bounded check for the “not on for two consecutive steps” requirement.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "New-Item -ItemType Directory -Force -Path 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped2\\model=qwen3\\baa7776c6e4578bb97aedd4c\\branches\\independent_test\\round-03\\test-writer' | Out-Null" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 742ms:
+codex
+I’m writing the test plan now. The plan uses the provided `spectra_file` path only as metadata for the DSL, and does not inspect it.
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-03\test-writer\test-plan.rtest
+diff --git a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..4c42427a6b4d2731c1af2c407f6060efe419e316
+--- /dev/null
++++ b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest
+@@ -0,0 +1,81 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\spec-repair\synthesis\jit
++spec_name Minepump
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\spec-repair\skill_artifacts\final.spectra
++environment highwater, methane
++system pump
++
++test declared_variables:
++  kind variable_ownership
++  env highwater, methane
++  sys pump
++
++test highwater_without_methane_turns_pump_on_next:
++  kind state_sequence
++  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
++  trace:
++    highwater=true, methane=false
++    highwater=false, methane=false
++  expect:
++    highwater=true, methane=false
++    pump=true
++
++test methane_turns_pump_off_next:
++  kind state_sequence
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  trace:
++    highwater=false, methane=true
++    highwater=false, methane=false
++  expect:
++    highwater=false, methane=true
++    pump=false
++
++test methane_overrides_highwater_next:
++  kind state_sequence
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  trace:
++    highwater=true, methane=true
++    highwater=true, methane=false
++  expect:
++    highwater=true, methane=true
++    pump=false
++
++test pump_not_on_for_two_consecutive_steps_after_activation:
++  kind state_sequence
++  requirement "At any point in time, either the pump is currently off or it was off in the previous step."
++  trace:
++    highwater=true, methane=false
++    highwater=false, methane=false
++    highwater=false, methane=false
++  expect:
++    highwater=true, methane=false
++    pump=true
++    pump=false
++
++test methane_absence_of_pump_bounded_random:
++  kind eventually_response
++  mode random
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  runs 40
++  max_depth 6
++  seed 17
++  domains:
++    highwater false, true
++    methane false, true
++  when methane=true
++  eventually pump=false
++  within_steps 2
++  require_closed_obligations true
++
++test highwater_response_bounded_exhaustive:
++  kind eventually_response
++  mode exhaustive
++  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
++  max_depth 5
++  max_paths 256
++  domains:
++    highwater false, true
++    methane false, true
++  when highwater=true, methane=false
++  eventually pump=true
++  within_steps 2
++  require_closed_obligations true
+
+diff --git a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..4c42427a6b4d2731c1af2c407f6060efe419e316
+--- /dev/null
++++ b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest
+@@ -0,0 +1,81 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\spec-repair\synthesis\jit
++spec_name Minepump
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\spec-repair\skill_artifacts\final.spectra
++environment highwater, methane
++system pump
++
++test declared_variables:
++  kind variable_ownership
++  env highwater, methane
++  sys pump
++
++test highwater_without_methane_turns_pump_on_next:
++  kind state_sequence
++  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
++  trace:
++    highwater=true, methane=false
++    highwater=false, methane=false
++  expect:
++    highwater=true, methane=false
++    pump=true
++
++test methane_turns_pump_off_next:
++  kind state_sequence
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  trace:
++    highwater=false, methane=true
++    highwater=false, methane=false
++  expect:
++    highwater=false, methane=true
++    pump=false
++
++test methane_overrides_highwater_next:
++  kind state_sequence
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  trace:
++    highwater=true, methane=true
++    highwater=true, methane=false
++  expect:
++    highwater=true, methane=true
++    pump=false
++
++test pump_not_on_for_two_consecutive_steps_after_activation:
++  kind state_sequence
++  requirement "At any point in time, either the pump is currently off or it was off in the previous step."
++  trace:
++    highwater=true, methane=false
++    highwater=false, methane=false
++    highwater=false, methane=false
++  expect:
++    highwater=true, methane=false
++    pump=true
++    pump=false
++
++test methane_absence_of_pump_bounded_random:
++  kind eventually_response
++  mode random
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  runs 40
++  max_depth 6
++  seed 17
++  domains:
++    highwater false, true
++    methane false, true
++  when methane=true
++  eventually pump=false
++  within_steps 2
++  require_closed_obligations true
++
++test highwater_response_bounded_exhaustive:
++  kind eventually_response
++  mode exhaustive
++  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
++  max_depth 5
++  max_paths 256
++  domains:
++    highwater false, true
++    methane false, true
++  when highwater=true, methane=false
++  eventually pump=true
++  within_steps 2
++  require_closed_obligations true
+
+codex
+The plan is in place. I’m compiling it next to catch DSL syntax or schema issues only; this does not validate or inspect the Spectra content.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped2\\model=qwen3\\baa7776c6e4578bb97aedd4c\\branches\\independent_test\\round-03\\test-writer\\test-plan.rtest' -o 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped2\\model=qwen3\\baa7776c6e4578bb97aedd4c\\branches\\independent_test\\round-03\\test-writer\\test-plan.json' --diagnostics-json 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped2\\model=qwen3\\baa7776c6e4578bb97aedd4c\\branches\\independent_test\\round-03\\test-writer\\dsl-diagnostics.json'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1400ms:
+diff --git a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..4c42427a6b4d2731c1af2c407f6060efe419e316
+--- /dev/null
++++ b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest
+@@ -0,0 +1,81 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\spec-repair\synthesis\jit
++spec_name Minepump
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\spec-repair\skill_artifacts\final.spectra
++environment highwater, methane
++system pump
++
++test declared_variables:
++  kind variable_ownership
++  env highwater, methane
++  sys pump
++
++test highwater_without_methane_turns_pump_on_next:
++  kind state_sequence
++  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
++  trace:
++    highwater=true, methane=false
++    highwater=false, methane=false
++  expect:
++    highwater=true, methane=false
++    pump=true
++
++test methane_turns_pump_off_next:
++  kind state_sequence
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  trace:
++    highwater=false, methane=true
++    highwater=false, methane=false
++  expect:
++    highwater=false, methane=true
++    pump=false
++
++test methane_overrides_highwater_next:
++  kind state_sequence
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  trace:
++    highwater=true, methane=true
++    highwater=true, methane=false
++  expect:
++    highwater=true, methane=true
++    pump=false
++
++test pump_not_on_for_two_consecutive_steps_after_activation:
++  kind state_sequence
++  requirement "At any point in time, either the pump is currently off or it was off in the previous step."
++  trace:
++    highwater=true, methane=false
++    highwater=false, methane=false
++    highwater=false, methane=false
++  expect:
++    highwater=true, methane=false
++    pump=true
++    pump=false
++
++test methane_absence_of_pump_bounded_random:
++  kind eventually_response
++  mode random
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  runs 40
++  max_depth 6
++  seed 17
++  domains:
++    highwater false, true
++    methane false, true
++  when methane=true
++  eventually pump=false
++  within_steps 2
++  require_closed_obligations true
++
++test highwater_response_bounded_exhaustive:
++  kind eventually_response
++  mode exhaustive
++  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
++  max_depth 5
++  max_paths 256
++  domains:
++    highwater false, true
++    methane false, true
++  when highwater=true, methane=false
++  eventually pump=true
++  within_steps 2
++  require_closed_obligations true
+
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped2\\model=qwen3\\baa7776c6e4578bb97aedd4c\\branches\\independent_test\\round-03\\test-writer\\dsl-diagnostics.json'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped2\\model=qwen3\\baa7776c6e4578bb97aedd4c\\branches\\independent_test\\round-03\\test-writer\\test-plan.rtest' -Pattern '"'^test '"' | Measure-Object | Select-Object -ExpandProperty Count" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1540ms:
+{
+  "status": "success",
+  "tool": "controller_tests.compile_test_plan",
+  "file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped2\\model=qwen3\\baa7776c6e4578bb97aedd4c\\branches\\independent_test\\round-03\\test-writer\\test-plan.rtest",
+  "errors": [],
+  "compiled_tests": 7
+}
+
+ succeeded in 1574ms:
+7
+
+diff --git a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..4c42427a6b4d2731c1af2c407f6060efe419e316
+--- /dev/null
++++ b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest
+@@ -0,0 +1,81 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\spec-repair\synthesis\jit
++spec_name Minepump
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\spec-repair\skill_artifacts\final.spectra
++environment highwater, methane
++system pump
++
++test declared_variables:
++  kind variable_ownership
++  env highwater, methane
++  sys pump
++
++test highwater_without_methane_turns_pump_on_next:
++  kind state_sequence
++  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
++  trace:
++    highwater=true, methane=false
++    highwater=false, methane=false
++  expect:
++    highwater=true, methane=false
++    pump=true
++
++test methane_turns_pump_off_next:
++  kind state_sequence
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  trace:
++    highwater=false, methane=true
++    highwater=false, methane=false
++  expect:
++    highwater=false, methane=true
++    pump=false
++
++test methane_overrides_highwater_next:
++  kind state_sequence
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  trace:
++    highwater=true, methane=true
++    highwater=true, methane=false
++  expect:
++    highwater=true, methane=true
++    pump=false
++
++test pump_not_on_for_two_consecutive_steps_after_activation:
++  kind state_sequence
++  requirement "At any point in time, either the pump is currently off or it was off in the previous step."
++  trace:
++    highwater=true, methane=false
++    highwater=false, methane=false
++    highwater=false, methane=false
++  expect:
++    highwater=true, methane=false
++    pump=true
++    pump=false
++
++test methane_absence_of_pump_bounded_random:
++  kind eventually_response
++  mode random
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  runs 40
++  max_depth 6
++  seed 17
++  domains:
++    highwater false, true
++    methane false, true
++  when methane=true
++  eventually pump=false
++  within_steps 2
++  require_closed_obligations true
++
++test highwater_response_bounded_exhaustive:
++  kind eventually_response
++  mode exhaustive
++  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
++  max_depth 5
++  max_paths 256
++  domains:
++    highwater false, true
++    methane false, true
++  when highwater=true, methane=false
++  eventually pump=true
++  within_steps 2
++  require_closed_obligations true
+
+codex
+test_plan_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-03\test-writer\test-plan.rtest
+compiled_test_plan_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-03\test-writer\test-plan.json
+dsl_diagnostics_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-03\test-writer\dsl-diagnostics.json
+tests_planned: 7
+untestable_requirements: 0
+artifact_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-03\test-writer
+diff --git a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..4c42427a6b4d2731c1af2c407f6060efe419e316
+--- /dev/null
++++ b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/independent_test/round-03/test-writer/test-plan.rtest
+@@ -0,0 +1,81 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\spec-repair\synthesis\jit
++spec_name Minepump
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped2\model=qwen3\baa7776c6e4578bb97aedd4c\branches\independent_test\round-02\spec-repair\skill_artifacts\final.spectra
++environment highwater, methane
++system pump
++
++test declared_variables:
++  kind variable_ownership
++  env highwater, methane
++  sys pump
++
++test highwater_without_methane_turns_pump_on_next:
++  kind state_sequence
++  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
++  trace:
++    highwater=true, methane=false
++    highwater=false, methane=false
++  expect:
++    highwater=true, methane=false
++    pump=true
++
++test methane_turns_pump_off_next:
++  kind state_sequence
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  trace:
++    highwater=false, methane=true
++    highwater=false, methane=false
++  expect:
++    highwater=false, methane=true
++    pump=false
++
++test methane_overrides_highwater_next:
++  kind state_sequence
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  trace:
++    highwater=true, methane=true
++    highwater=true, methane=false
++  expect:
++    highwater=true, methane=true
++    pump=false
++
++test pump_not_on_for_two_consecutive_steps_after_activation:
++  kind state_sequence
++  requirement "At any point in time, either the pump is currently off or it was off in the previous step."
++  trace:
++    highwater=true, methane=false
++    highwater=false, methane=false
++    highwater=false, methane=false
++  expect:
++    highwater=true, methane=false
++    pump=true
++    pump=false
++
++test methane_absence_of_pump_bounded_random:
++  kind eventually_response
++  mode random
++  requirement "Whenever methane is true, the pump must be off in the next step."
++  runs 40
++  max_depth 6
++  seed 17
++  domains:
++    highwater false, true
++    methane false, true
++  when methane=true
++  eventually pump=false
++  within_steps 2
++  require_closed_obligations true
++
++test highwater_response_bounded_exhaustive:
++  kind eventually_response
++  mode exhaustive
++  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
++  max_depth 5
++  max_paths 256
++  domains:
++    highwater false, true
++    methane false, true
++  when highwater=true, methane=false
++  eventually pump=true
++  within_steps 2
++  require_closed_obligations true
+
+tokens used
+34.995

@@ -1,0 +1,19 @@
+spec TrafficA3a
+
+env boolean carA;
+env boolean carB;
+
+sys boolean greenA;
+sys boolean greenB;
+
+asm carA_waits:
+  G ((carA & !greenA) -> next(carA));
+
+asm carB_waits:
+  G ((carB & !greenB) -> next(carB));
+
+asm not_both_cars_infinitely_often:
+  GF !(carA & carB);
+
+gar never_both_green:
+  G !(greenA & greenB);

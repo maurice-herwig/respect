@@ -1,0 +1,45 @@
+controller_dir C:/Users/mauri/OneDrive/Desktop/Repos/respect/experiments/branched_runs/jringert/spectra-tutorial/E2_execution/TrafficE2/model=qwen3/96383dabca0a8c08b7f3ab26/branches/self_test/synthesis/jit
+spec_name TrafficE2
+spectra_file C:/Users/mauri/OneDrive/Desktop/Repos/respect/experiments/branched_runs/jringert/spectra-tutorial/E2_execution/TrafficE2/model=qwen3/96383dabca0a8c08b7f3ab26/branches/self_test/specs/00_from_core.spectra
+environment carA, carB
+system greenA, greenB
+
+test declared_variables:
+  kind variable_ownership
+
+test never_both_green_exhaustive:
+  kind mutual_exclusion
+  requirement "The system must ensure that greenA and greenB are never true simultaneously."
+  mode exhaustive
+  max_depth 6
+  max_paths 128
+  domains:
+    carA false, true
+    carB false, true
+  variables greenA, greenB
+
+test greenA_observed_on_fair_prefix:
+  kind eventually_response
+  requirement "The system must guarantee that greenA becomes true infinitely often."
+  trace:
+    carA=true, carB=false
+    carA=false, carB=true
+    carA=true, carB=true
+    carA=false, carB=false
+    carA=true, carB=false
+    carA=false, carB=true
+  eventually greenA=true
+  within_steps 6
+
+test greenB_observed_on_fair_prefix:
+  kind eventually_response
+  requirement "The system must guarantee that greenB becomes true infinitely often."
+  trace:
+    carA=false, carB=true
+    carA=true, carB=false
+    carA=true, carB=true
+    carA=false, carB=false
+    carA=false, carB=true
+    carA=true, carB=false
+  eventually greenB=true
+  within_steps 6

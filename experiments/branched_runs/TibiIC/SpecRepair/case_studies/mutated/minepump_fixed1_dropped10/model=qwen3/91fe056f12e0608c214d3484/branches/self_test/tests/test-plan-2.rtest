@@ -1,0 +1,29 @@
+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\synthesis\jit
+spec_name Minepump
+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped10\model=qwen3\91fe056f12e0608c214d3484\branches\self_test\specs\00_from_core.spectra
+environment highwater, methane
+system pump
+
+test declared_variables:
+  kind variable_ownership
+
+test no_methane_requires_pump:
+  kind eventually_response
+  requirement "At all times, if methane is false, then pump must be true in the next state."
+  trace:
+    highwater=false, methane=false
+    highwater=false, methane=true
+  when methane=false
+  eventually pump=true
+  within_steps 2
+  require_closed_obligations true
+
+test methane_requires_no_pump:
+  kind response_absence
+  requirement "At all times, if methane is true, then pump must be false in the next state."
+  trace:
+    highwater=false, methane=true
+    highwater=false, methane=true
+  when methane=true
+  absent pump=true
+  for_steps 2

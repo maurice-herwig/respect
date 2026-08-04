@@ -1,0 +1,15 @@
+spec Minepump
+
+env boolean highwater;
+env boolean methane;
+
+sys boolean pump;
+
+gar pump_false_context:
+  alw !pump;
+
+asm methane_or_not_highwater_context:
+  alw (methane | !highwater);
+
+gar methane_implies_next_pump_off:
+  alw (methane -> next(!pump));

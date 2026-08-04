@@ -1,0 +1,15 @@
+spec Minepump
+
+env boolean highwater;
+env boolean methane;
+
+sys boolean pump;
+
+asm pump_clears_highwater:
+  G (pump -> next(!highwater));
+
+gar methane_stops_pump:
+  G (methane -> next(!pump));
+
+gar safe_highwater_starts_pump:
+  G ((highwater & !methane) -> next(pump));

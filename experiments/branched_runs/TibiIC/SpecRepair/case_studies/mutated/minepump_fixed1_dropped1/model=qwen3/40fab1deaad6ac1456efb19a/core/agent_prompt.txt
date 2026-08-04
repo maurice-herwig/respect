@@ -1,0 +1,53 @@
+Use $respect-core.
+
+Run directory: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\core
+Agent timeout budget seconds: 7200.0
+
+Fixed env/sys signature JSON:
+
+```json
+{
+  "environment": [
+    {
+      "name": "highwater",
+      "type": "boolean"
+    },
+    {
+      "name": "methane",
+      "type": "boolean"
+    }
+  ],
+  "spec_name": "Minepump",
+  "system": [
+    {
+      "name": "pump",
+      "type": "boolean"
+    }
+  ],
+  "type_definitions": []
+}
+```
+
+Generate the shared core reconstruction. Stop after successful synthesis and
+write both core context files. Use the same generous timeout budget for this
+branch as the other branches; do not stop early unless a nested command reports
+its own timeout or the task reaches a documented repair-loop limit.
+
+Natural-language requirements:
+
+
+
+Specification name: Minepump
+
+Environment variables:
+- highwater: boolean
+- methane: boolean
+
+System variables:
+- pump: boolean
+
+The Minepump system operates continuously to control a pump based on environmental conditions. The environment provides the boolean inputs `highwater` and `methane`, while the system controls the boolean output `pump`.
+
+Regarding assumptions on the environment, it is assumed that at all times, if the variable `pump` is true, then the variable `highwater` must be false in the next step. This constrains the environment to ensure the high water level condition is cleared immediately following pump activation.
+
+Regarding guarantees required from the system, the system must satisfy the following conditions at all times. First, if the variable `methane` is true, then the variable `pump` must be false in the next step. Second, if the variable `highwater` is true and the variable `methane` is false, then the variable `pump` must be true in the next step. These requirements ensure the pump activates to clear water when safe and deactivates when methane is detected.

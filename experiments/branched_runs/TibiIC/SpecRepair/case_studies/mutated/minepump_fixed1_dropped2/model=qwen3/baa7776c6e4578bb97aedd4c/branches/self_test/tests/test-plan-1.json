@@ -1,0 +1,131 @@
+{
+  "tests": [
+    {
+      "name": "declared_variables",
+      "kind": "variable_ownership",
+      "env": [
+        "highwater",
+        "methane"
+      ],
+      "sys": [
+        "pump"
+      ]
+    },
+    {
+      "name": "safe_highwater_turns_pump_on_next_step",
+      "kind": "state_sequence",
+      "requirement": "Whenever methane is false and highwater is true, the pump must be on in the next step.",
+      "trace": [
+        {
+          "highwater": "true",
+          "methane": "false"
+        },
+        {
+          "highwater": "false",
+          "methane": "false"
+        }
+      ],
+      "expect": [
+        {
+          "highwater": "true",
+          "methane": "false"
+        },
+        {
+          "pump": "true"
+        }
+      ]
+    },
+    {
+      "name": "methane_turns_pump_off_next_step",
+      "kind": "state_sequence",
+      "requirement": "Whenever methane is true, the pump must be off in the next step.",
+      "trace": [
+        {
+          "highwater": "false",
+          "methane": "true"
+        },
+        {
+          "highwater": "false",
+          "methane": "false"
+        }
+      ],
+      "expect": [
+        {
+          "highwater": "false",
+          "methane": "true"
+        },
+        {
+          "pump": "false"
+        }
+      ]
+    },
+    {
+      "name": "methane_highwater_turns_pump_off_next_step",
+      "kind": "state_sequence",
+      "requirement": "Whenever methane is true, the pump must be off in the next step.",
+      "trace": [
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "false",
+          "methane": "false"
+        }
+      ],
+      "expect": [
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "pump": "false"
+        }
+      ]
+    },
+    {
+      "name": "pump_not_on_for_two_consecutive_steps_after_safe_highwater",
+      "kind": "state_sequence",
+      "requirement": "The pump is never on for two consecutive steps.",
+      "trace": [
+        {
+          "highwater": "true",
+          "methane": "false"
+        },
+        {
+          "highwater": "false",
+          "methane": "false"
+        },
+        {
+          "highwater": "false",
+          "methane": "false"
+        }
+      ],
+      "expect": [
+        {
+          "highwater": "true",
+          "methane": "false"
+        },
+        {
+          "pump": "true"
+        },
+        {
+          "pump": "false"
+        }
+      ]
+    }
+  ],
+  "controller_dir": "experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/core/synthesis/jit",
+  "spec_name": "Minepump",
+  "spectra_file": "experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped2/model=qwen3/baa7776c6e4578bb97aedd4c/branches/self_test/specs/00_from_core.spectra",
+  "environment": [
+    "highwater",
+    "methane"
+  ],
+  "system": [
+    "pump"
+  ],
+  "outputs": [
+    "pump"
+  ]
+}

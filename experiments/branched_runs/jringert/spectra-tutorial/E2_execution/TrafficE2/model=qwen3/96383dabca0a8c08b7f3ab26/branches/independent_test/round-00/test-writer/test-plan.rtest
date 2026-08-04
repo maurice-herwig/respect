@@ -1,0 +1,81 @@
+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\core\synthesis\jit
+spec_name TrafficE2
+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\spectra-tutorial\E2_execution\TrafficE2\model=qwen3\96383dabca0a8c08b7f3ab26\core\skill_artifacts\final.spectra
+environment carA, carB
+system greenA, greenB
+
+test declared_variables:
+  kind variable_ownership
+  env carA, carB
+  sys greenA, greenB
+
+test exhaustive_never_both_green:
+  kind mutual_exclusion
+  requirement "The system must ensure that the outputs greenA and greenB are never true simultaneously."
+  mode exhaustive
+  max_depth 6
+  max_paths 256
+  domains:
+    carA false, true
+    carB false, true
+  variables greenA, greenB
+
+test simultaneous_requests_never_both_green:
+  kind exclusion
+  requirement "The system must ensure that the outputs greenA and greenB are never true simultaneously."
+  trace:
+    carA=true, carB=true
+    carA=true, carB=true
+    carA=true, carB=true
+    carA=true, carB=true
+    carA=true, carB=true
+    carA=true, carB=true
+  forbidden greenA=true, greenB=true
+
+test no_requests_never_both_green:
+  kind exclusion
+  requirement "The system must ensure that the outputs greenA and greenB are never true simultaneously."
+  trace:
+    carA=false, carB=false
+    carA=false, carB=false
+    carA=false, carB=false
+    carA=false, carB=false
+    carA=false, carB=false
+    carA=false, carB=false
+  forbidden greenA=true, greenB=true
+
+test alternating_requests_never_both_green:
+  kind exclusion
+  requirement "The system must ensure that the outputs greenA and greenB are never true simultaneously."
+  trace:
+    carA=true, carB=false
+    carA=false, carB=true
+    carA=true, carB=false
+    carA=false, carB=true
+    carA=true, carB=true
+    carA=false, carB=false
+  forbidden greenA=true, greenB=true
+
+test persistent_carA_request_never_both_green:
+  kind exclusion
+  requirement "The system must ensure that the outputs greenA and greenB are never true simultaneously."
+  trace:
+    carA=true, carB=false
+    carA=true, carB=false
+    carA=true, carB=false
+    carA=true, carB=false
+    carA=true, carB=false
+    carA=true, carB=false
+  forbidden greenA=true, greenB=true
+
+test persistent_carB_request_never_both_green:
+  kind exclusion
+  requirement "The system must ensure that the outputs greenA and greenB are never true simultaneously."
+  trace:
+    carA=false, carB=true
+    carA=false, carB=true
+    carA=false, carB=true
+    carA=false, carB=true
+    carA=false, carB=true
+    carA=false, carB=true
+  forbidden greenA=true, greenB=true

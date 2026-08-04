@@ -1,0 +1,1685 @@
+OpenAI Codex v0.146.0
+--------
+workdir: C:\Users\mauri\OneDrive\Desktop\Repos\respect
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: medium
+reasoning summaries: none
+session id: 019fc811-181e-7c20-a846-5bc525a65e95
+--------
+user
+Use $respect-test-writer.
+
+Write independent controller tests in the controller_tests .rtest DSL.
+
+Output directory: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer
+Required test plan path: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest
+Agent timeout budget seconds: 7200.0
+
+Fixed env/sys signature JSON:
+
+```json
+{
+  "environment": [
+    {
+      "name": "distance",
+      "type": "Int(0..100)"
+    }
+  ],
+  "spec_name": "BotV1naive",
+  "system": [
+    {
+      "name": "leftM",
+      "type": "MotorCmd"
+    },
+    {
+      "name": "rightM",
+      "type": "MotorCmd"
+    }
+  ],
+  "type_definitions": [
+    {
+      "domain": "{FWD, BWD, STP}",
+      "name": "MotorCmd"
+    }
+  ]
+}
+```
+
+Controller metadata:
+- spec_name: BotV1naive
+- controller_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
+- spectra_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
+
+Important boundaries:
+- Do not open or inspect the generated Spectra file. Use spectra_file only as a DSL path.
+- Do not read core_context.full.json, repair logs, source Spectra, benchmark oracles, or distance results.
+- Derive expected behavior only from the natural-language requirements and fixed signature.
+- Use the same generous timeout budget as the other branches; do not stop early
+  unless a nested command reports its own timeout.
+
+Natural-language requirements:
+
+
+
+Specification name: BotV1naive
+
+Named domains:
+- MotorCmd: {FWD, BWD, STP}
+
+Environment variables:
+- distance: Int(0..100)
+
+System variables:
+- leftM: MotorCmd
+- rightM: MotorCmd
+
+The system controls two motors via the output variables `leftM` and `rightM`. Each motor command must be selected from the set {FWD, BWD, STP}, representing forward, backward, and stop respectively. The environment provides an input variable `distance`, which is an integer value ranging from 0 to 100.
+
+The specification defines the condition "forward" as occurring when both `leftM` and `rightM` are set to FWD simultaneously.
+
+The system must satisfy the following guarantee regarding proximity safety: At all times, if the current `distance` value is less than or equal to 20, then in the immediately next state, the system must not be in the "forward" condition. This means that whenever the measured distance is 20 or less, the subsequent motor commands cannot have both `leftM` and `rightM` set to FWD.
+
+codex
+I’ll use `respect-test-writer` and keep the tests independent from the generated Spectra, as requested. I’m reading only the skill instructions and the controller test DSL before writing the plan.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\.agents\\skills\\respect-test-writer\\SKILL.md'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\controller_tests\\DSL.md'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 891ms:
+---
+name: respect-test-writer
+description: Independent ReSpect controller-test writer. Generate controller_tests .rtest plans from natural-language requirements plus a fixed env/sys signature and controller metadata, without reading generated Spectra contents or the specification agent's reasoning. Use for independent-test experiments that reduce self-testing bias.
+---
+
+# ReSpect Test Writer
+
+## Research Role
+
+This skill writes independent bounded controller tests for a generated controller:
+
+- Input: natural-language requirements, fixed environment/system signature, `spec_name`, `controller_dir`, `spectra_file` path, and output directory.
+- Output: `.rtest` controller-test DSL plan plus optional DSL compile diagnostics.
+- Allowed sources: the natural-language requirements, fixed signature, controller metadata, and `controller_tests/DSL.md`.
+- Not allowed: reading generated Spectra contents, source/reference Spectra files, the specification agent's stdout/reasoning, repair logs, benchmark oracles, mutation checks, equivalence checks, or distance results.
+
+The goal is to test the natural-language requirements independently of the generated implementation.
+
+## Workflow
+
+1. Read `controller_tests/DSL.md`.
+2. Read the fixed signature from the prompt. Use exactly those environment and system variables.
+3. Derive tests only from the natural-language requirements.
+4. Use `spectra_file` only as a top-level DSL path. Do not open or inspect its contents.
+5. Prefer adversarial tests that could expose incomplete, over-permissive, over-restrictive, wrongly initialized, or unfair controllers. Do not write only happy-path tests.
+6. Include a `variable_ownership` test. Write it explicitly with `env ...` and
+   `sys ...` lists copied from the fixed signature, even though the DSL can infer
+   them from top-level `environment` and `system`. Avoid the compact form
+   `test declared_variables: kind variable_ownership` because it is hard for
+   humans to review.
+7. For every runtime test, include `requirement "<quote or close paraphrase from the NL description>"`.
+8. Use bounded trace, random, or exhaustive modes with conservative bounds. Prefer `max_depth <= 6`, `max_paths <= 256`, `runs <= 50`, and `within_steps <= 10` unless the description gives a bound.
+9. Save the plan as `test-plan.rtest` in the output directory supplied by the prompt.
+10. If asked to compile, run `python controller_tests\compile_test_plan.py <rtest> -o <json>` and repair only DSL/test-plan issues, not Spectra.
+
+## Test Selection
+
+Cover each clearly testable requirement at least once:
+
+- Ownership/signature declarations.
+- Initial output requirements.
+- Safety exclusions and invariants.
+- Immediate implications.
+- Bounded evidence for response/liveness requirements.
+- Small exhaustive exploration for Boolean or small finite input domains.
+
+Do not limit the plan to traces where the controller is expected to behave nicely. Include stress cases when supported by the natural-language requirements, such as simultaneous requests, no requests, persistent one-sided requests, alternating requests, rapid input changes, boundary enum values, and inputs that could reveal over-permissive behavior. Do not turn an unbounded liveness requirement into a hard bounded deadline unless the natural-language text gives that deadline.
+
+If a requirement cannot be tested soundly with bounded controller tests, record it in the final response under `untestable_requirements`.
+
+## Final Response Format
+
+Return a final JSON object or key-value block with:
+
+```text
+test_plan_file: <path>
+compiled_test_plan_file: <path or none>
+dsl_diagnostics_file: <path or none>
+tests_planned: <number>
+untestable_requirements: <number>
+artifact_dir: <path>
+```
+
+ succeeded in 974ms:
+# ReSpect Controller-Test DSL
+
+This document defines the `.rtest` language used to write Method-3 controller
+test plans. The DSL is a human- and agent-facing format. It compiles to the JSON
+plan consumed by the Java controller-test runner.
+
+Compile a DSL file:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest -o path\to\plan.json
+```
+
+Validate without writing JSON:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest --check
+```
+
+Write machine-readable diagnostics for humans or LLM repair loops:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest --check --diagnostics-json path\to\dsl-diagnostics.json
+```
+
+Require referenced runtime artifacts to already exist:
+
+```powershell
+python controller_tests\compile_test_plan.py path\to\plan.rtest --check --strict-files
+```
+
+## Design Goals
+
+- Keep test plans readable for humans and LLM agents.
+- Make variable ownership explicit through top-level `environment` and `system`
+  declarations.
+- Preserve the existing Java runner by compiling to its JSON format.
+- Fail early on misspelled keys, missing fields, and unsupported test kinds.
+- Keep the DSL bounded and black-box: tests execute finite controller traces and
+  are not full Spectra equivalence proofs.
+
+## File Structure
+
+An `.rtest` file contains required top-level metadata followed by one or more
+test blocks:
+
+```text
+controller_dir assets/examples/E2_execution/out/jit
+spec_name TrafficE2
+spectra_file assets/examples/E2_execution/TrafficE2.spectra
+environment carA, carB
+system greenA, greenB
+
+test declared_variables:
+  kind variable_ownership
+
+test never_both_green:
+  kind exclusion
+  trace:
+    carA=true, carB=false
+    carA=false, carB=true
+  forbidden greenA=true, greenB=true
+```
+
+## Lexical Rules
+
+- Files are UTF-8 text.
+- Indentation uses spaces. Tabs are rejected.
+- Empty lines are ignored.
+- Comments start with `#` and continue to the end of the line.
+- `#` inside single or double quotes is treated as part of the value.
+- Statements are either `key value` or `key: value`.
+- Block statements use `key:` with no value and an indented body.
+- Values may be unquoted or quoted with single or double quotes.
+- Boolean and numeric values in valuations compile to strings because the Java
+  runner compares controller values as strings.
+
+## Grammar
+
+The grammar below is descriptive. The compiler also performs semantic
+validation after parsing.
+
+```text
+plan            ::= top_level_stmt+ test_block+
+
+top_level_stmt  ::= controller_dir_stmt
+                  | spec_name_stmt
+                  | spectra_file_stmt
+                  | environment_stmt
+                  | system_stmt
+
+controller_dir_stmt ::= "controller_dir" scalar
+spec_name_stmt      ::= "spec_name" scalar
+spectra_file_stmt   ::= "spectra_file" scalar
+environment_stmt    ::= "environment" variable_list
+system_stmt         ::= "system" variable_list
+
+test_block      ::= "test" test_name ":" indented_test_stmt+
+
+indented_test_stmt ::= kind_stmt
+                     | mode_stmt
+                     | scalar_test_stmt
+                     | map_test_stmt
+                     | list_test_stmt
+                     | trace_block
+                     | expect_block
+                     | domains_block
+
+kind_stmt       ::= "kind" test_kind
+test_kind       ::= "variable_ownership"
+                  | "initial_condition"
+                  | "exclusion"
+                  | "always_implication"
+                  | "eventually_response"
+                  | "mutual_exclusion"
+                  | "one_hot"
+                  | "invariant"
+                  | "state_sequence"
+                  | "persistence"
+                  | "response_absence"
+
+mode_stmt       ::= "mode" exploration_mode
+exploration_mode ::= "trace" | "random" | "exhaustive"
+
+scalar_test_stmt ::= ("max_depth" | "max_paths" | "runs" | "seed"
+                    | "within_steps" | "for_steps") integer
+                   | "require_closed_obligations" boolean
+                   | ("requirement" | "active_value") scalar
+
+list_test_stmt  ::= ("env" | "sys" | "environment" | "system"
+                    | "variables") variable_list
+
+map_test_stmt   ::= ("forbidden" | "when" | "then" | "eventually"
+                    | "expected" | "inputs" | "initial_inputs"
+                    | "condition" | "maintain" | "until"
+                    | "absent") valuation
+
+trace_block     ::= "trace:" indented_valuation+
+expect_block    ::= "expect:" indented_valuation+
+domains_block   ::= "domains:" indented_domain+
+
+indented_valuation ::= valuation
+indented_domain    ::= variable value_list
+
+variable_list   ::= variable ("," variable)*
+value_list      ::= value ("," value)*
+valuation       ::= variable "=" value ("," variable "=" value)*
+```
+
+## Required Top-Level Fields
+
+Every `.rtest` file must define:
+
+- `controller_dir`: path to the synthesized JIT controller directory.
+- `spec_name`: Spectra module/spec name used by Syntech.
+- `spectra_file`: generated Spectra file used by static tests.
+- `environment`: comma-separated environment-controlled input variables.
+- `system`: comma-separated system-controlled output variables.
+
+The compiler writes `system` to the JSON field `outputs`, because the Java
+runner currently reads system outputs from that field.
+
+Top-level `outputs` is accepted as a legacy alias for `system`, but new DSL files
+should use `system`.
+
+## Test Blocks
+
+A test block starts with `test <name>:`. The name must start with a letter or
+underscore and may contain letters, digits, underscores, and hyphens.
+
+Each test block must contain a `kind` statement. Supported kinds are described
+below.
+
+Method-3 test plans should also include a `requirement` statement for every
+runtime test. The value should quote or closely paraphrase the natural-language
+requirement that justifies the test:
+
+```text
+test never_both_green:
+  kind mutual_exclusion
+  requirement "The two traffic lights must never be green at the same time."
+  variables greenA, greenB
+```
+
+Do not add tests that cannot be justified by a natural-language requirement.
+
+### variable_ownership
+
+Checks the generated Spectra file statically. It verifies that variables are
+declared with the expected ownership.
+
+```text
+test declared_variables:
+  kind variable_ownership
+```
+
+If `env` and `sys` are omitted, the compiler fills them from top-level
+`environment` and `system`.
+
+You may override them explicitly:
+
+```text
+test selected_variables:
+  kind variable_ownership
+  env request, cancel
+  sys grant
+```
+
+### initial_condition
+
+Runs one initial controller step and checks the expected valuation.
+
+```text
+test starts_closed:
+  kind initial_condition
+  inputs request=false
+  expected door=CLOSED
+```
+
+Required field:
+
+- `expected`: valuation that must hold after the initial step.
+
+Optional field:
+
+- `inputs`: input valuation for the initial step.
+
+### exclusion
+
+Fails if a forbidden valuation appears in any explored step.
+
+```text
+test never_both_green:
+  kind exclusion
+  trace:
+    carA=true, carB=false
+    carA=false, carB=true
+  forbidden greenA=true, greenB=true
+```
+
+Required field:
+
+- `forbidden`: valuation that must never be reached.
+
+### always_implication
+
+Checks an immediate safety implication. Whenever `when` matches a step, `then`
+must match the same step.
+
+```text
+test grant_only_on_request:
+  kind always_implication
+  mode exhaustive
+  max_depth 4
+  max_paths 256
+  domains:
+    request false, true
+  when request=false
+  then grant=false
+```
+
+Required field:
+
+- `then`: valuation that must hold when the trigger matches.
+
+Optional field:
+
+- `when`: trigger valuation. An empty `when` is allowed by the underlying runner,
+  but should normally be avoided unless the intended meaning is global.
+
+### eventually_response
+
+Checks bounded response behavior. When `when` is observed, `eventually` must
+match within `within_steps`.
+
+```text
+test request_eventually_granted:
+  kind eventually_response
+  trace:
+    request=true
+    request=true
+    request=true
+  when request=true
+  eventually grant=true
+  within_steps 3
+```
+
+Required field:
+
+- `eventually`: valuation that must occur within the response window.
+
+Optional fields:
+
+- `when`: trigger valuation. If omitted, the response window starts immediately.
+- `within_steps`: response bound. Defaults to `10`.
+- `require_closed_obligations`: if `true`, a trace ending before the response is
+  observed fails. Defaults to `false`.
+
+### mutual_exclusion
+
+Checks that at most one variable from a group is active at every explored step.
+
+```text
+test never_two_modes:
+  kind mutual_exclusion
+  trace:
+    request=true
+  variables idle, moving, charging
+```
+
+Required field:
+
+- `variables`: variables in the mutually exclusive group.
+
+Optional field:
+
+- `active_value`: value considered active. Defaults to `true`.
+
+### one_hot
+
+Checks that exactly one variable from a group is active at every explored step.
+
+```text
+test exactly_one_mode:
+  kind one_hot
+  trace:
+    request=false
+  variables idle, moving, charging
+```
+
+Required field:
+
+- `variables`: variables in the one-hot group.
+
+Optional field:
+
+- `active_value`: value considered active. Defaults to `true`.
+
+### invariant
+
+Checks that a valuation holds at every explored step.
+
+```text
+test reset_implies_idle:
+  kind invariant
+  trace:
+    reset=true
+  condition reset=true, idle=true
+```
+
+Required field:
+
+- `condition`: valuation that must match every step.
+
+### state_sequence
+
+Replays a concrete `trace:` and checks an `expect:` valuation for each step.
+
+```text
+test startup_sequence:
+  kind state_sequence
+  trace:
+    start=true
+    start=false
+  expect:
+    ready=false
+    ready=true
+```
+
+Required fields:
+
+- `trace`: concrete input sequence.
+- `expect`: expected valuations. It must have exactly one entry per trace step.
+
+Use this only when the natural-language requirement defines a concrete sequence;
+otherwise it can overconstrain underspecified controllers.
+
+### persistence
+
+After `when` matches, `maintain` must keep matching until `until` matches. If
+`until` is omitted, the maintained valuation must hold to the end of each trace.
+
+```text
+test alarm_persists_until_reset:
+  kind persistence
+  trace:
+    fault=true, reset=false
+    fault=false, reset=false
+    fault=false, reset=true
+  when alarm=true
+  maintain alarm=true
+  until reset=true
+```
+
+Required field:
+
+- `maintain`: valuation that must persist after the trigger.
+
+Optional fields:
+
+- `when`: trigger valuation. If omitted, the trigger is effectively immediate.
+- `until`: valuation that closes the persistence obligation.
+
+### response_absence
+
+After `when` matches, `absent` must not match for `for_steps` steps.
+
+```text
+test no_grant_during_reset:
+  kind response_absence
+  trace:
+    reset=true
+    reset=false
+  when reset=true
+  absent grant=true
+  for_steps 2
+```
+
+Required field:
+
+- `absent`: valuation that must not occur in the absence window.
+
+Optional fields:
+
+- `when`: trigger valuation. If omitted, the trigger is effectively immediate.
+- `for_steps`: absence-window length. Defaults to `1`.
+
+## Exploration Modes
+
+Controller tests replay concrete input traces against fresh controller
+instances.
+
+### trace
+
+`trace` is the default mode. It requires a `trace:` block for runtime tests such
+as `exclusion`, `always_implication`, and `eventually_response`.
+
+```text
+test concrete_case:
+  kind exclusion
+  trace:
+    a=false, b=false
+    a=true, b=false
+  forbidden x=true, y=true
+```
+
+### random
+
+Generates deterministic random traces from finite environment domains.
+
+```text
+test random_safety:
+  kind exclusion
+  mode random
+  runs 50
+  max_depth 10
+  seed 1
+  domains:
+    request false, true
+    reset false, true
+  forbidden error=true
+```
+
+Required field:
+
+- `domains`: finite input domains.
+
+Defaults:
+
+- `runs`: `100`
+- `max_depth`: `10`
+- `seed`: `1`
+
+### exhaustive
+
+Enumerates the bounded input tree from finite environment domains.
+
+```text
+test exhaustive_safety:
+  kind exclusion
+  mode exhaustive
+  max_depth 4
+  max_paths 256
+  domains:
+    carA false, true
+    carB false, true
+  forbidden greenA=true, greenB=true
+```
+
+Required field:
+
+- `domains`: finite input domains.
+
+Defaults:
+
+- `max_depth`: `6`
+- `max_paths`: `10000`
+
+Use exhaustive mode only for small domains and shallow depths.
+
+## Valuations
+
+A valuation is a comma-separated list of `variable=value` pairs:
+
+```text
+request=true, mode=ACTIVE, level=2
+```
+
+The compiler emits values as strings in JSON:
+
+```json
+{"request": "true", "mode": "ACTIVE", "level": "2"}
+```
+
+This matches the Java runner's comparison behavior.
+
+## Compilation Output
+
+The DSL:
+
+```text
+environment carA, carB
+system greenA, greenB
+```
+
+compiles to JSON containing:
+
+```json
+{
+  "environment": ["carA", "carB"],
+  "system": ["greenA", "greenB"],
+  "outputs": ["greenA", "greenB"]
+}
+```
+
+The `outputs` field exists for Java runner compatibility. The DSL-level source
+of truth is `system`.
+
+## Validation Rules
+
+The compiler rejects:
+
+- tabs,
+- unknown keys,
+- missing required top-level fields,
+- files without tests,
+- unsupported test kinds,
+- `variable_ownership` without any environment or system variables,
+- `initial_condition` without `expected`,
+- `exclusion` without `forbidden`,
+- `always_implication` without `then`,
+- `eventually_response` without `eventually`,
+- `mutual_exclusion` or `one_hot` without `variables`,
+- `invariant` without `condition`,
+- `state_sequence` without `expect`,
+- `persistence` without `maintain`,
+- `response_absence` without `absent`,
+- `random` or `exhaustive` tests without `domains:`,
+- trace-mode runtime tests without a `trace:` block.
+
+The compiler also performs semantic validation:
+
+- top-level `environment` and `system` variables must be unique,
+- a variable may not appear in both `environment` and `system`,
+- every test name must be unique,
+- all referenced variables must be declared in top-level `environment` or
+  `system`,
+- `trace:`, `inputs`, and `initial_inputs` may assign only environment
+  variables,
+- `domains:` may define only environment variables,
+- `expected`, `then`, `eventually`, `when`, and `forbidden` may reference known
+  environment or system variables because tests match the combined input/output
+  valuation observed at each step,
+- `condition`, `maintain`, `until`, `absent`, `expect`, and `variables` may also
+  reference known environment or system variables,
+- `trace:` must not be combined with `mode random` or `mode exhaustive`,
+- `domains:` must not be used with default trace mode,
+- `max_depth`, `max_paths`, `runs`, `seed`, and `within_steps` must be positive
+  when present,
+- domain values must not contain duplicates.
+
+With `--strict-files`, the compiler additionally requires `spectra_file` to be
+an existing file and `controller_dir` to be an existing directory. This check is
+optional because Method-3 agents may create plans before final runtime artifacts
+are available.
+
+## Diagnostics JSON
+
+`compile_test_plan.py` can write structured diagnostics with
+`--diagnostics-json`. On success, the file has this shape:
+
+```json
+{
+  "status": "success",
+  "tool": "controller_tests.compile_test_plan",
+  "file": "tests/test-plan-1.rtest",
+  "errors": [],
+  "compiled_tests": 3
+}
+```
+
+On failure, the status is `dsl_syntax_error` and the first compiler error is
+reported with a stable code, source context, and repair hint:
+
+```json
+{
+  "status": "dsl_syntax_error",
+  "tool": "controller_tests.compile_test_plan",
+  "file": "tests/test-plan-1.rtest",
+  "errors": [
+    {
+      "code": "missing_required_field",
+      "line": 8,
+      "column": null,
+      "message": "Line 8: exclusion requires forbidden.",
+      "hint": "Add `forbidden <valuation>` to this exclusion test.",
+      "context": [
+        {"line": 8, "text": "test never_both_green:", "is_error_line": true}
+      ]
+    }
+  ],
+  "repair_instruction": "Repair only the .rtest test-plan syntax and structure..."
+}
+```
+
+Diagnostic codes include:
+
+- `indentation_error`
+- `invalid_statement`
+- `unknown_key`
+- `invalid_block_syntax`
+- `invalid_valuation`
+- `invalid_domain`
+- `empty_block`
+- `invalid_integer`
+- `invalid_boolean`
+- `missing_top_level_field`
+- `missing_test_block`
+- `missing_test_kind`
+- `unsupported_test_kind`
+- `missing_required_field`
+- `invalid_exploration`
+- `duplicate_variable`
+- `variable_owner_conflict`
+- `duplicate_test_name`
+- `unknown_variable`
+- `wrong_variable_owner`
+- `unsupported_exploration_mode`
+- `conflicting_exploration_fields`
+- `invalid_bound`
+- `duplicate_domain_value`
+- `sequence_length_mismatch`
+- `missing_file`
+- `missing_controller_dir`
+
+These diagnostics are intended for `.rtest` repair only. A DSL compile failure
+must not be treated as evidence that the generated Spectra specification is
+wrong.
+
+## DSL Repair Loop
+
+ReSpect agents should repair invalid `.rtest` files before running the Java
+controller tests:
+
+1. Write `tests/test-plan-<n>.rtest`.
+2. Run the compiler with `--diagnostics-json`.
+3. If compilation fails, send the diagnostics JSON, the current `.rtest` file,
+   and this DSL reference to the LLM.
+4. Ask the LLM to repair only the `.rtest` syntax and structure.
+5. Save the repaired file as a new attempt.
+6. Retry compilation.
+7. Stop after at most three DSL repair attempts.
+
+Only after the `.rtest` file compiles should the generated JSON plan be passed
+to `respect.controller_tests.TestRunner`.
+
+## ReSpect Guidance
+
+For the ReSpect controller-test workflow, tests must be derived only from:
+
+- the natural-language requirement,
+- the generated Spectra file,
+- synthesized controller metadata.
+
+Do not derive `.rtest` files from the original benchmark Spectra file or from an
+oracle controller.
+
+Prefer a small set of tests that are clearly justified by the natural-language
+requirements:
+
+- one `variable_ownership` test,
+- safety tests for explicit "never" or "always" requirements,
+- bounded response tests for explicit request/response requirements,
+- shallow exhaustive exploration for small Boolean input domains,
+- seeded random exploration for larger finite domains.
+
+Do not assert a concrete output strategy when the natural-language requirement
+allows multiple valid strategies.
+
+codex
+I have the DSL shape now. The main testable behavior is the one-step safety obligation after `distance <= 20`; I’m going to encode that with bounded absence tests around boundary and stress input traces, without asserting a particular motor command when the distance is safe.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-ChildItem -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01' -Force | Select-Object FullName,Name,Mode" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 695ms:
+
+FullName                                                                                                                                                                               
+--------                                                                                                                                                                               
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_t...
+
+
+
+codex
+I’m creating the `.rtest` file in the requested artifact directory now. The tests will include explicit ownership plus concrete boundary cases at `0`, `20`, `21`, and `100`, and a shallow finite exploration over representative distances.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "New-Item -ItemType Directory -Force -Path 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer' | Select-Object -ExpandProperty FullName" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 907ms:
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer
+
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest
+diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..91d24bf20e48d9b70af75a1a145d219370da5fb2
+--- /dev/null
++++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+@@ -0,0 +1,83 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
++spec_name BotV1naive
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
++environment distance
++system leftM, rightM
++
++test declared_variables:
++  kind variable_ownership
++  env distance
++  sys leftM, rightM
++
++test obstacle_zero_blocks_next_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=0
++    distance=100
++  when distance=0
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_boundary_twenty_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=20
++    distance=21
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test persistent_close_distance_blocks_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=20
++    distance=19
++    distance=1
++    distance=0
++    distance=20
++    distance=18
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test alternating_close_and_clear_blocks_after_close:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=100
++    distance=20
++    distance=100
++    distance=0
++    distance=21
++    distance=20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_low_distance_random_safety:
++  kind response_absence
++  mode random
++  runs 50
++  max_depth 6
++  seed 7
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  domains:
++    distance 0, 1, 19, 20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_boundary_exhaustive_safety:
++  kind response_absence
++  mode exhaustive
++  max_depth 4
++  max_paths 256
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  domains:
++    distance 0, 20, 21, 100
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
+
+diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..91d24bf20e48d9b70af75a1a145d219370da5fb2
+--- /dev/null
++++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+@@ -0,0 +1,83 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
++spec_name BotV1naive
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
++environment distance
++system leftM, rightM
++
++test declared_variables:
++  kind variable_ownership
++  env distance
++  sys leftM, rightM
++
++test obstacle_zero_blocks_next_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=0
++    distance=100
++  when distance=0
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_boundary_twenty_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=20
++    distance=21
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test persistent_close_distance_blocks_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=20
++    distance=19
++    distance=1
++    distance=0
++    distance=20
++    distance=18
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test alternating_close_and_clear_blocks_after_close:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=100
++    distance=20
++    distance=100
++    distance=0
++    distance=21
++    distance=20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_low_distance_random_safety:
++  kind response_absence
++  mode random
++  runs 50
++  max_depth 6
++  seed 7
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  domains:
++    distance 0, 1, 19, 20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_boundary_exhaustive_safety:
++  kind response_absence
++  mode exhaustive
++  max_depth 4
++  max_paths 256
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  domains:
++    distance 0, 20, 21, 100
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
+
+codex
+The first draft is in place. I’m running the DSL compiler now to catch structural issues; this does not inspect the Spectra contents or evaluate the controller.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest' -o 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.json' --diagnostics-json 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\dsl-diagnostics.json'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1607ms:
+diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..91d24bf20e48d9b70af75a1a145d219370da5fb2
+--- /dev/null
++++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+@@ -0,0 +1,83 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
++spec_name BotV1naive
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
++environment distance
++system leftM, rightM
++
++test declared_variables:
++  kind variable_ownership
++  env distance
++  sys leftM, rightM
++
++test obstacle_zero_blocks_next_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=0
++    distance=100
++  when distance=0
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_boundary_twenty_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=20
++    distance=21
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test persistent_close_distance_blocks_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=20
++    distance=19
++    distance=1
++    distance=0
++    distance=20
++    distance=18
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test alternating_close_and_clear_blocks_after_close:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=100
++    distance=20
++    distance=100
++    distance=0
++    distance=21
++    distance=20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_low_distance_random_safety:
++  kind response_absence
++  mode random
++  runs 50
++  max_depth 6
++  seed 7
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  domains:
++    distance 0, 1, 19, 20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_boundary_exhaustive_safety:
++  kind response_absence
++  mode exhaustive
++  max_depth 4
++  max_paths 256
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  domains:
++    distance 0, 20, 21, 100
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
+
+codex
+The DSL compiled cleanly. I noticed the representative exploration focused on the `20` trigger, so I’m adding one more just-below-boundary case at `19` to better exercise the “less than” part without broadening the expected behavior at safe distances.
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest
+diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..25f302313fd5a4aa498d2365362c75cf3c66a5e7
+--- /dev/null
++++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+@@ -0,0 +1,93 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
++spec_name BotV1naive
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
++environment distance
++system leftM, rightM
++
++test declared_variables:
++  kind variable_ownership
++  env distance
++  sys leftM, rightM
++
++test obstacle_zero_blocks_next_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=0
++    distance=100
++  when distance=0
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_boundary_twenty_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=20
++    distance=21
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_nineteen_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=19
++    distance=21
++  when distance=19
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test persistent_close_distance_blocks_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=20
++    distance=19
++    distance=1
++    distance=0
++    distance=20
++    distance=18
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test alternating_close_and_clear_blocks_after_close:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=100
++    distance=20
++    distance=100
++    distance=0
++    distance=21
++    distance=20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_low_distance_random_safety:
++  kind response_absence
++  mode random
++  runs 50
++  max_depth 6
++  seed 7
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  domains:
++    distance 0, 1, 19, 20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_boundary_exhaustive_safety:
++  kind response_absence
++  mode exhaustive
++  max_depth 4
++  max_paths 256
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  domains:
++    distance 0, 20, 21, 100
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
+
+diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..25f302313fd5a4aa498d2365362c75cf3c66a5e7
+--- /dev/null
++++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+@@ -0,0 +1,93 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
++spec_name BotV1naive
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
++environment distance
++system leftM, rightM
++
++test declared_variables:
++  kind variable_ownership
++  env distance
++  sys leftM, rightM
++
++test obstacle_zero_blocks_next_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=0
++    distance=100
++  when distance=0
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_boundary_twenty_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=20
++    distance=21
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_nineteen_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=19
++    distance=21
++  when distance=19
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test persistent_close_distance_blocks_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=20
++    distance=19
++    distance=1
++    distance=0
++    distance=20
++    distance=18
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test alternating_close_and_clear_blocks_after_close:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=100
++    distance=20
++    distance=100
++    distance=0
++    distance=21
++    distance=20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_low_distance_random_safety:
++  kind response_absence
++  mode random
++  runs 50
++  max_depth 6
++  seed 7
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  domains:
++    distance 0, 1, 19, 20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_boundary_exhaustive_safety:
++  kind response_absence
++  mode exhaustive
++  max_depth 4
++  max_paths 256
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  domains:
++    distance 0, 20, 21, 100
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
+
+codex
+I’m recompiling after that small coverage edit so the JSON artifact and diagnostics match the final `.rtest` file.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest' -o 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.json' --diagnostics-json 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\dsl-diagnostics.json'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1211ms:
+diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..25f302313fd5a4aa498d2365362c75cf3c66a5e7
+--- /dev/null
++++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+@@ -0,0 +1,93 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
++spec_name BotV1naive
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
++environment distance
++system leftM, rightM
++
++test declared_variables:
++  kind variable_ownership
++  env distance
++  sys leftM, rightM
++
++test obstacle_zero_blocks_next_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=0
++    distance=100
++  when distance=0
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_boundary_twenty_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=20
++    distance=21
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_nineteen_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=19
++    distance=21
++  when distance=19
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test persistent_close_distance_blocks_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=20
++    distance=19
++    distance=1
++    distance=0
++    distance=20
++    distance=18
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test alternating_close_and_clear_blocks_after_close:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=100
++    distance=20
++    distance=100
++    distance=0
++    distance=21
++    distance=20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_low_distance_random_safety:
++  kind response_absence
++  mode random
++  runs 50
++  max_depth 6
++  seed 7
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  domains:
++    distance 0, 1, 19, 20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_boundary_exhaustive_safety:
++  kind response_absence
++  mode exhaustive
++  max_depth 4
++  max_paths 256
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  domains:
++    distance 0, 20, 21, 100
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
+
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\dsl-diagnostics.json'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest' -Pattern '"'^test '"' | Measure-Object | Select-Object -ExpandProperty Count" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 833ms:
+{
+  "status": "success",
+  "tool": "controller_tests.compile_test_plan",
+  "file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest",
+  "errors": [],
+  "compiled_tests": 8
+}
+
+ succeeded in 911ms:
+8
+
+diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..25f302313fd5a4aa498d2365362c75cf3c66a5e7
+--- /dev/null
++++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+@@ -0,0 +1,93 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
++spec_name BotV1naive
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
++environment distance
++system leftM, rightM
++
++test declared_variables:
++  kind variable_ownership
++  env distance
++  sys leftM, rightM
++
++test obstacle_zero_blocks_next_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=0
++    distance=100
++  when distance=0
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_boundary_twenty_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=20
++    distance=21
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_nineteen_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=19
++    distance=21
++  when distance=19
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test persistent_close_distance_blocks_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=20
++    distance=19
++    distance=1
++    distance=0
++    distance=20
++    distance=18
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test alternating_close_and_clear_blocks_after_close:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=100
++    distance=20
++    distance=100
++    distance=0
++    distance=21
++    distance=20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_low_distance_random_safety:
++  kind response_absence
++  mode random
++  runs 50
++  max_depth 6
++  seed 7
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  domains:
++    distance 0, 1, 19, 20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_boundary_exhaustive_safety:
++  kind response_absence
++  mode exhaustive
++  max_depth 4
++  max_paths 256
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  domains:
++    distance 0, 20, 21, 100
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
+
+codex
+test_plan_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest
+compiled_test_plan_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.json
+dsl_diagnostics_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\dsl-diagnostics.json
+tests_planned: 8
+untestable_requirements: 0
+artifact_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer
+diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+new file mode 100644
+index 0000000000000000000000000000000000000000..25f302313fd5a4aa498d2365362c75cf3c66a5e7
+--- /dev/null
++++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
+@@ -0,0 +1,93 @@
++controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
++spec_name BotV1naive
++spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
++environment distance
++system leftM, rightM
++
++test declared_variables:
++  kind variable_ownership
++  env distance
++  sys leftM, rightM
++
++test obstacle_zero_blocks_next_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=0
++    distance=100
++  when distance=0
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_boundary_twenty_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=20
++    distance=21
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test obstacle_nineteen_blocks_next_forward:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=19
++    distance=21
++  when distance=19
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test persistent_close_distance_blocks_forward:
++  kind response_absence
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  trace:
++    distance=20
++    distance=19
++    distance=1
++    distance=0
++    distance=20
++    distance=18
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test alternating_close_and_clear_blocks_after_close:
++  kind response_absence
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  trace:
++    distance=100
++    distance=20
++    distance=100
++    distance=0
++    distance=21
++    distance=20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_low_distance_random_safety:
++  kind response_absence
++  mode random
++  runs 50
++  max_depth 6
++  seed 7
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  domains:
++    distance 0, 1, 19, 20
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
++
++test representative_boundary_exhaustive_safety:
++  kind response_absence
++  mode exhaustive
++  max_depth 4
++  max_paths 256
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  domains:
++    distance 0, 20, 21, 100
++  when distance=20
++  absent leftM=FWD, rightM=FWD
++  for_steps 1
+
+tokens used
+32.255

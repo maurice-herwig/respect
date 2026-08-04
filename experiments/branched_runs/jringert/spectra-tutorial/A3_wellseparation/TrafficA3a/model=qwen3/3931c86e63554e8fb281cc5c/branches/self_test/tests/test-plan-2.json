@@ -1,0 +1,128 @@
+{
+  "tests": [
+    {
+      "name": "declared_variables",
+      "kind": "variable_ownership",
+      "requirement": "The environment controls carA and carB, and the system controls greenA and greenB.",
+      "env": [
+        "carA",
+        "carB"
+      ],
+      "sys": [
+        "greenA",
+        "greenB"
+      ]
+    },
+    {
+      "name": "never_both_green_no_cars",
+      "kind": "mutual_exclusion",
+      "requirement": "At all times, the lights for A and B must not be green simultaneously.",
+      "trace": [
+        {
+          "carA": "false",
+          "carB": "false"
+        },
+        {
+          "carA": "false",
+          "carB": "false"
+        },
+        {
+          "carA": "false",
+          "carB": "false"
+        }
+      ],
+      "variables": [
+        "greenA",
+        "greenB"
+      ]
+    },
+    {
+      "name": "never_both_green_both_waiting",
+      "kind": "mutual_exclusion",
+      "requirement": "At all times, the lights for A and B must not be green simultaneously.",
+      "trace": [
+        {
+          "carA": "true",
+          "carB": "true"
+        },
+        {
+          "carA": "true",
+          "carB": "true"
+        },
+        {
+          "carA": "true",
+          "carB": "true"
+        },
+        {
+          "carA": "true",
+          "carB": "true"
+        }
+      ],
+      "variables": [
+        "greenA",
+        "greenB"
+      ]
+    },
+    {
+      "name": "never_both_green_a_waiting",
+      "kind": "exclusion",
+      "requirement": "It is never the case that both greenA and greenB are true.",
+      "trace": [
+        {
+          "carA": "true",
+          "carB": "false"
+        },
+        {
+          "carA": "true",
+          "carB": "false"
+        },
+        {
+          "carA": "true",
+          "carB": "false"
+        }
+      ],
+      "forbidden": {
+        "greenA": "true",
+        "greenB": "true"
+      }
+    },
+    {
+      "name": "never_both_green_b_waiting",
+      "kind": "exclusion",
+      "requirement": "It is never the case that both greenA and greenB are true.",
+      "trace": [
+        {
+          "carA": "false",
+          "carB": "true"
+        },
+        {
+          "carA": "false",
+          "carB": "true"
+        },
+        {
+          "carA": "false",
+          "carB": "true"
+        }
+      ],
+      "forbidden": {
+        "greenA": "true",
+        "greenB": "true"
+      }
+    }
+  ],
+  "controller_dir": "experiments/branched_runs/jringert/spectra-tutorial/A3_wellseparation/TrafficA3a/model=qwen3/3931c86e63554e8fb281cc5c/branches/self_test/synthesis/jit",
+  "spec_name": "TrafficA3a",
+  "spectra_file": "experiments/branched_runs/jringert/spectra-tutorial/A3_wellseparation/TrafficA3a/model=qwen3/3931c86e63554e8fb281cc5c/branches/self_test/specs/00_from_core.spectra",
+  "environment": [
+    "carA",
+    "carB"
+  ],
+  "system": [
+    "greenA",
+    "greenB"
+  ],
+  "outputs": [
+    "greenA",
+    "greenB"
+  ]
+}

@@ -1,0 +1,43 @@
+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\input-files\examples\simpletest\model=qwen3\200a6390d21cdad917234fa5\branches\self_test\synthesis\jit
+spec_name simpletest
+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\input-files\examples\simpletest\model=qwen3\200a6390d21cdad917234fa5\branches\self_test\specs\00_from_core.spectra
+environment input1, input2
+system output1, output2
+
+test declared_variables:
+  kind variable_ownership
+  requirement "The environment controls input1 and input2, while the system controls output1 and output2."
+
+test output1_initially_true:
+  kind initial_condition
+  requirement "The system must ensure that output1 is true at all times."
+  inputs input1=true, input2=true
+  expected output1=true
+
+test output2_initially_true:
+  kind initial_condition
+  requirement "The system must ensure that output2 is true at all times."
+  inputs input1=true, input2=true
+  expected output2=true
+
+test output1_always_true:
+  kind invariant
+  mode exhaustive
+  requirement "The system must ensure that output1 is true at all times."
+  max_depth 4
+  max_paths 32
+  domains:
+    input1 true
+    input2 false, true
+  condition output1=true
+
+test output2_always_true:
+  kind invariant
+  mode exhaustive
+  requirement "The system must ensure that output2 is true at all times."
+  max_depth 4
+  max_paths 32
+  domains:
+    input1 true
+    input2 false, true
+  condition output2=true

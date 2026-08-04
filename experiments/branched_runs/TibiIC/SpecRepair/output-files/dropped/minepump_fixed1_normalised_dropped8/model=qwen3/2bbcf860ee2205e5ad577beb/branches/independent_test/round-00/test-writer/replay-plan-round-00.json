@@ -1,0 +1,152 @@
+{
+  "controller_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\dropped\\minepump_fixed1_normalised_dropped8\\model=qwen3\\2bbcf860ee2205e5ad577beb\\core\\synthesis\\jit",
+  "environment": [
+    "highwater",
+    "methane"
+  ],
+  "outputs": [
+    "pump"
+  ],
+  "spec_name": "Minepump",
+  "spectra_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\dropped\\minepump_fixed1_normalised_dropped8\\model=qwen3\\2bbcf860ee2205e5ad577beb\\core\\skill_artifacts\\final.spectra",
+  "system": [
+    "pump"
+  ],
+  "tests": [
+    {
+      "env": [
+        "highwater",
+        "methane"
+      ],
+      "kind": "variable_ownership",
+      "name": "declared_variables",
+      "sys": [
+        "pump"
+      ]
+    },
+    {
+      "expected": {
+        "pump": "false"
+      },
+      "inputs": {
+        "highwater": "false",
+        "methane": "false"
+      },
+      "kind": "initial_condition",
+      "name": "initial_pump_false_no_hazard",
+      "requirement": "The pump variable is assumed to be false at all times."
+    },
+    {
+      "condition": {
+        "pump": "false"
+      },
+      "env": {
+        "highwater": [
+          "false",
+          "true"
+        ],
+        "methane": [
+          "false",
+          "true"
+        ]
+      },
+      "kind": "invariant",
+      "max_depth": 6,
+      "max_paths": 256,
+      "mode": "exhaustive",
+      "name": "exhaustive_pump_false_all_inputs",
+      "requirement": "The pump variable is assumed to be false at all times."
+    },
+    {
+      "env": {
+        "highwater": [
+          "false",
+          "true"
+        ],
+        "methane": [
+          "false",
+          "true"
+        ]
+      },
+      "forbidden": {
+        "highwater": "true",
+        "methane": "false"
+      },
+      "kind": "exclusion",
+      "max_depth": 6,
+      "max_paths": 256,
+      "mode": "exhaustive",
+      "name": "no_highwater_without_methane_exhaustive",
+      "requirement": "At all times, either methane is true or highwater is false."
+    },
+    {
+      "forbidden": {
+        "highwater": "true",
+        "methane": "false"
+      },
+      "kind": "exclusion",
+      "name": "no_highwater_without_methane_concrete_stress",
+      "requirement": "At all times, either methane is true or highwater is false.",
+      "trace": [
+        {
+          "highwater": "false",
+          "methane": "false"
+        },
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "true",
+          "methane": "false"
+        }
+      ]
+    },
+    {
+      "expect": [
+        {
+          "methane": "true"
+        },
+        {
+          "pump": "false"
+        }
+      ],
+      "kind": "state_sequence",
+      "name": "methane_next_pump_false_when_methane_clears",
+      "requirement": "At all times, if methane is true, then pump must be false in the next state.",
+      "trace": [
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "false",
+          "methane": "false"
+        }
+      ]
+    },
+    {
+      "expect": [
+        {
+          "methane": "true"
+        },
+        {
+          "pump": "false"
+        }
+      ],
+      "kind": "state_sequence",
+      "name": "methane_next_pump_false_when_methane_persists",
+      "requirement": "At all times, if methane is true, then pump must be false in the next state.",
+      "trace": [
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "false",
+          "methane": "true"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,213 @@
+{
+  "controller_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\A3_wellseparation\\TrafficA3a\\model=qwen3\\3931c86e63554e8fb281cc5c\\core\\synthesis\\jit",
+  "environment": [
+    "carA",
+    "carB"
+  ],
+  "outputs": [
+    "greenA",
+    "greenB"
+  ],
+  "spec_name": "TrafficA3a",
+  "spectra_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\spectra-tutorial\\A3_wellseparation\\TrafficA3a\\model=qwen3\\3931c86e63554e8fb281cc5c\\core\\skill_artifacts\\final.spectra",
+  "system": [
+    "greenA",
+    "greenB"
+  ],
+  "tests": [
+    {
+      "env": [
+        "carA",
+        "carB"
+      ],
+      "kind": "variable_ownership",
+      "name": "declared_variables",
+      "sys": [
+        "greenA",
+        "greenB"
+      ]
+    },
+    {
+      "kind": "mutual_exclusion",
+      "name": "never_both_green_no_cars",
+      "requirement": "At all times, the lights for A and B must not be green simultaneously.",
+      "trace": [
+        {
+          "carA": "false",
+          "carB": "false"
+        },
+        {
+          "carA": "false",
+          "carB": "false"
+        },
+        {
+          "carA": "false",
+          "carB": "false"
+        }
+      ],
+      "variables": [
+        "greenA",
+        "greenB"
+      ]
+    },
+    {
+      "kind": "mutual_exclusion",
+      "name": "never_both_green_single_sided_requests",
+      "requirement": "At all times, the lights for A and B must not be green simultaneously.",
+      "trace": [
+        {
+          "carA": "true",
+          "carB": "false"
+        },
+        {
+          "carA": "true",
+          "carB": "false"
+        },
+        {
+          "carA": "false",
+          "carB": "true"
+        },
+        {
+          "carA": "false",
+          "carB": "true"
+        }
+      ],
+      "variables": [
+        "greenA",
+        "greenB"
+      ]
+    },
+    {
+      "forbidden": {
+        "greenA": "true",
+        "greenB": "true"
+      },
+      "kind": "exclusion",
+      "name": "never_both_green_simultaneous_cars",
+      "requirement": "It is never the case that both greenA and greenB are true.",
+      "trace": [
+        {
+          "carA": "true",
+          "carB": "true"
+        },
+        {
+          "carA": "true",
+          "carB": "true"
+        },
+        {
+          "carA": "false",
+          "carB": "false"
+        },
+        {
+          "carA": "true",
+          "carB": "true"
+        }
+      ]
+    },
+    {
+      "forbidden": {
+        "greenA": "true",
+        "greenB": "true"
+      },
+      "kind": "exclusion",
+      "name": "never_both_green_rapid_changes",
+      "requirement": "The lights for A and B must not be green simultaneously.",
+      "trace": [
+        {
+          "carA": "false",
+          "carB": "false"
+        },
+        {
+          "carA": "true",
+          "carB": "false"
+        },
+        {
+          "carA": "false",
+          "carB": "true"
+        },
+        {
+          "carA": "true",
+          "carB": "true"
+        },
+        {
+          "carA": "false",
+          "carB": "false"
+        },
+        {
+          "carA": "true",
+          "carB": "false"
+        }
+      ]
+    },
+    {
+      "env": {
+        "carA": [
+          "false",
+          "true"
+        ],
+        "carB": [
+          "false",
+          "true"
+        ]
+      },
+      "forbidden": {
+        "greenA": "true",
+        "greenB": "true"
+      },
+      "kind": "exclusion",
+      "max_depth": 6,
+      "max_paths": 256,
+      "mode": "exhaustive",
+      "name": "exhaustive_never_both_green",
+      "requirement": "At all times, the lights for A and B must not be green simultaneously."
+    },
+    {
+      "env": {
+        "carA": [
+          "false",
+          "true"
+        ],
+        "carB": [
+          "false",
+          "true"
+        ]
+      },
+      "kind": "always_implication",
+      "max_depth": 5,
+      "max_paths": 256,
+      "mode": "exhaustive",
+      "name": "greenA_implies_not_greenB",
+      "requirement": "It is never the case that both greenA and greenB are true.",
+      "then": {
+        "greenB": "false"
+      },
+      "when": {
+        "greenA": "true"
+      }
+    },
+    {
+      "env": {
+        "carA": [
+          "false",
+          "true"
+        ],
+        "carB": [
+          "false",
+          "true"
+        ]
+      },
+      "kind": "always_implication",
+      "max_depth": 5,
+      "max_paths": 256,
+      "mode": "exhaustive",
+      "name": "greenB_implies_not_greenA",
+      "requirement": "It is never the case that both greenA and greenB are true.",
+      "then": {
+        "greenA": "false"
+      },
+      "when": {
+        "greenB": "true"
+      }
+    }
+  ]
+}
