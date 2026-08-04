@@ -1,0 +1,32 @@
+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped10_fixed21\model=qwen3\9694a6529aae08959ed819d9\branches\self_test\synthesis\jit
+spec_name Minepump
+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped10_fixed21\model=qwen3\9694a6529aae08959ed819d9\branches\self_test\specs\00_from_core.spectra
+environment highwater, methane
+system pump
+
+test declared_variables:
+  kind variable_ownership
+
+test methane_false_requires_pump_true:
+  kind always_implication
+  requirement "Whenever methane is false, the system must set the pump to true in the subsequent state."
+  mode exhaustive
+  max_depth 3
+  max_paths 100
+  domains:
+    highwater false, true
+    methane false, true
+  when methane=false
+  then pump=true
+
+test methane_true_requires_pump_false:
+  kind always_implication
+  requirement "Whenever methane is true, the system must set the pump to false in the subsequent state."
+  mode exhaustive
+  max_depth 3
+  max_paths 100
+  domains:
+    highwater false, true
+    methane false, true
+  when methane=true
+  then pump=false

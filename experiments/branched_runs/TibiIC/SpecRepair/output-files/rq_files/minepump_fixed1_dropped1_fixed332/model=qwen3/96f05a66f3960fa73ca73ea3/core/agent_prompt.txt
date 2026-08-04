@@ -1,0 +1,57 @@
+Use $respect-core.
+
+Run directory: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped1_fixed332\model=qwen3\96f05a66f3960fa73ca73ea3\core
+Agent timeout budget seconds: 7200.0
+
+Fixed env/sys signature JSON:
+
+```json
+{
+  "environment": [
+    {
+      "name": "highwater",
+      "type": "boolean"
+    },
+    {
+      "name": "methane",
+      "type": "boolean"
+    }
+  ],
+  "spec_name": "Minepump",
+  "system": [
+    {
+      "name": "pump",
+      "type": "boolean"
+    }
+  ],
+  "type_definitions": []
+}
+```
+
+Generate the shared core reconstruction. Stop after successful synthesis and
+write both core context files. Use the same generous timeout budget for this
+branch as the other branches; do not stop early unless a nested command reports
+its own timeout or the task reaches a documented repair-loop limit.
+
+Natural-language requirements:
+
+
+
+Specification name: Minepump
+
+Environment variables:
+- highwater: boolean
+- methane: boolean
+
+System variables:
+- pump: boolean
+
+The system controls the `pump` output based on the `highwater` and `methane` inputs provided by the environment. The behavior is defined by the following assumptions and guarantees that must hold at every step of the system execution.
+
+**Environment Assumptions**
+The environment is assumed to behave such that the following condition is always satisfied: if `methane` was true in the previous step, then either `highwater` will be false in the next step or `pump` is currently false.
+
+**System Guarantees**
+The system must ensure the following conditions are always met:
+1. If `methane` is false and `highwater` is true, then `pump` must be true in the next step. (Equivalently, at every step, either `methane` is true, or `pump` will be true in the next step, or `highwater` is false.)
+2. If `methane` is true, then `pump` must be false in the next step. (Equivalently, at every step, either `methane` is false, or `pump` will be false in the next step.)

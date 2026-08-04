@@ -1,0 +1,65 @@
+Use $respect-test-writer.
+
+Write independent controller tests in the controller_tests .rtest DSL.
+
+Output directory: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped1_fixed211\model=qwen3\191b36c09fdddc2f4dc9953a\branches\independent_test\round-00\test-writer
+Required test plan path: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped1_fixed211\model=qwen3\191b36c09fdddc2f4dc9953a\branches\independent_test\round-00\test-writer\test-plan.rtest
+Agent timeout budget seconds: 7200.0
+
+Fixed env/sys signature JSON:
+
+```json
+{
+  "environment": [
+    {
+      "name": "highwater",
+      "type": "boolean"
+    },
+    {
+      "name": "methane",
+      "type": "boolean"
+    }
+  ],
+  "spec_name": "Minepump",
+  "system": [
+    {
+      "name": "pump",
+      "type": "boolean"
+    }
+  ],
+  "type_definitions": []
+}
+```
+
+Controller metadata:
+- spec_name: Minepump
+- controller_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped1_fixed211\model=qwen3\191b36c09fdddc2f4dc9953a\core\synthesis\jit
+- spectra_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped1_fixed211\model=qwen3\191b36c09fdddc2f4dc9953a\core\skill_artifacts\final.spectra
+
+Important boundaries:
+- Do not open or inspect the generated Spectra file. Use spectra_file only as a DSL path.
+- Do not read core_context.full.json, repair logs, source Spectra, benchmark oracles, or distance results.
+- Derive expected behavior only from the natural-language requirements and fixed signature.
+- Use the same generous timeout budget as the other branches; do not stop early
+  unless a nested command reports its own timeout.
+
+Natural-language requirements:
+
+
+
+Specification name: Minepump
+
+Environment variables:
+- highwater: boolean
+- methane: boolean
+
+System variables:
+- pump: boolean
+
+The Minepump specification defines a reactive system where the environment controls the boolean inputs highwater and methane, and the system controls the boolean output pump.
+
+The environment is assumed to satisfy the following safety condition: At all times, if methane is false, then either highwater must be false in the next step or the pump must have been false in the previous step. This implies that whenever methane is absent and the pump was on in the previous step, the high water level signal must become absent in the next step.
+
+The system must satisfy the following guarantees at all times:
+1. Either methane is true or the pump must be true in the next step. Consequently, if methane is false, the system must turn the pump on in the next step.
+2. Either methane is false or the pump must be false in the next step. Consequently, if methane is true, the system must turn the pump off in the next step.

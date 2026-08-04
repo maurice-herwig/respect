@@ -1,0 +1,57 @@
+Use $respect-core.
+
+Run directory: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped2_fixed158\model=qwen3\9e3a0e6b3fb0e771d632fe6e\core
+Agent timeout budget seconds: 7200.0
+
+Fixed env/sys signature JSON:
+
+```json
+{
+  "environment": [
+    {
+      "name": "highwater",
+      "type": "boolean"
+    },
+    {
+      "name": "methane",
+      "type": "boolean"
+    }
+  ],
+  "spec_name": "Minepump",
+  "system": [
+    {
+      "name": "pump",
+      "type": "boolean"
+    }
+  ],
+  "type_definitions": []
+}
+```
+
+Generate the shared core reconstruction. Stop after successful synthesis and
+write both core context files. Use the same generous timeout budget for this
+branch as the other branches; do not stop early unless a nested command reports
+its own timeout or the task reaches a documented repair-loop limit.
+
+Natural-language requirements:
+
+
+
+Specification name: Minepump
+
+Environment variables:
+- highwater: boolean
+- methane: boolean
+
+System variables:
+- pump: boolean
+
+The Minepump system controls the `pump` output based on the `highwater` and `methane` inputs. The behavior is defined by the following assumptions and guarantees.
+
+**Assumptions**
+The specification assumes that at every step, if `highwater` was true in the previous step, then either `pump` is false in the current step or `pump` was false in the previous step.
+
+**Guarantees**
+The system guarantees the following safety and next-state requirements:
+1. At every step, if `methane` is false and `highwater` is true, then `pump` must be true in the next step.
+2. At every step, if `methane` is true, then `pump` must be false in the next step.
