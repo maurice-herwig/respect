@@ -36,7 +36,7 @@ DEFAULT_CROSS_RUNNER = "experiments/cross_repair_from_core.py"
 DEFAULT_BRANCHES = ("no_test", "self_test", "independent_test", "cross_repair")
 DEFAULT_AGENT_TIMEOUT_SECONDS = 7200.0
 DEFAULT_BROKER_TIMEOUT_SECONDS = 1800.0
-SUCCESS_BRANCH_STATUSES = {"success", "tests_passed"}
+SUCCESS_BRANCH_STATUSES = {"success", "tests_passed", "completed"}
 LOGGER = logging.getLogger("branched_reconstruction")
 
 if str(REPO_ROOT) not in sys.path:
@@ -73,6 +73,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--branches", nargs="+", choices=DEFAULT_BRANCHES, default=list(DEFAULT_BRANCHES))
     parser.add_argument("--timeout", type=float, default=DEFAULT_AGENT_TIMEOUT_SECONDS)
     parser.add_argument("--max-feedback-rounds", type=int, default=3)
+    parser.add_argument("--max-test-plan-repair-attempts", type=int, default=3)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
@@ -270,6 +271,7 @@ def run_key(record: dict[str, Any], args: argparse.Namespace, signature_file: Pa
                 "description_id": record.get("description_id"),
                 "description_response_sha256": record.get("response_sha256"),
                 "max_feedback_rounds": args.max_feedback_rounds,
+                "max_test_plan_repair_attempts": args.max_test_plan_repair_attempts,
                 "prompt_version": "branched_reconstruction_v1",
                 "self_test_skill": args.self_test_skill,
                 "signature_file": str(signature_file),
@@ -285,12 +287,22 @@ def run_key(record: dict[str, Any], args: argparse.Namespace, signature_file: Pa
 
 def completed_run_keys(runs_manifest: Path) -> set[str]:
     """Return completed run keys from an existing branched manifest."""
-    completed = {"success"}
     return {
         record["run_key"]
         for record in load_jsonl(runs_manifest)
-        if record.get("status") in completed and record.get("run_key")
+        if is_completed_for_resume(record) and record.get("run_key")
     }
+
+
+def is_completed_for_resume(record: dict[str, Any]) -> bool:
+    """Return whether a run should be skipped by default on later batches."""
+    if record.get("status") == "success":
+        return True
+    if record.get("status") != "partial_success":
+        return False
+    branches = record.get("branches") if isinstance(record.get("branches"), dict) else {}
+    independent_branch = branches.get("independent_test") if isinstance(branches.get("independent_test"), dict) else {}
+    return normalized_independent_status(independent_branch.get("status")) == "max_rounds_with_failures"
 
 
 def branch_has_required_artifact(branch_name: str, branch: dict[str, Any]) -> bool:
@@ -309,7 +321,8 @@ def reusable_branch(branch_name: str, branch: Any, *, force: bool) -> bool:
     """Return whether an existing branch result can be reused for this run."""
     if force or not isinstance(branch, dict):
         return False
-    if branch.get("status") not in SUCCESS_BRANCH_STATUSES:
+    branch_status = normalized_independent_status(branch.get("status")) if branch_name == "independent_test" else branch.get("status")
+    if branch_status not in SUCCESS_BRANCH_STATUSES:
         return False
     return branch_has_required_artifact(branch_name, branch)
 
@@ -601,7 +614,42 @@ def controller_jit_dir(controller_output_dir: Path | None) -> Path | None:
     """Return the JIT controller directory inside a synthesis output path."""
     if controller_output_dir is None:
         return None
-    return controller_output_dir if controller_output_dir.name == "jit" else controller_output_dir / "jit"
+    candidate = controller_output_dir if controller_output_dir.name == "jit" else controller_output_dir / "jit"
+    return candidate if candidate.is_dir() else None
+
+
+def independent_core_controller_unavailable(
+    *,
+    core_branch: dict[str, Any],
+    core_spectra_file: Path | None,
+) -> dict[str, Any]:
+    """Return an independent-test result when core produced no runnable controller."""
+    reported = core_branch.get("reported") if isinstance(core_branch.get("reported"), dict) else {}
+    cli_status = reported.get("cli_status")
+    well_separation_status = reported.get("well_separation_status")
+    if cli_status == "unrealizable":
+        status = "core_unrealizable"
+    elif well_separation_status == "non_well_separated":
+        status = "core_not_well_separated"
+    elif reported.get("blocked_by_nl_conflict") is True:
+        status = "core_blocked_by_nl_conflict"
+    else:
+        status = "core_controller_unavailable"
+    return {
+        "status": status,
+        "lineage": "independent_test",
+        "role": "spec_repair_from_independent_tests",
+        "start_source": "core_final",
+        "parent_spectra_file": repo_relative_path(core_spectra_file),
+        "final_spectra_file": repo_relative_path(core_spectra_file),
+        "terminal_reason": status,
+        "core_status": core_branch.get("status"),
+        "core_cli_status": cli_status,
+        "core_well_separation_status": well_separation_status,
+        "core_blocked_by_nl_conflict": reported.get("blocked_by_nl_conflict"),
+        "core_controller_output_dir": core_branch.get("controller_output_dir"),
+        "rounds": [],
+    }
 
 
 def build_core_prompt(skill: str, run_dir: Path, natural_language: str, signature_json: str, timeout: float) -> str:
@@ -713,6 +761,65 @@ Natural-language requirements:
 """
 
 
+def build_test_plan_repair_prompt(
+    *,
+    skill: str,
+    output_dir: Path,
+    natural_language: str,
+    signature_json: str,
+    spec_name: str,
+    spectra_file: Path,
+    controller_dir: Path,
+    previous_test_plan_file: Path,
+    diagnostics_file: Path,
+    attempt_index: int,
+    max_attempts: int,
+    timeout: float,
+) -> str:
+    """Build a prompt that asks the test writer to repair invalid TestDSL."""
+    return f"""Use ${skill}.
+
+Repair the controller_tests .rtest plan so it compiles successfully.
+
+Output directory: {output_dir}
+Required repaired test plan path: {output_dir / "test-plan.rtest"}
+Repair attempt: {attempt_index} of {max_attempts}
+Agent timeout budget seconds: {timeout}
+
+Fixed env/sys signature JSON:
+
+```json
+{signature_json}
+```
+
+Controller metadata:
+- spec_name: {spec_name}
+- controller_dir: {controller_dir}
+- spectra_file: {spectra_file}
+
+Previous invalid test plan:
+{previous_test_plan_file}
+
+DSL compiler diagnostics JSON:
+{diagnostics_file}
+
+Important boundaries:
+- Read the previous invalid .rtest plan and the diagnostics JSON.
+- Repair only TestDSL syntax/structure issues reported by the compiler.
+- Preserve the intended tests where possible, but drop or simplify a test if the
+  intended behavior cannot be expressed syntactically in the documented DSL.
+- Do not open or inspect the generated Spectra file. Use spectra_file only as a DSL path.
+- Do not read core_context.full.json, repair logs, source Spectra, benchmark oracles, or distance results.
+- Derive expected behavior only from the natural-language requirements and fixed signature.
+- Use the same generous timeout budget as the other branches; do not stop early
+  unless a nested command reports its own timeout.
+
+Natural-language requirements:
+
+{natural_language}
+"""
+
+
 def build_spec_repair_prompt(
     *,
     skill: str,
@@ -760,11 +867,18 @@ Natural-language requirements:
 """
 
 
-def compile_test_plan(rtest_file: Path, json_file: Path) -> subprocess.CompletedProcess[str]:
+def compile_test_plan(
+    rtest_file: Path,
+    json_file: Path,
+    diagnostics_file: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
     """Compile an `.rtest` plan to the JSON format consumed by Java tests."""
     LOGGER.info("Compiling test plan: %s -> %s", repo_relative_path(rtest_file), repo_relative_path(json_file))
+    command = [sys.executable, "controller_tests/compile_test_plan.py", str(rtest_file), "-o", str(json_file)]
+    if diagnostics_file is not None:
+        command.extend(["--diagnostics-json", str(diagnostics_file)])
     return subprocess.run(
-        [sys.executable, "controller_tests/compile_test_plan.py", str(rtest_file), "-o", str(json_file)],
+        command,
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -856,6 +970,7 @@ def independent_terminal_status(rounds: list[dict[str, Any]]) -> str:
         "test_agent_failed": "test_agent_failed",
         "missing_test_plan_path": "missing_test_plan_path",
         "test_plan_compile_failed": "test_plan_compile_failed",
+        "test_plan_repair_failed": "test_plan_repair_failed",
         "max_feedback_rounds_reached": "max_rounds_with_failures",
         "spec_repair_failed": "spec_repair_failed",
         "spec_repair_not_synthesized": "spec_repair_not_synthesized",
@@ -863,6 +978,16 @@ def independent_terminal_status(rounds: list[dict[str, Any]]) -> str:
         "missing_controller_dir": "missing_controller_dir",
     }
     return mapping.get(str(stop_reason), str(stop_reason or "unknown_stop_reason"))
+
+
+def normalized_independent_status(status: Any) -> str | None:
+    """Normalize legacy independent-test statuses for evaluation summaries."""
+    if status is None:
+        return None
+    value = str(status)
+    if value == "completed":
+        return "tests_passed"
+    return value
 
 
 def process_no_test(core_artifacts: dict[str, Any], branch_dir: Path) -> dict[str, Any]:
@@ -1069,6 +1194,7 @@ def process_independent_branch(
             "test_agent_exit_code": test_exit,
             "test_agent_error": test_error,
             "test_result": test_result,
+            "test_plan_repair_attempts": [],
         }
         rounds.append(round_record)
         if test_exit != 0 or not test_result or not test_result.get("test_plan_file"):
@@ -1081,13 +1207,107 @@ def process_independent_branch(
             round_record["stop_reason"] = "missing_test_plan_path"
             break
         compiled_file = test_dir / "test-plan.json"
-        compile_result = compile_test_plan(rtest_file, compiled_file)
+        diagnostics_file = test_dir / "dsl-diagnostics-00.json"
+        compile_result = compile_test_plan(rtest_file, compiled_file, diagnostics_file)
         write_text(test_dir / "compile.stdout.txt", compile_result.stdout)
         write_text(test_dir / "compile.stderr.txt", compile_result.stderr)
         round_record["compile_exit_code"] = compile_result.returncode
+        round_record["dsl_diagnostics_file"] = repo_relative_path(diagnostics_file) if diagnostics_file.is_file() else None
+
+        for attempt_index in range(1, args.max_test_plan_repair_attempts + 1):
+            if compile_result.returncode == 0:
+                break
+            LOGGER.warning(
+                "Independent test plan compile failed at round %s; starting DSL repair attempt %s/%s",
+                round_index,
+                attempt_index,
+                args.max_test_plan_repair_attempts,
+            )
+            repair_test_dir = test_dir / f"dsl-repair-{attempt_index:02d}"
+            repair_prompt = build_test_plan_repair_prompt(
+                skill=args.test_writer_skill,
+                output_dir=repair_test_dir,
+                natural_language=natural_language,
+                signature_json=signature_json,
+                spec_name=spec_name,
+                spectra_file=current_spectra_file,
+                controller_dir=controller_dir,
+                previous_test_plan_file=rtest_file,
+                diagnostics_file=diagnostics_file,
+                attempt_index=attempt_index,
+                max_attempts=args.max_test_plan_repair_attempts,
+                timeout=args.timeout,
+            )
+            repair_exit, repair_result, repair_error = run_agent(
+                agent_command=args.agent_command,
+                prompt=repair_prompt,
+                prompt_file=repair_test_dir / "agent_prompt.txt",
+                stdout_file=repair_test_dir / "agent_stdout.txt",
+                stderr_file=repair_test_dir / "agent_stderr.txt",
+                timeout=args.timeout,
+            )
+            if repair_result:
+                write_json(repair_test_dir / "parsed_result.json", repair_result)
+            repair_record: dict[str, Any] = {
+                "attempt": attempt_index,
+                "agent_exit_code": repair_exit,
+                "agent_error": repair_error,
+                "test_result": repair_result,
+                "agent_prompt_file": repo_relative_path(repair_test_dir / "agent_prompt.txt"),
+                "agent_stdout_file": repo_relative_path(repair_test_dir / "agent_stdout.txt"),
+                "agent_stderr_file": repo_relative_path(repair_test_dir / "agent_stderr.txt"),
+                "parsed_result_file": repo_relative_path(repair_test_dir / "parsed_result.json")
+                if (repair_test_dir / "parsed_result.json").is_file()
+                else None,
+            }
+            round_record["test_plan_repair_attempts"].append(repair_record)
+            if repair_exit != 0 or not repair_result or not repair_result.get("test_plan_file"):
+                repair_record["stop_reason"] = "test_plan_repair_agent_failed"
+                LOGGER.warning(
+                    "Independent test plan repair agent failed at round %s attempt %s",
+                    round_index,
+                    attempt_index,
+                )
+                continue
+
+            repaired_rtest_file = extract_path_value(repair_result.get("test_plan_file"))
+            if repaired_rtest_file is None:
+                repair_record["stop_reason"] = "missing_repaired_test_plan_path"
+                continue
+            rtest_file = repaired_rtest_file
+            diagnostics_file = test_dir / f"dsl-diagnostics-{attempt_index:02d}.json"
+            compile_result = compile_test_plan(rtest_file, compiled_file, diagnostics_file)
+            write_text(repair_test_dir / "compile.stdout.txt", compile_result.stdout)
+            write_text(repair_test_dir / "compile.stderr.txt", compile_result.stderr)
+            repair_record.update(
+                {
+                    "test_plan_file": repo_relative_path(rtest_file),
+                    "compile_exit_code": compile_result.returncode,
+                    "dsl_diagnostics_file": repo_relative_path(diagnostics_file) if diagnostics_file.is_file() else None,
+                }
+            )
+            if compile_result.returncode == 0:
+                repair_record["stop_reason"] = "test_plan_repaired"
+                LOGGER.info(
+                    "Independent test plan repaired at round %s attempt %s",
+                    round_index,
+                    attempt_index,
+                )
+                break
+
+        round_record["compile_exit_code"] = compile_result.returncode
+        round_record["compiled_test_plan_file"] = repo_relative_path(compiled_file) if compiled_file.is_file() else None
+        round_record["test_plan_file"] = repo_relative_path(rtest_file)
+        round_record["dsl_diagnostics_file"] = repo_relative_path(diagnostics_file) if diagnostics_file.is_file() else None
         if compile_result.returncode != 0:
             round_record["stop_reason"] = "test_plan_compile_failed"
-            LOGGER.warning("Independent test plan compile failed at round %s", round_index)
+            if round_record["test_plan_repair_attempts"]:
+                round_record["stop_reason"] = "test_plan_repair_failed"
+            LOGGER.warning(
+                "Independent test plan compile failed at round %s after %s repair attempts",
+                round_index,
+                len(round_record["test_plan_repair_attempts"]),
+            )
             break
 
         compiled_test_plans.append((round_index, compiled_file))
@@ -1366,14 +1586,20 @@ def process_cross_branch(
     return result
 
 
-def process_record(record: dict[str, Any], args: argparse.Namespace, output_dir: Path, runs_manifest: Path, completed: set[str]) -> str:
+def process_record(
+    record: dict[str, Any],
+    args: argparse.Namespace,
+    output_dir: Path,
+    runs_manifest: Path,
+    completed: set[str],
+) -> dict[str, Any]:
     """Run core plus requested branches for one description manifest record."""
     response_file = resolve_repo_path(record["response_file"])
     signature_file = signature_file_for(record, resolve_repo_path(args.signature_root))
     current_run_key = run_key(record, args, signature_file)
     if not args.force and current_run_key in completed:
         LOGGER.info("Skipping completed branched run: description_id=%s run_key=%s", record.get("description_id"), current_run_key)
-        return "skipped"
+        return {"status": "skipped"}
 
     description_stem = description_relative_stem(response_file)
     core_run_id = current_run_key[:24]
@@ -1482,6 +1708,17 @@ def process_record(record: dict[str, Any], args: argparse.Namespace, output_dir:
             if "independent_test" in args.branches:
                 if reusable_branch("independent_test", branches.get("independent_test"), force=args.force):
                     LOGGER.info("Reusing completed independent_test branch: final=%s", branches["independent_test"].get("final_spectra_file"))
+                elif not args.dry_run and controller_jit_dir(core_controller) is None:
+                    branches["independent_test"] = independent_core_controller_unavailable(
+                        core_branch=core_branch,
+                        core_spectra_file=core_spectra,
+                    )
+                    LOGGER.warning(
+                        "Skipping independent_test branch because core produced no runnable controller: status=%s cli_status=%s well_separation=%s",
+                        branches["independent_test"]["status"],
+                        branches["independent_test"].get("core_cli_status"),
+                        branches["independent_test"].get("core_well_separation_status"),
+                    )
                 else:
                     branches["independent_test"] = process_independent_branch(
                         branch_dir=run_dir / "branches" / "independent_test",
@@ -1546,6 +1783,7 @@ def process_record(record: dict[str, Any], args: argparse.Namespace, output_dir:
         "run_dir": str(run_dir),
         "runs_manifest": str(runs_manifest),
         "max_feedback_rounds": args.max_feedback_rounds,
+        "max_test_plan_repair_attempts": args.max_test_plan_repair_attempts,
         "broker_timeout_seconds": args.broker_timeout,
         "timeout_seconds": args.timeout,
         "run_started_at": started_at,
@@ -1567,7 +1805,12 @@ def process_record(record: dict[str, Any], args: argparse.Namespace, output_dir:
     )
     if status == "success":
         completed.add(current_run_key)
-    return status
+    independent_branch = branches.get("independent_test") if isinstance(branches.get("independent_test"), dict) else {}
+    return {
+        "status": status,
+        "independent_test_status": independent_branch.get("status"),
+        "independent_test_terminal_reason": independent_branch.get("terminal_reason"),
+    }
 
 
 def main() -> int:
@@ -1614,16 +1857,27 @@ def main() -> int:
         "processed": 0,
         "success": 0,
         "partial_success": 0,
+        "partial_success_independent_max_rounds_with_failures": 0,
+        "partial_success_independent_spec_repair_not_well_separated": 0,
         "dry_run": 0,
         "missing_input": 0,
         "skipped": 0,
     }
+    independent_test_terminal_stats: dict[str, int] = {}
     for record in descriptions:
         if args.limit is not None and stats["processed"] >= args.limit:
             break
         result = process_record(record, args, output_dir, runs_manifest, completed)
+        status = str(result.get("status"))
         stats["processed"] += 1
-        stats[result] = stats.get(result, 0) + 1
+        stats[status] = stats.get(status, 0) + 1
+        independent_test_status = normalized_independent_status(result.get("independent_test_status"))
+        if independent_test_status:
+            independent_test_terminal_stats[independent_test_status] = independent_test_terminal_stats.get(independent_test_status, 0) + 1
+        if status == "partial_success" and independent_test_status == "max_rounds_with_failures":
+            stats["partial_success_independent_max_rounds_with_failures"] += 1
+        if status == "partial_success" and independent_test_status == "spec_repair_not_well_separated":
+            stats["partial_success_independent_spec_repair_not_well_separated"] += 1
 
     summary = {
         "descriptions_manifest": str(descriptions_manifest),
@@ -1635,6 +1889,7 @@ def main() -> int:
         "runs_manifest": str(runs_manifest),
         "branches": args.branches,
         "stats": stats,
+        "independent_test_terminal_stats": independent_test_terminal_stats,
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
     LOGGER.info("Finished branched batch: stats=%s manifest=%s", stats, repo_relative_path(runs_manifest))

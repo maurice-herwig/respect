@@ -30,8 +30,31 @@ this filter intentionally.
 
 Completed records are skipped by default when a matching `run_key` already
 exists in `experiments/branched_runs/runs.jsonl` with status `success`.
-`partial_success` is treated as incomplete and can be retried without `--force`.
-Use `--force` only when a successful record should be recomputed.
+Most `partial_success` records are treated as incomplete and can be retried
+without `--force`. The exception is `partial_success` caused by
+`branches.independent_test.status == "max_rounds_with_failures"`: this means the
+configured independent-test feedback loop budget was exhausted, so the record is
+treated as terminal and skipped by default. Use `--force` only when a successful
+or terminal record should be recomputed.
+
+The top-level batch `stats` contain mutually exclusive run statuses
+(`success`, `partial_success`, `dry_run`, `missing_input`, `skipped`) plus
+additional diagnostic counters. In particular,
+`partial_success_independent_max_rounds_with_failures` counts the subset of
+`partial_success` runs where the `independent_test` branch reached
+`--max-feedback-rounds` and still had failing controller tests. Do not add this
+counter to the other top-level statuses; it is an overlapping reason count used
+for reporting how often independent-test repair exhausted its loop budget.
+`partial_success_independent_spec_repair_not_well_separated` counts the subset
+where independent-test feedback produced a repaired Spectra file that was not
+well-separated and therefore could not be synthesized for another test round.
+
+The batch summary also includes `independent_test_terminal_stats`, a frequency
+table over `branches.independent_test.status`. Use
+`independent_test_terminal_stats.max_rounds_with_failures` as the direct
+evaluation number for "after the configured feedback loops, tests still fail".
+Older manifests may contain the legacy independent-test status `completed`; the
+batch summary normalizes it to `tests_passed` for evaluation.
 
 If `dataset\signatures` does not contain a matching JSON file, the runner falls
 back to the `source_spectra_file` referenced by the NL manifest, extracts the
