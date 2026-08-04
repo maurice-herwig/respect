@@ -1,0 +1,107 @@
+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped2_fixed27\model=qwen3\ebb3f64a8a43d2418a87d9d4\core\synthesis\jit
+spec_name Minepump
+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped2_fixed27\model=qwen3\ebb3f64a8a43d2418a87d9d4\core\skill_artifacts\final.spectra
+environment highwater, methane
+system pump
+
+test declared_variables:
+  kind variable_ownership
+  env highwater, methane
+  sys pump
+
+test safe_highwater_turns_pump_on:
+  kind eventually_response
+  requirement "If methane is not present and the water level is high, the pump must be set to true in the next step."
+  trace:
+    highwater=true, methane=false
+    highwater=true, methane=false
+    highwater=true, methane=false
+  when highwater=true, methane=false
+  eventually pump=true
+  within_steps 2
+  require_closed_obligations true
+
+test safe_highwater_after_idle_turns_pump_on:
+  kind eventually_response
+  requirement "If methane is not present and the water level is high, the pump must be set to true in the next step."
+  trace:
+    highwater=false, methane=false
+    highwater=true, methane=false
+    highwater=true, methane=false
+  when highwater=true, methane=false
+  eventually pump=true
+  within_steps 2
+  require_closed_obligations true
+
+test methane_turns_pump_off_lowwater:
+  kind eventually_response
+  requirement "If methane is present, the pump must be set to false in the next step."
+  trace:
+    highwater=false, methane=true
+    highwater=false, methane=true
+    highwater=false, methane=true
+  when methane=true
+  eventually pump=false
+  within_steps 2
+  require_closed_obligations true
+
+test methane_overrides_highwater:
+  kind eventually_response
+  requirement "If methane is present, the pump must be set to false in the next step."
+  trace:
+    highwater=true, methane=true
+    highwater=true, methane=true
+    highwater=true, methane=true
+  when methane=true
+  eventually pump=false
+  within_steps 2
+  require_closed_obligations true
+
+test methane_prevents_persistent_pump_on:
+  kind response_absence
+  requirement "If methane is present, the pump must be set to false in the next step."
+  trace:
+    highwater=true, methane=true
+    highwater=true, methane=true
+    highwater=true, methane=true
+  when methane=true
+  absent pump=true
+  for_steps 2
+
+test changing_inputs_respect_latest_methane:
+  kind eventually_response
+  requirement "If methane is present, the pump must be set to false in the next step."
+  trace:
+    highwater=true, methane=false
+    highwater=true, methane=true
+    highwater=true, methane=true
+  when methane=true
+  eventually pump=false
+  within_steps 2
+  require_closed_obligations true
+
+test exhaustive_safe_highwater_response:
+  kind eventually_response
+  mode exhaustive
+  requirement "If methane is not present and the water level is high, the pump must be set to true in the next step."
+  max_depth 4
+  max_paths 256
+  domains:
+    highwater false, true
+    methane false, true
+  when highwater=true, methane=false
+  eventually pump=true
+  within_steps 2
+
+test exhaustive_methane_response:
+  kind eventually_response
+  mode exhaustive
+  requirement "If methane is present, the pump must be set to false in the next step."
+  max_depth 4
+  max_paths 256
+  domains:
+    highwater false, true
+    methane false, true
+  when methane=true
+  eventually pump=false
+  within_steps 2

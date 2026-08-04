@@ -1,0 +1,94 @@
+controller_dir "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped6_fixed17\model=qwen3\0e7c3be5f830a8fcba51357c\core\synthesis\jit"
+spec_name Minepump
+spectra_file "C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped6_fixed17\model=qwen3\0e7c3be5f830a8fcba51357c\core\skill_artifacts\final.spectra"
+environment highwater, methane
+system pump
+
+test declared_variables:
+  kind variable_ownership
+  env highwater, methane
+  sys pump
+
+test methane_turns_pump_off_single_trigger:
+  kind eventually_response
+  requirement "At every step, if methane is true, then the pump must be false in the next step."
+  trace:
+    highwater=false, methane=true
+    highwater=false, methane=true
+  when methane=true
+  eventually pump=false
+  within_steps 1
+  require_closed_obligations true
+
+test methane_overrides_highwater:
+  kind eventually_response
+  requirement "The pump turns off whenever methane is detected, including when highwater is also true."
+  trace:
+    highwater=true, methane=true
+    highwater=true, methane=true
+  when methane=true
+  eventually pump=false
+  within_steps 1
+  require_closed_obligations true
+
+test highwater_without_methane_turns_pump_on:
+  kind eventually_response
+  requirement "At every step, if methane is false and highwater is true, then the pump must be true in the next step."
+  trace:
+    highwater=true, methane=false
+    highwater=true, methane=false
+  when highwater=true, methane=false
+  eventually pump=true
+  within_steps 1
+  require_closed_obligations true
+
+test alternating_sensor_demands:
+  kind state_sequence
+  requirement "The pump turns off whenever methane is detected and turns on whenever highwater is true provided no methane is present."
+  trace:
+    highwater=true, methane=false
+    highwater=true, methane=true
+    highwater=true, methane=false
+    highwater=false, methane=true
+  expect:
+    pump=true
+    pump=false
+    pump=true
+    pump=false
+
+test exhaustive_immediate_methane_safety:
+  kind always_implication
+  mode exhaustive
+  max_depth 5
+  max_paths 256
+  requirement "At every step, if methane is true, then the pump must be false in the next step."
+  domains:
+    highwater false, true
+    methane false, true
+  when methane=true
+  then pump=false
+
+test exhaustive_immediate_highwater_no_methane_response:
+  kind always_implication
+  mode exhaustive
+  max_depth 5
+  max_paths 256
+  requirement "At every step, if methane is false and highwater is true, then the pump must be true in the next step."
+  domains:
+    highwater false, true
+    methane false, true
+  when highwater=true, methane=false
+  then pump=true
+
+test random_mixed_sensor_stress:
+  kind always_implication
+  mode random
+  runs 50
+  max_depth 6
+  seed 17
+  requirement "The pump turns off whenever methane is detected."
+  domains:
+    highwater false, true
+    methane false, true
+  when methane=true
+  then pump=false

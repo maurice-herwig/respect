@@ -1,0 +1,209 @@
+{
+  "controller_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped6_fixed17\\model=qwen3\\0e7c3be5f830a8fcba51357c\\branches\\independent_test\\round-02\\spec-repair\\synthesis\\jit",
+  "environment": [
+    "highwater",
+    "methane"
+  ],
+  "outputs": [
+    "pump"
+  ],
+  "spec_name": "Minepump",
+  "spectra_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped6_fixed17\\model=qwen3\\0e7c3be5f830a8fcba51357c\\branches\\independent_test\\round-02\\spec-repair\\skill_artifacts\\final.spectra",
+  "system": [
+    "pump"
+  ],
+  "tests": [
+    {
+      "env": [
+        "highwater",
+        "methane"
+      ],
+      "kind": "variable_ownership",
+      "name": "declared_variables",
+      "sys": [
+        "pump"
+      ]
+    },
+    {
+      "eventually": {
+        "pump": "false"
+      },
+      "kind": "eventually_response",
+      "name": "methane_turns_pump_off_single_trigger",
+      "require_closed_obligations": true,
+      "requirement": "At every step, if methane is true, then the pump must be false in the next step.",
+      "trace": [
+        {
+          "highwater": "false",
+          "methane": "true"
+        },
+        {
+          "highwater": "false",
+          "methane": "true"
+        }
+      ],
+      "when": {
+        "methane": "true"
+      },
+      "within_steps": 1
+    },
+    {
+      "eventually": {
+        "pump": "false"
+      },
+      "kind": "eventually_response",
+      "name": "methane_overrides_highwater",
+      "require_closed_obligations": true,
+      "requirement": "The pump turns off whenever methane is detected, including when highwater is also true.",
+      "trace": [
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "true",
+          "methane": "true"
+        }
+      ],
+      "when": {
+        "methane": "true"
+      },
+      "within_steps": 1
+    },
+    {
+      "eventually": {
+        "pump": "true"
+      },
+      "kind": "eventually_response",
+      "name": "highwater_without_methane_turns_pump_on",
+      "require_closed_obligations": true,
+      "requirement": "At every step, if methane is false and highwater is true, then the pump must be true in the next step.",
+      "trace": [
+        {
+          "highwater": "true",
+          "methane": "false"
+        },
+        {
+          "highwater": "true",
+          "methane": "false"
+        }
+      ],
+      "when": {
+        "highwater": "true",
+        "methane": "false"
+      },
+      "within_steps": 1
+    },
+    {
+      "expect": [
+        {
+          "pump": "true"
+        },
+        {
+          "pump": "false"
+        },
+        {
+          "pump": "true"
+        },
+        {
+          "pump": "false"
+        }
+      ],
+      "kind": "state_sequence",
+      "name": "alternating_sensor_demands",
+      "requirement": "The pump turns off whenever methane is detected and turns on whenever highwater is true provided no methane is present.",
+      "trace": [
+        {
+          "highwater": "true",
+          "methane": "false"
+        },
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "true",
+          "methane": "false"
+        },
+        {
+          "highwater": "false",
+          "methane": "true"
+        }
+      ]
+    },
+    {
+      "env": {
+        "highwater": [
+          "false",
+          "true"
+        ],
+        "methane": [
+          "false",
+          "true"
+        ]
+      },
+      "kind": "always_implication",
+      "max_depth": 5,
+      "max_paths": 256,
+      "mode": "exhaustive",
+      "name": "exhaustive_immediate_methane_safety",
+      "requirement": "At every step, if methane is true, then the pump must be false in the next step.",
+      "then": {
+        "pump": "false"
+      },
+      "when": {
+        "methane": "true"
+      }
+    },
+    {
+      "env": {
+        "highwater": [
+          "false",
+          "true"
+        ],
+        "methane": [
+          "false",
+          "true"
+        ]
+      },
+      "kind": "always_implication",
+      "max_depth": 5,
+      "max_paths": 256,
+      "mode": "exhaustive",
+      "name": "exhaustive_immediate_highwater_no_methane_response",
+      "requirement": "At every step, if methane is false and highwater is true, then the pump must be true in the next step.",
+      "then": {
+        "pump": "true"
+      },
+      "when": {
+        "highwater": "true",
+        "methane": "false"
+      }
+    },
+    {
+      "env": {
+        "highwater": [
+          "false",
+          "true"
+        ],
+        "methane": [
+          "false",
+          "true"
+        ]
+      },
+      "kind": "always_implication",
+      "max_depth": 6,
+      "mode": "random",
+      "name": "random_mixed_sensor_stress",
+      "requirement": "The pump turns off whenever methane is detected.",
+      "runs": 50,
+      "seed": 17,
+      "then": {
+        "pump": "false"
+      },
+      "when": {
+        "methane": "true"
+      }
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "tests": [
+    {
+      "name": "declared_variables",
+      "kind": "variable_ownership",
+      "env": [
+        "highwater",
+        "methane"
+      ],
+      "sys": [
+        "pump"
+      ]
+    },
+    {
+      "name": "methane_next_step_pump_off_lowwater",
+      "kind": "state_sequence",
+      "requirement": "Always, if methane is present, the pump must be off in the next step.",
+      "trace": [
+        {
+          "highwater": "false",
+          "methane": "true"
+        },
+        {
+          "highwater": "false",
+          "methane": "false"
+        }
+      ],
+      "expect": [
+        {
+          "methane": "true"
+        },
+        {
+          "pump": "false"
+        }
+      ]
+    },
+    {
+      "name": "methane_next_step_pump_off_highwater_conflict",
+      "kind": "state_sequence",
+      "requirement": "Always, if methane is present, the pump must be off in the next step.",
+      "trace": [
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "true",
+          "methane": "false"
+        }
+      ],
+      "expect": [
+        {
+          "methane": "true"
+        },
+        {
+          "pump": "false"
+        }
+      ]
+    },
+    {
+      "name": "persistent_methane_forces_following_steps_off",
+      "kind": "state_sequence",
+      "requirement": "Always, if methane is present, the pump must be off in the next step.",
+      "trace": [
+        {
+          "highwater": "false",
+          "methane": "true"
+        },
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "false",
+          "methane": "true"
+        },
+        {
+          "highwater": "true",
+          "methane": "false"
+        }
+      ],
+      "expect": [
+        {
+          "methane": "true"
+        },
+        {
+          "pump": "false"
+        },
+        {
+          "pump": "false"
+        },
+        {
+          "pump": "false"
+        }
+      ]
+    },
+    {
+      "name": "alternating_methane_forces_each_following_step_off",
+      "kind": "state_sequence",
+      "requirement": "Always, if methane is present, the pump must be off in the next step.",
+      "trace": [
+        {
+          "highwater": "false",
+          "methane": "false"
+        },
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "true",
+          "methane": "false"
+        },
+        {
+          "highwater": "false",
+          "methane": "true"
+        },
+        {
+          "highwater": "false",
+          "methane": "false"
+        }
+      ],
+      "expect": [
+        {
+          "methane": "false"
+        },
+        {
+          "methane": "true"
+        },
+        {
+          "pump": "false"
+        },
+        {
+          "methane": "true"
+        },
+        {
+          "pump": "false"
+        }
+      ]
+    }
+  ],
+  "controller_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped8_fixed127\\model=qwen3\\5da6803809bc11053b78cad4\\branches\\independent_test\\round-02\\spec-repair\\synthesis\\jit",
+  "spec_name": "Minepump",
+  "spectra_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped8_fixed127\\model=qwen3\\5da6803809bc11053b78cad4\\branches\\independent_test\\round-02\\spec-repair\\skill_artifacts\\final.spectra",
+  "environment": [
+    "highwater",
+    "methane"
+  ],
+  "system": [
+    "pump"
+  ],
+  "outputs": [
+    "pump"
+  ]
+}

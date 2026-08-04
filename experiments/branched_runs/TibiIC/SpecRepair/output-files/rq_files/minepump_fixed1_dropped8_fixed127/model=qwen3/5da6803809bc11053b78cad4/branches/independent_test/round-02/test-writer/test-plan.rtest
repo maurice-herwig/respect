@@ -1,0 +1,72 @@
+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped8_fixed127\model=qwen3\5da6803809bc11053b78cad4\branches\independent_test\round-01\spec-repair\synthesis\jit
+spec_name Minepump
+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\output-files\rq_files\minepump_fixed1_dropped8_fixed127\model=qwen3\5da6803809bc11053b78cad4\branches\independent_test\round-01\spec-repair\skill_artifacts\final.spectra
+environment highwater, methane
+system pump
+
+test declared_variables:
+  kind variable_ownership
+  env highwater, methane
+  sys pump
+
+test methane_present_forces_pump_off_next_lowwater:
+  kind state_sequence
+  requirement "Always, if methane is present, the pump must be off in the next step."
+  trace:
+    highwater=false, methane=true
+    highwater=false, methane=false
+  expect:
+    highwater=false, methane=true
+    pump=false
+
+test methane_present_forces_pump_off_next_highwater:
+  kind state_sequence
+  requirement "Always, if methane is present, the pump must be off in the next step."
+  trace:
+    highwater=true, methane=true
+    highwater=true, methane=false
+  expect:
+    highwater=true, methane=true
+    pump=false
+
+test persistent_methane_keeps_pump_off_after_first_step:
+  kind state_sequence
+  requirement "Always, if methane is present, the pump must be off in the next step."
+  trace:
+    highwater=false, methane=true
+    highwater=true, methane=true
+    highwater=true, methane=true
+    highwater=false, methane=false
+  expect:
+    highwater=false, methane=true
+    pump=false
+    pump=false
+    pump=false
+
+test alternating_methane_forces_following_step_off:
+  kind state_sequence
+  requirement "Always, if methane is present, the pump must be off in the next step."
+  trace:
+    highwater=true, methane=false
+    highwater=true, methane=true
+    highwater=true, methane=false
+    highwater=false, methane=true
+    highwater=false, methane=false
+  expect:
+    highwater=true, methane=false
+    highwater=true, methane=true
+    pump=false
+    highwater=false, methane=true
+    pump=false
+
+test exhaustive_methane_same_step_safety:
+  kind always_implication
+  mode exhaustive
+  max_depth 5
+  max_paths 256
+  requirement "Always, if methane is present, the pump must be off in the next step."
+  domains:
+    highwater false, true
+    methane false, true
+  when methane=true
+  then pump=false

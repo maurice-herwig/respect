@@ -1,0 +1,56 @@
+{
+  "natural_language_summary": "Minepump has environment inputs highwater and methane, and system output pump. The environment constraint says absence of methane is compatible only with the pump having been off in the previous step. The system must make pump false in the next step whenever methane is true, and make pump true in the next step whenever methane is false and highwater is true.",
+  "signature": {
+    "environment": [
+      {
+        "name": "highwater",
+        "type": "boolean"
+      },
+      {
+        "name": "methane",
+        "type": "boolean"
+      }
+    ],
+    "spec_name": "Minepump",
+    "system": [
+      {
+        "name": "pump",
+        "type": "boolean"
+      }
+    ],
+    "type_definitions": []
+  },
+  "final_spectra_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped6_fixed17\\model=qwen3\\0e7c3be5f830a8fcba51357c\\core\\final.spectra",
+  "controller_output_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped6_fixed17\\model=qwen3\\0e7c3be5f830a8fcba51357c\\core\\synthesis",
+  "well_separation_status": "well_separated",
+  "repair_counters": {
+    "repair_loops": 2,
+    "syntax_repair_loops": 0,
+    "unrealizable_repair_loops": 0,
+    "well_separation_repair_loops": 2
+  },
+  "intermediate_spectra_files": {
+    "initial": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped6_fixed17\\model=qwen3\\0e7c3be5f830a8fcba51357c\\core\\specs\\00_initial.spectra",
+    "after_syntax_repair": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped6_fixed17\\model=qwen3\\0e7c3be5f830a8fcba51357c\\core\\specs\\01_after_syntax_repair.spectra",
+    "after_well_separation_repair": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped6_fixed17\\model=qwen3\\0e7c3be5f830a8fcba51357c\\core\\specs\\03_after_well_separation_repair.spectra"
+  },
+  "diagnostic_files": {
+    "well_separation": [
+      "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped6_fixed17\\model=qwen3\\0e7c3be5f830a8fcba51357c\\core\\diagnostics\\well-separation-0.json",
+      "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped6_fixed17\\model=qwen3\\0e7c3be5f830a8fcba51357c\\core\\diagnostics\\well-separation-1.json",
+      "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped6_fixed17\\model=qwen3\\0e7c3be5f830a8fcba51357c\\core\\diagnostics\\well-separation-2.json"
+    ],
+    "unrealizable": [],
+    "unrealizable_core": []
+  },
+  "repair_log_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped6_fixed17\\model=qwen3\\0e7c3be5f830a8fcba51357c\\core\\repair_log.jsonl",
+  "modeling_decisions": [
+    "The initial draft encoded the stated environment assumption literally as !methane implying PREV(!pump).",
+    "The literal assumption was realizable but non-well-separated because it referenced a system variable from an environment assumption.",
+    "The final repair uses the environment-only forward restriction (!methane & highwater) -> next(methane), matching the forced pump-on case created by the system guarantee while avoiding direct system-variable dependence in the assumption.",
+    "No liveness or initial guarantees were added because the requirements only state safety/update behavior."
+  ],
+  "unresolved_ambiguities": [
+    "The natural-language environment assumption is written in terms of previous pump, a system-controlled signal. The final well-separated model preserves the forced pump-on consequence as an environment-input restriction rather than retaining the literal cross-owner assumption."
+  ]
+}

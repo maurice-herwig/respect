@@ -1,0 +1,174 @@
+{
+  "controller_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped8_fixed127\\model=qwen3\\5da6803809bc11053b78cad4\\core\\synthesis\\jit",
+  "environment": [
+    "highwater",
+    "methane"
+  ],
+  "outputs": [
+    "pump"
+  ],
+  "spec_name": "Minepump",
+  "spectra_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\output-files\\rq_files\\minepump_fixed1_dropped8_fixed127\\model=qwen3\\5da6803809bc11053b78cad4\\core\\skill_artifacts\\final.spectra",
+  "system": [
+    "pump"
+  ],
+  "tests": [
+    {
+      "env": [
+        "highwater",
+        "methane"
+      ],
+      "kind": "variable_ownership",
+      "name": "declared_variables",
+      "sys": [
+        "pump"
+      ]
+    },
+    {
+      "kind": "always_implication",
+      "name": "methane_present_pump_off_single_step",
+      "requirement": "Always, if methane is present, the pump must be off in the next step.",
+      "then": {
+        "pump": "false"
+      },
+      "trace": [
+        {
+          "highwater": "false",
+          "methane": "true"
+        }
+      ],
+      "when": {
+        "methane": "true"
+      }
+    },
+    {
+      "kind": "always_implication",
+      "name": "methane_present_with_highwater_pump_off",
+      "requirement": "Always, if methane is present, the pump must be off in the next step.",
+      "then": {
+        "pump": "false"
+      },
+      "trace": [
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "true",
+          "methane": "true"
+        }
+      ],
+      "when": {
+        "methane": "true"
+      }
+    },
+    {
+      "kind": "always_implication",
+      "name": "methane_toggle_pump_off_on_methane_steps",
+      "requirement": "Always, if methane is present, the pump must be off in the next step.",
+      "then": {
+        "pump": "false"
+      },
+      "trace": [
+        {
+          "highwater": "false",
+          "methane": "false"
+        },
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "true",
+          "methane": "false"
+        },
+        {
+          "highwater": "false",
+          "methane": "true"
+        },
+        {
+          "highwater": "false",
+          "methane": "false"
+        }
+      ],
+      "when": {
+        "methane": "true"
+      }
+    },
+    {
+      "absent": {
+        "pump": "true"
+      },
+      "for_steps": 1,
+      "kind": "response_absence",
+      "name": "methane_absence_of_pump_activation",
+      "requirement": "Always, if methane is present, the pump must be off in the next step.",
+      "trace": [
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "true",
+          "methane": "true"
+        },
+        {
+          "highwater": "false",
+          "methane": "true"
+        }
+      ],
+      "when": {
+        "methane": "true"
+      }
+    },
+    {
+      "env": {
+        "highwater": [
+          "false",
+          "true"
+        ],
+        "methane": [
+          "false",
+          "true"
+        ]
+      },
+      "kind": "always_implication",
+      "max_depth": 5,
+      "max_paths": 256,
+      "mode": "exhaustive",
+      "name": "exhaustive_methane_safety",
+      "requirement": "Always, if methane is present, the pump must be off in the next step.",
+      "then": {
+        "pump": "false"
+      },
+      "when": {
+        "methane": "true"
+      }
+    },
+    {
+      "env": {
+        "highwater": [
+          "false",
+          "true"
+        ],
+        "methane": [
+          "false",
+          "true"
+        ]
+      },
+      "kind": "always_implication",
+      "max_depth": 6,
+      "mode": "random",
+      "name": "random_methane_safety",
+      "requirement": "Always, if methane is present, the pump must be off in the next step.",
+      "runs": 50,
+      "seed": 17,
+      "then": {
+        "pump": "false"
+      },
+      "when": {
+        "methane": "true"
+      }
+    }
+  ]
+}

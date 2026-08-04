@@ -1,0 +1,36 @@
+controller_dir C:/Users/mauri/OneDrive/Desktop/Repos/respect/experiments/branched_runs/TibiIC/SpecRepair/output-files/rq_files/minepump_fixed1_dropped5_fixed71/model=qwen3/a31e07598188bdcc72afd85c/branches/self_test/synthesis/jit
+spec_name Minepump
+spectra_file C:/Users/mauri/OneDrive/Desktop/Repos/respect/experiments/branched_runs/TibiIC/SpecRepair/output-files/rq_files/minepump_fixed1_dropped5_fixed71/model=qwen3/a31e07598188bdcc72afd85c/branches/self_test/specs/00_from_core.spectra
+environment highwater, methane
+system pump
+
+test declared_variables:
+  kind variable_ownership
+
+test no_methane_then_next_pump_on:
+  kind state_sequence
+  requirement "At every step, either methane is true or the pump will be true in the next state."
+  trace:
+    highwater=false, methane=false
+    highwater=true, methane=true
+    highwater=false, methane=false
+    highwater=true, methane=true
+  expect:
+    methane=false
+    pump=true
+    pump=false
+    pump=true
+
+test methane_then_next_pump_off:
+  kind state_sequence
+  requirement "At every step, either methane is false or the pump will be false in the next state."
+  trace:
+    highwater=false, methane=true
+    highwater=true, methane=false
+    highwater=false, methane=true
+    highwater=true, methane=false
+  expect:
+    methane=true
+    pump=false
+    pump=true
+    pump=false
