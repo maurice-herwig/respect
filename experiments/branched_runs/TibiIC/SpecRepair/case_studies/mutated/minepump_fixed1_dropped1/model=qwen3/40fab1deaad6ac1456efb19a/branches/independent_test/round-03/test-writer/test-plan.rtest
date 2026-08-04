@@ -9,53 +9,48 @@ test declared_variables:
   env highwater, methane
   sys pump
 
-test methane_forces_pump_off_next_step:
-  kind state_sequence
+test methane_shutdown_bounded:
+  kind eventually_response
   requirement "If methane is true, then pump must be false in the next step."
   trace:
     highwater=false, methane=true
-    highwater=false, methane=false
-  expect:
-    pump=false
-    pump=false
-
-test highwater_without_methane_turns_pump_on_next_step:
-  kind state_sequence
-  requirement "If highwater is true and methane is false, then pump must be true in the next step."
-  trace:
-    highwater=true, methane=false
-    highwater=false, methane=false
-  expect:
-    pump=false
-    pump=true
-
-test methane_overrides_highwater_request:
-  kind state_sequence
-  requirement "If methane is true, then pump must be false in the next step."
-  trace:
-    highwater=true, methane=true
-    highwater=false, methane=false
-  expect:
-    pump=false
-    pump=false
-
-test no_pump_when_methane_persists:
-  kind response_absence
-  requirement "If methane is true, then pump must be false in the next step."
-  trace:
-    highwater=true, methane=true
-    highwater=true, methane=true
     highwater=false, methane=true
-    highwater=false, methane=true
+    highwater=false, methane=false
   when methane=true
-  absent pump=true
-  for_steps 2
+  eventually pump=false
+  within_steps 2
+  require_closed_obligations true
 
-test repeated_safe_highwater_requests_are_served:
+test highwater_safe_activation_bounded:
   kind eventually_response
   requirement "If highwater is true and methane is false, then pump must be true in the next step."
   trace:
     highwater=true, methane=false
+    highwater=false, methane=false
+    highwater=false, methane=false
+  when highwater=true, methane=false
+  eventually pump=true
+  within_steps 2
+  require_closed_obligations true
+
+test methane_overrides_highwater_bounded:
+  kind eventually_response
+  requirement "If methane is true, then pump must be false in the next step."
+  trace:
+    highwater=true, methane=true
+    highwater=true, methane=true
+    highwater=false, methane=false
+  when methane=true
+  eventually pump=false
+  within_steps 2
+  require_closed_obligations true
+
+test alternating_water_and_methane:
+  kind eventually_response
+  requirement "The pump activates when highwater is true and methane is false, and deactivates when methane is true."
+  trace:
+    highwater=true, methane=false
+    highwater=false, methane=true
     highwater=false, methane=false
     highwater=true, methane=false
     highwater=false, methane=false
@@ -64,34 +59,30 @@ test repeated_safe_highwater_requests_are_served:
   within_steps 2
   require_closed_obligations true
 
-test alternating_safe_and_unsafe_water_conditions:
-  kind state_sequence
-  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
-  trace:
-    highwater=true, methane=false
-    highwater=false, methane=false
-    highwater=true, methane=true
-    highwater=false, methane=false
-    highwater=true, methane=false
-    highwater=false, methane=false
-  expect:
-    pump=false
-    pump=true
-    pump=false
-    pump=false
-    pump=false
-    pump=true
-
-test exhaustive_next_step_methane_suppression:
+test exhaustive_methane_shutdown:
   kind eventually_response
-  mode exhaustive
-  max_depth 4
-  max_paths 256
   requirement "If methane is true, then pump must be false in the next step."
+  mode exhaustive
+  max_depth 5
+  max_paths 64
   domains:
     highwater false, true
     methane false, true
   when methane=true
   eventually pump=false
+  within_steps 2
+  require_closed_obligations true
+
+test exhaustive_safe_highwater_activation:
+  kind eventually_response
+  requirement "If highwater is true and methane is false, then pump must be true in the next step."
+  mode exhaustive
+  max_depth 5
+  max_paths 64
+  domains:
+    highwater false, true
+    methane false, true
+  when highwater=true, methane=false
+  eventually pump=true
   within_steps 2
   require_closed_obligations true

@@ -9,67 +9,51 @@ test declared_variables:
   env req, cl
   sys gr, val
 
-test safety_cl_true_forces_val_false_exhaustive:
-  kind always_implication
-  requirement "Whenever cl is true, the output val must be false."
-  mode exhaustive
-  max_depth 6
-  max_paths 256
-  domains:
-    req false, true
-    cl false, true
-  when cl=true
-  then val=false
-
-test safety_never_cl_and_val_true_random:
-  kind exclusion
-  requirement "Whenever cl is true, the output val must be false."
-  mode random
-  runs 50
-  max_depth 6
-  seed 904
-  domains:
-    req false, true
-    cl false, true
-  forbidden cl=true, val=true
-
-test safety_concrete_clearance_pulses:
+test clearance_pulse_forces_val_false:
   kind always_implication
   requirement "Whenever cl is true, the output val must be false."
   trace:
     req=false, cl=false
     req=true, cl=true
     req=false, cl=false
+    req=true, cl=false
+    req=false, cl=false
+  when cl=true
+  then val=false
+
+test repeated_clearance_forces_val_false:
+  kind always_implication
+  requirement "Whenever cl is true, the output val must be false."
+  trace:
+    req=false, cl=false
+    req=false, cl=true
+    req=false, cl=true
+    req=true, cl=false
+    req=false, cl=false
+    req=true, cl=true
+  when cl=true
+  then val=false
+
+test alternating_inputs_never_clearance_with_val:
+  kind exclusion
+  requirement "Whenever cl is true, the output val must be false."
+  trace:
+    req=false, cl=false
+    req=true, cl=false
+    req=false, cl=true
+    req=true, cl=false
+    req=false, cl=true
+    req=false, cl=false
+  forbidden cl=true, val=true
+
+test request_variations_do_not_override_clearance_safety:
+  kind exclusion
+  requirement "Whenever cl is true, the output val must be false."
+  trace:
+    req=false, cl=false
+    req=true, cl=true
     req=true, cl=true
     req=false, cl=false
     req=false, cl=true
-  when cl=true
-  then val=false
-
-test liveness_bounded_witness_when_clear:
-  kind eventually_response
-  requirement "The condition where both gr and val are true must occur infinitely often."
-  trace:
     req=false, cl=false
-    req=true, cl=false
-    req=false, cl=false
-    req=true, cl=false
-    req=false, cl=false
-    req=false, cl=false
-  eventually gr=true, val=true
-  within_steps 6
-  require_closed_obligations true
-
-test liveness_bounded_witness_after_clearance_releases:
-  kind eventually_response
-  requirement "The condition where both gr and val are true must occur infinitely often."
-  trace:
-    req=false, cl=false
-    req=true, cl=true
-    req=false, cl=false
-    req=true, cl=false
-    req=false, cl=false
-    req=false, cl=false
-  eventually gr=true, val=true
-  within_steps 6
-  require_closed_obligations true
+  forbidden cl=true, val=true

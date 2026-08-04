@@ -7,7 +7,7 @@ approval: never
 sandbox: danger-full-access
 reasoning effort: medium
 reasoning summaries: none
-session id: 019fc83d-eaad-7921-b9cb-ef326c7b32f3
+session id: 019fcc1b-0ee1-72d1-a28d-91123293b4ac
 --------
 user
 Use $respect-test-writer.
@@ -75,10 +75,12 @@ Regarding assumptions on the environment, it is assumed that at all times, if th
 Regarding guarantees required from the system, the system must satisfy the following conditions at all times. First, if the variable `methane` is true, then the variable `pump` must be false in the next step. Second, if the variable `highwater` is true and the variable `methane` is false, then the variable `pump` must be true in the next step. These requirements ensure the pump activates to clear water when safe and deactivates when methane is detected.
 
 codex
-I’ll use `respect-test-writer` and keep the test plan independent: only the NL requirements, fixed signature, controller metadata paths, and the controller test DSL. I’ll first read the local skill and DSL reference, then write and compile the `.rtest` plan.
+I’ll use `respect-test-writer` for this, and I’ll first load its local instructions plus the controller test DSL so the test plan matches the repository grammar.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw .agents\\skills\\respect-test-writer\\SKILL.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 588ms:
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\controller_tests\\DSL.md\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\.agents\\skills\\respect-test-writer\\SKILL.md\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 731ms:
 ---
 name: respect-test-writer
 description: Independent ReSpect controller-test writer. Generate controller_tests .rtest plans from natural-language requirements plus a fixed env/sys signature and controller metadata, without reading generated Spectra contents or the specification agent's reasoning. Use for independent-test experiments that reduce self-testing bias.
@@ -143,11 +145,7 @@ artifact_dir: <path>
 ```
 
 
-codex
-The skill confirms the anti-leakage boundary: I won’t open the generated Spectra or any repair/core artifacts. Next I’m reading only the controller test DSL so the plan compiles against the local grammar.
-exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw controller_tests\\DSL.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 584ms:
+ succeeded in 748ms:
 # ReSpect Controller-Test DSL
 
 This document defines the `.rtest` language used to write Method-3 controller
@@ -848,588 +846,968 @@ allows multiple valid strategies.
 
 
 codex
-I have enough DSL detail now. I’m going to write a focused plan: explicit variable ownership, direct one-step methane shutoff and highwater activation checks, adversarial simultaneous-input traces, and shallow exhaustive coverage over the two Boolean inputs.
+I’ve got the DSL constraints. The key point for this minepump case is to keep runtime traces within the stated environment assumption after pump activation, while still covering methane dominance, safe high-water activation, simultaneous inputs, and rapid changes.
+codex
+I’m creating the test plan now. I’ll include explicit ownership, focused concrete traces for the two next-step guarantees, and bounded adversarial traces that respect the environment assumption instead of exploring impossible environment behavior.
 exec
 "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "New-Item -ItemType Directory -Force \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\" | Out-Null" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 783ms:
-codex
-I’m editing only the required test plan file in the provided output directory. The generated Spectra path is included as metadata only, per the boundary.
+ succeeded in 576ms:
 apply patch
 patch: completed
 C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer\test-plan.rtest
 diff --git a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..801c178048a73b40c2d1fb8b762af8b297d7e7c9
---- /dev/null
+index 801c178048a73b40c2d1fb8b762af8b297d7e7c9..b0aa1c467e61d8e05bcbfe22715a1a073785d1c2
+--- a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
-@@ -0,0 +1,100 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\spec-repair\synthesis\jit
-+spec_name Minepump
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\spec-repair\skill_artifacts\final.spectra
-+environment highwater, methane
-+system pump
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env highwater, methane
-+  sys pump
-+
-+test methane_forces_pump_off_next_trace:
-+  kind state_sequence
-+  requirement "If methane is true, then pump must be false in the next step."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=false, methane=true
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=false
-+    pump=false
-+
-+test highwater_safe_forces_pump_on_next_trace:
-+  kind state_sequence
-+  requirement "If highwater is true and methane is false, then pump must be true in the next step."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=true
-+    pump=false
-+
-+test methane_overrides_highwater_when_both_present:
+@@ -9,92 +9,76 @@
+   env highwater, methane
+   sys pump
+ 
+-test methane_forces_pump_off_next_trace:
+-  kind state_sequence
++test methane_forces_pump_off:
 +  kind always_implication
-+  requirement "If methane is true, then pump must be false in the next step."
-+  trace:
-+    highwater=true, methane=false
-+    highwater=true, methane=true
+   requirement "If methane is true, then pump must be false in the next step."
+   trace:
+-    highwater=false, methane=false
+     highwater=false, methane=true
 +    highwater=false, methane=true
-+    highwater=true, methane=false
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=false
+-    pump=false
++    highwater=true, methane=true
++    highwater=false, methane=false
 +  when methane=true
 +  then pump=false
-+
-+test highwater_safe_activation_alternating_trace:
-+  kind always_implication
-+  requirement "If highwater is true and methane is false, then pump must be true in the next step."
-+  trace:
-+    highwater=false, methane=true
+ 
+-test highwater_safe_forces_pump_on_next_trace:
+-  kind state_sequence
++test highwater_without_methane_turns_pump_on:
++  kind eventually_response
+   requirement "If highwater is true and methane is false, then pump must be true in the next step."
+   trace:
 +    highwater=true, methane=false
-+    highwater=false, methane=false
-+    highwater=true, methane=false
+     highwater=false, methane=false
+-    highwater=true, methane=false
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=true
+-    pump=false
++  when highwater=true, methane=false
++  eventually pump=true
++  within_steps 1
++  require_closed_obligations true
+ 
+-test methane_overrides_highwater_when_both_present:
++test methane_overrides_highwater:
+   kind always_implication
+-  requirement "If methane is true, then pump must be false in the next step."
++  requirement "If methane is true, then pump must be false in the next step, even when highwater is also true."
+   trace:
+-    highwater=true, methane=false
+     highwater=true, methane=true
 +    highwater=true, methane=true
-+    highwater=true, methane=false
-+  when highwater=true, methane=false
-+  then pump=true
-+
-+test exhaustive_methane_blocks_pump:
-+  kind always_implication
-+  requirement "At all times, if methane is true, then pump must be false in the next step."
-+  mode exhaustive
-+  max_depth 5
-+  max_paths 256
-+  domains:
-+    highwater false, true
-+    methane false, true
-+  when methane=true
-+  then pump=false
-+
-+test exhaustive_safe_highwater_starts_pump:
-+  kind always_implication
-+  requirement "At all times, if highwater is true and methane is false, then pump must be true in the next step."
-+  mode exhaustive
-+  max_depth 5
-+  max_paths 256
-+  domains:
-+    highwater false, true
-+    methane false, true
-+  when highwater=true, methane=false
-+  then pump=true
-+
-+test random_stress_immediate_rules:
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=false
+   when methane=true
+   then pump=false
+ 
+-test highwater_safe_activation_alternating_trace:
+-  kind always_implication
+-  requirement "If highwater is true and methane is false, then pump must be true in the next step."
++test safe_highwater_repeated_after_clear:
 +  kind state_sequence
-+  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=true, methane=true
-+    highwater=false, methane=true
-+    highwater=true, methane=false
++  requirement "The pump activates to clear water when highwater is true and methane is false."
+   trace:
+-    highwater=false, methane=true
+     highwater=true, methane=false
+     highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+-    highwater=true, methane=false
+-  when highwater=true, methane=false
+-  then pump=true
 +    highwater=false, methane=false
 +  expect:
++    pump=true
 +    pump=false
 +    pump=true
 +    pump=false
-+    pump=false
-+    pump=true
-+    pump=false
+ 
+-test exhaustive_methane_blocks_pump:
+-  kind always_implication
+-  requirement "At all times, if methane is true, then pump must be false in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when methane=true
+-  then pump=false
+-
+-test exhaustive_safe_highwater_starts_pump:
+-  kind always_implication
+-  requirement "At all times, if highwater is true and methane is false, then pump must be true in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when highwater=true, methane=false
+-  then pump=true
+-
+-test random_stress_immediate_rules:
++test methane_blocks_after_safe_request:
+   kind state_sequence
+-  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
++  requirement "The pump deactivates when methane is detected."
+   trace:
+-    highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=true
+     highwater=false, methane=false
+   expect:
+-    pump=false
+     pump=true
+     pump=false
+     pump=false
+-    pump=true
+     pump=false
++
++test no_spurious_pump_when_no_water:
++  kind always_implication
++  requirement "The system controls the pump based on environmental conditions: it activates to clear water when safe and deactivates when methane is detected."
++  trace:
++    highwater=false, methane=false
++    highwater=false, methane=false
++    highwater=false, methane=true
++    highwater=false, methane=false
++  when highwater=false
++  then pump=false
 
 diff --git a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..801c178048a73b40c2d1fb8b762af8b297d7e7c9
---- /dev/null
+index 801c178048a73b40c2d1fb8b762af8b297d7e7c9..b0aa1c467e61d8e05bcbfe22715a1a073785d1c2
+--- a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
-@@ -0,0 +1,100 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\spec-repair\synthesis\jit
-+spec_name Minepump
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\spec-repair\skill_artifacts\final.spectra
-+environment highwater, methane
-+system pump
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env highwater, methane
-+  sys pump
-+
-+test methane_forces_pump_off_next_trace:
-+  kind state_sequence
-+  requirement "If methane is true, then pump must be false in the next step."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=false, methane=true
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=false
-+    pump=false
-+
-+test highwater_safe_forces_pump_on_next_trace:
-+  kind state_sequence
-+  requirement "If highwater is true and methane is false, then pump must be true in the next step."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=true
-+    pump=false
-+
-+test methane_overrides_highwater_when_both_present:
+@@ -9,92 +9,76 @@
+   env highwater, methane
+   sys pump
+ 
+-test methane_forces_pump_off_next_trace:
+-  kind state_sequence
++test methane_forces_pump_off:
 +  kind always_implication
-+  requirement "If methane is true, then pump must be false in the next step."
-+  trace:
-+    highwater=true, methane=false
-+    highwater=true, methane=true
+   requirement "If methane is true, then pump must be false in the next step."
+   trace:
+-    highwater=false, methane=false
+     highwater=false, methane=true
 +    highwater=false, methane=true
-+    highwater=true, methane=false
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=false
+-    pump=false
++    highwater=true, methane=true
++    highwater=false, methane=false
 +  when methane=true
 +  then pump=false
-+
-+test highwater_safe_activation_alternating_trace:
-+  kind always_implication
-+  requirement "If highwater is true and methane is false, then pump must be true in the next step."
-+  trace:
-+    highwater=false, methane=true
+ 
+-test highwater_safe_forces_pump_on_next_trace:
+-  kind state_sequence
++test highwater_without_methane_turns_pump_on:
++  kind eventually_response
+   requirement "If highwater is true and methane is false, then pump must be true in the next step."
+   trace:
 +    highwater=true, methane=false
-+    highwater=false, methane=false
-+    highwater=true, methane=false
+     highwater=false, methane=false
+-    highwater=true, methane=false
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=true
+-    pump=false
++  when highwater=true, methane=false
++  eventually pump=true
++  within_steps 1
++  require_closed_obligations true
+ 
+-test methane_overrides_highwater_when_both_present:
++test methane_overrides_highwater:
+   kind always_implication
+-  requirement "If methane is true, then pump must be false in the next step."
++  requirement "If methane is true, then pump must be false in the next step, even when highwater is also true."
+   trace:
+-    highwater=true, methane=false
+     highwater=true, methane=true
 +    highwater=true, methane=true
-+    highwater=true, methane=false
-+  when highwater=true, methane=false
-+  then pump=true
-+
-+test exhaustive_methane_blocks_pump:
-+  kind always_implication
-+  requirement "At all times, if methane is true, then pump must be false in the next step."
-+  mode exhaustive
-+  max_depth 5
-+  max_paths 256
-+  domains:
-+    highwater false, true
-+    methane false, true
-+  when methane=true
-+  then pump=false
-+
-+test exhaustive_safe_highwater_starts_pump:
-+  kind always_implication
-+  requirement "At all times, if highwater is true and methane is false, then pump must be true in the next step."
-+  mode exhaustive
-+  max_depth 5
-+  max_paths 256
-+  domains:
-+    highwater false, true
-+    methane false, true
-+  when highwater=true, methane=false
-+  then pump=true
-+
-+test random_stress_immediate_rules:
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=false
+   when methane=true
+   then pump=false
+ 
+-test highwater_safe_activation_alternating_trace:
+-  kind always_implication
+-  requirement "If highwater is true and methane is false, then pump must be true in the next step."
++test safe_highwater_repeated_after_clear:
 +  kind state_sequence
-+  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=true, methane=true
-+    highwater=false, methane=true
-+    highwater=true, methane=false
++  requirement "The pump activates to clear water when highwater is true and methane is false."
+   trace:
+-    highwater=false, methane=true
+     highwater=true, methane=false
+     highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+-    highwater=true, methane=false
+-  when highwater=true, methane=false
+-  then pump=true
 +    highwater=false, methane=false
 +  expect:
++    pump=true
 +    pump=false
 +    pump=true
 +    pump=false
-+    pump=false
-+    pump=true
-+    pump=false
+ 
+-test exhaustive_methane_blocks_pump:
+-  kind always_implication
+-  requirement "At all times, if methane is true, then pump must be false in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when methane=true
+-  then pump=false
+-
+-test exhaustive_safe_highwater_starts_pump:
+-  kind always_implication
+-  requirement "At all times, if highwater is true and methane is false, then pump must be true in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when highwater=true, methane=false
+-  then pump=true
+-
+-test random_stress_immediate_rules:
++test methane_blocks_after_safe_request:
+   kind state_sequence
+-  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
++  requirement "The pump deactivates when methane is detected."
+   trace:
+-    highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=true
+     highwater=false, methane=false
+   expect:
+-    pump=false
+     pump=true
+     pump=false
+     pump=false
+-    pump=true
+     pump=false
++
++test no_spurious_pump_when_no_water:
++  kind always_implication
++  requirement "The system controls the pump based on environmental conditions: it activates to clear water when safe and deactivates when methane is detected."
++  trace:
++    highwater=false, methane=false
++    highwater=false, methane=false
++    highwater=false, methane=true
++    highwater=false, methane=false
++  when highwater=false
++  then pump=false
 
 codex
-One important adjustment before compiling: the NL requirements are explicitly next-step obligations. I’m tightening the runtime tests to avoid treating them as same-step assertions, so the plan remains faithful to the requirement text rather than overconstraining valid controllers.
+I spotted two places where the draft was too strong: the NL requirements do not explicitly require the pump to be off when there is no water and no methane. I’m tightening the plan so every expected output is directly justified by the stated guarantees.
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer\test-plan.rtest
+diff --git a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
+index 801c178048a73b40c2d1fb8b762af8b297d7e7c9..12ce3c8df8a1621f8c7c61b54de62bf473ea529e
+--- a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
++++ b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
+@@ -9,92 +9,61 @@
+   env highwater, methane
+   sys pump
+ 
+-test methane_forces_pump_off_next_trace:
+-  kind state_sequence
++test methane_forces_pump_off:
++  kind always_implication
+   requirement "If methane is true, then pump must be false in the next step."
+   trace:
++    highwater=false, methane=true
++    highwater=false, methane=true
+     highwater=false, methane=false
+-    highwater=false, methane=true
++    highwater=true, methane=true
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=false
+-    pump=false
++  when methane=true
++  then pump=false
+ 
+-test highwater_safe_forces_pump_on_next_trace:
+-  kind state_sequence
++test highwater_without_methane_turns_pump_on:
++  kind eventually_response
+   requirement "If highwater is true and methane is false, then pump must be true in the next step."
+   trace:
++    highwater=true, methane=false
+     highwater=false, methane=false
+-    highwater=true, methane=false
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=true
+-    pump=false
++  when highwater=true, methane=false
++  eventually pump=true
++  within_steps 1
++  require_closed_obligations true
+ 
+-test methane_overrides_highwater_when_both_present:
++test methane_overrides_highwater:
+   kind always_implication
+-  requirement "If methane is true, then pump must be false in the next step."
++  requirement "If methane is true, then pump must be false in the next step, even when highwater is also true."
+   trace:
+-    highwater=true, methane=false
+     highwater=true, methane=true
++    highwater=true, methane=true
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=false
+   when methane=true
+   then pump=false
+ 
+-test highwater_safe_activation_alternating_trace:
+-  kind always_implication
+-  requirement "If highwater is true and methane is false, then pump must be true in the next step."
++test safe_highwater_repeated_after_clear:
++  kind eventually_response
++  requirement "The pump activates to clear water when highwater is true and methane is false."
+   trace:
+-    highwater=false, methane=true
+     highwater=true, methane=false
+     highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=false
+   when highwater=true, methane=false
+-  then pump=true
+-
+-test exhaustive_methane_blocks_pump:
+-  kind always_implication
+-  requirement "At all times, if methane is true, then pump must be false in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when methane=true
+-  then pump=false
++  eventually pump=true
++  within_steps 1
++  require_closed_obligations true
+ 
+-test exhaustive_safe_highwater_starts_pump:
++test methane_blocks_after_safe_request:
+   kind always_implication
+-  requirement "At all times, if highwater is true and methane is false, then pump must be true in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when highwater=true, methane=false
+-  then pump=true
+-
+-test random_stress_immediate_rules:
+-  kind state_sequence
+-  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
++  requirement "The pump deactivates when methane is detected."
+   trace:
+-    highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=true
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=true
+-    pump=false
+-    pump=false
+-    pump=true
+-    pump=false
++  when methane=true
++  then pump=false
+
+diff --git a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
+index 801c178048a73b40c2d1fb8b762af8b297d7e7c9..12ce3c8df8a1621f8c7c61b54de62bf473ea529e
+--- a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
++++ b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
+@@ -9,92 +9,61 @@
+   env highwater, methane
+   sys pump
+ 
+-test methane_forces_pump_off_next_trace:
+-  kind state_sequence
++test methane_forces_pump_off:
++  kind always_implication
+   requirement "If methane is true, then pump must be false in the next step."
+   trace:
++    highwater=false, methane=true
++    highwater=false, methane=true
+     highwater=false, methane=false
+-    highwater=false, methane=true
++    highwater=true, methane=true
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=false
+-    pump=false
++  when methane=true
++  then pump=false
+ 
+-test highwater_safe_forces_pump_on_next_trace:
+-  kind state_sequence
++test highwater_without_methane_turns_pump_on:
++  kind eventually_response
+   requirement "If highwater is true and methane is false, then pump must be true in the next step."
+   trace:
++    highwater=true, methane=false
+     highwater=false, methane=false
+-    highwater=true, methane=false
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=true
+-    pump=false
++  when highwater=true, methane=false
++  eventually pump=true
++  within_steps 1
++  require_closed_obligations true
+ 
+-test methane_overrides_highwater_when_both_present:
++test methane_overrides_highwater:
+   kind always_implication
+-  requirement "If methane is true, then pump must be false in the next step."
++  requirement "If methane is true, then pump must be false in the next step, even when highwater is also true."
+   trace:
+-    highwater=true, methane=false
+     highwater=true, methane=true
++    highwater=true, methane=true
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=false
+   when methane=true
+   then pump=false
+ 
+-test highwater_safe_activation_alternating_trace:
+-  kind always_implication
+-  requirement "If highwater is true and methane is false, then pump must be true in the next step."
++test safe_highwater_repeated_after_clear:
++  kind eventually_response
++  requirement "The pump activates to clear water when highwater is true and methane is false."
+   trace:
+-    highwater=false, methane=true
+     highwater=true, methane=false
+     highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=false
+   when highwater=true, methane=false
+-  then pump=true
+-
+-test exhaustive_methane_blocks_pump:
+-  kind always_implication
+-  requirement "At all times, if methane is true, then pump must be false in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when methane=true
+-  then pump=false
++  eventually pump=true
++  within_steps 1
++  require_closed_obligations true
+ 
+-test exhaustive_safe_highwater_starts_pump:
++test methane_blocks_after_safe_request:
+   kind always_implication
+-  requirement "At all times, if highwater is true and methane is false, then pump must be true in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when highwater=true, methane=false
+-  then pump=true
+-
+-test random_stress_immediate_rules:
+-  kind state_sequence
+-  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
++  requirement "The pump deactivates when methane is detected."
+   trace:
+-    highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=true
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=true
+-    pump=false
+-    pump=false
+-    pump=true
+-    pump=false
++  when methane=true
++  then pump=false
+
 codex
-Because the DSL has no wildcard expectation for sequence tests, next-step properties need care: I’m using bounded response/absence tests where appropriate, plus concrete traces that avoid relying on unspecified initial output.
-codex
-I’m going to compile the plan now. If the compiler reports DSL-only issues, I’ll repair the `.rtest` structure without using any specification contents.
+The plan is now scoped to the two system guarantees plus explicit variable ownership. I’m compiling the `.rtest` to JSON next, which validates the DSL without using the Spectra contents as a source.
 exec
 "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-plan.rtest\" -o \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-plan.json\" --diagnostics-json \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\dsl-diagnostics.json\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 1439ms:
+ succeeded in 1041ms:
 diff --git a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..801c178048a73b40c2d1fb8b762af8b297d7e7c9
---- /dev/null
+index 801c178048a73b40c2d1fb8b762af8b297d7e7c9..12ce3c8df8a1621f8c7c61b54de62bf473ea529e
+--- a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
-@@ -0,0 +1,100 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\spec-repair\synthesis\jit
-+spec_name Minepump
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\spec-repair\skill_artifacts\final.spectra
-+environment highwater, methane
-+system pump
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env highwater, methane
-+  sys pump
-+
-+test methane_forces_pump_off_next_trace:
-+  kind state_sequence
-+  requirement "If methane is true, then pump must be false in the next step."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=false, methane=true
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=false
-+    pump=false
-+
-+test highwater_safe_forces_pump_on_next_trace:
-+  kind state_sequence
-+  requirement "If highwater is true and methane is false, then pump must be true in the next step."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=true
-+    pump=false
-+
-+test methane_overrides_highwater_when_both_present:
+@@ -9,92 +9,61 @@
+   env highwater, methane
+   sys pump
+ 
+-test methane_forces_pump_off_next_trace:
+-  kind state_sequence
++test methane_forces_pump_off:
 +  kind always_implication
-+  requirement "If methane is true, then pump must be false in the next step."
-+  trace:
-+    highwater=true, methane=false
-+    highwater=true, methane=true
+   requirement "If methane is true, then pump must be false in the next step."
+   trace:
 +    highwater=false, methane=true
-+    highwater=true, methane=false
++    highwater=false, methane=true
+     highwater=false, methane=false
+-    highwater=false, methane=true
++    highwater=true, methane=true
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=false
+-    pump=false
 +  when methane=true
 +  then pump=false
-+
-+test highwater_safe_activation_alternating_trace:
-+  kind always_implication
-+  requirement "If highwater is true and methane is false, then pump must be true in the next step."
-+  trace:
-+    highwater=false, methane=true
+ 
+-test highwater_safe_forces_pump_on_next_trace:
+-  kind state_sequence
++test highwater_without_methane_turns_pump_on:
++  kind eventually_response
+   requirement "If highwater is true and methane is false, then pump must be true in the next step."
+   trace:
 +    highwater=true, methane=false
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=true, methane=true
-+    highwater=true, methane=false
+     highwater=false, methane=false
+-    highwater=true, methane=false
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=true
+-    pump=false
 +  when highwater=true, methane=false
-+  then pump=true
-+
-+test exhaustive_methane_blocks_pump:
-+  kind always_implication
-+  requirement "At all times, if methane is true, then pump must be false in the next step."
-+  mode exhaustive
-+  max_depth 5
-+  max_paths 256
-+  domains:
-+    highwater false, true
-+    methane false, true
++  eventually pump=true
++  within_steps 1
++  require_closed_obligations true
+ 
+-test methane_overrides_highwater_when_both_present:
++test methane_overrides_highwater:
+   kind always_implication
+-  requirement "If methane is true, then pump must be false in the next step."
++  requirement "If methane is true, then pump must be false in the next step, even when highwater is also true."
+   trace:
+-    highwater=true, methane=false
+     highwater=true, methane=true
++    highwater=true, methane=true
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=false
+   when methane=true
+   then pump=false
+ 
+-test highwater_safe_activation_alternating_trace:
+-  kind always_implication
+-  requirement "If highwater is true and methane is false, then pump must be true in the next step."
++test safe_highwater_repeated_after_clear:
++  kind eventually_response
++  requirement "The pump activates to clear water when highwater is true and methane is false."
+   trace:
+-    highwater=false, methane=true
+     highwater=true, methane=false
+     highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=false
+   when highwater=true, methane=false
+-  then pump=true
+-
+-test exhaustive_methane_blocks_pump:
+-  kind always_implication
+-  requirement "At all times, if methane is true, then pump must be false in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when methane=true
+-  then pump=false
++  eventually pump=true
++  within_steps 1
++  require_closed_obligations true
+ 
+-test exhaustive_safe_highwater_starts_pump:
++test methane_blocks_after_safe_request:
+   kind always_implication
+-  requirement "At all times, if highwater is true and methane is false, then pump must be true in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when highwater=true, methane=false
+-  then pump=true
+-
+-test random_stress_immediate_rules:
+-  kind state_sequence
+-  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
++  requirement "The pump deactivates when methane is detected."
+   trace:
+-    highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=true
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=true
+-    pump=false
+-    pump=false
+-    pump=true
+-    pump=false
 +  when methane=true
 +  then pump=false
-+
-+test exhaustive_safe_highwater_starts_pump:
-+  kind always_implication
-+  requirement "At all times, if highwater is true and methane is false, then pump must be true in the next step."
-+  mode exhaustive
-+  max_depth 5
-+  max_paths 256
-+  domains:
-+    highwater false, true
-+    methane false, true
-+  when highwater=true, methane=false
-+  then pump=true
-+
-+test random_stress_immediate_rules:
-+  kind state_sequence
-+  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=true, methane=true
-+    highwater=false, methane=true
-+    highwater=true, methane=false
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=true
-+    pump=false
-+    pump=false
-+    pump=true
-+    pump=false
 
-codex
-The DSL compiler accepted the plan and wrote the JSON plan plus diagnostics. I’m doing a quick artifact check now so the final status has exact counts and paths.
 exec
 "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\dsl-diagnostics.json\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
 exec
 "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-plan.rtest\" -Pattern '"'^test '"' | Measure-Object | Select-Object -ExpandProperty Count" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 1207ms:
+ succeeded in 819ms:
 {
   "status": "success",
   "tool": "controller_tests.compile_test_plan",
   "file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-plan.rtest",
   "errors": [],
-  "compiled_tests": 8
+  "compiled_tests": 6
 }
 
 
- succeeded in 1217ms:
-8
+ succeeded in 882ms:
+6
 
 diff --git a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..801c178048a73b40c2d1fb8b762af8b297d7e7c9
---- /dev/null
+index 801c178048a73b40c2d1fb8b762af8b297d7e7c9..12ce3c8df8a1621f8c7c61b54de62bf473ea529e
+--- a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
-@@ -0,0 +1,100 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\spec-repair\synthesis\jit
-+spec_name Minepump
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\spec-repair\skill_artifacts\final.spectra
-+environment highwater, methane
-+system pump
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env highwater, methane
-+  sys pump
-+
-+test methane_forces_pump_off_next_trace:
-+  kind state_sequence
-+  requirement "If methane is true, then pump must be false in the next step."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=false, methane=true
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=false
-+    pump=false
-+
-+test highwater_safe_forces_pump_on_next_trace:
-+  kind state_sequence
-+  requirement "If highwater is true and methane is false, then pump must be true in the next step."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=true
-+    pump=false
-+
-+test methane_overrides_highwater_when_both_present:
+@@ -9,92 +9,61 @@
+   env highwater, methane
+   sys pump
+ 
+-test methane_forces_pump_off_next_trace:
+-  kind state_sequence
++test methane_forces_pump_off:
 +  kind always_implication
-+  requirement "If methane is true, then pump must be false in the next step."
-+  trace:
-+    highwater=true, methane=false
-+    highwater=true, methane=true
+   requirement "If methane is true, then pump must be false in the next step."
+   trace:
 +    highwater=false, methane=true
-+    highwater=true, methane=false
++    highwater=false, methane=true
+     highwater=false, methane=false
+-    highwater=false, methane=true
++    highwater=true, methane=true
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=false
+-    pump=false
 +  when methane=true
 +  then pump=false
-+
-+test highwater_safe_activation_alternating_trace:
-+  kind always_implication
-+  requirement "If highwater is true and methane is false, then pump must be true in the next step."
-+  trace:
-+    highwater=false, methane=true
+ 
+-test highwater_safe_forces_pump_on_next_trace:
+-  kind state_sequence
++test highwater_without_methane_turns_pump_on:
++  kind eventually_response
+   requirement "If highwater is true and methane is false, then pump must be true in the next step."
+   trace:
 +    highwater=true, methane=false
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=true, methane=true
-+    highwater=true, methane=false
+     highwater=false, methane=false
+-    highwater=true, methane=false
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=true
+-    pump=false
 +  when highwater=true, methane=false
-+  then pump=true
-+
-+test exhaustive_methane_blocks_pump:
-+  kind always_implication
-+  requirement "At all times, if methane is true, then pump must be false in the next step."
-+  mode exhaustive
-+  max_depth 5
-+  max_paths 256
-+  domains:
-+    highwater false, true
-+    methane false, true
++  eventually pump=true
++  within_steps 1
++  require_closed_obligations true
+ 
+-test methane_overrides_highwater_when_both_present:
++test methane_overrides_highwater:
+   kind always_implication
+-  requirement "If methane is true, then pump must be false in the next step."
++  requirement "If methane is true, then pump must be false in the next step, even when highwater is also true."
+   trace:
+-    highwater=true, methane=false
+     highwater=true, methane=true
++    highwater=true, methane=true
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=false
+   when methane=true
+   then pump=false
+ 
+-test highwater_safe_activation_alternating_trace:
+-  kind always_implication
+-  requirement "If highwater is true and methane is false, then pump must be true in the next step."
++test safe_highwater_repeated_after_clear:
++  kind eventually_response
++  requirement "The pump activates to clear water when highwater is true and methane is false."
+   trace:
+-    highwater=false, methane=true
+     highwater=true, methane=false
+     highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=false
+   when highwater=true, methane=false
+-  then pump=true
+-
+-test exhaustive_methane_blocks_pump:
+-  kind always_implication
+-  requirement "At all times, if methane is true, then pump must be false in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when methane=true
+-  then pump=false
++  eventually pump=true
++  within_steps 1
++  require_closed_obligations true
+ 
+-test exhaustive_safe_highwater_starts_pump:
++test methane_blocks_after_safe_request:
+   kind always_implication
+-  requirement "At all times, if highwater is true and methane is false, then pump must be true in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when highwater=true, methane=false
+-  then pump=true
+-
+-test random_stress_immediate_rules:
+-  kind state_sequence
+-  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
++  requirement "The pump deactivates when methane is detected."
+   trace:
+-    highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=true
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=true
+-    pump=false
+-    pump=false
+-    pump=true
+-    pump=false
 +  when methane=true
 +  then pump=false
-+
-+test exhaustive_safe_highwater_starts_pump:
-+  kind always_implication
-+  requirement "At all times, if highwater is true and methane is false, then pump must be true in the next step."
-+  mode exhaustive
-+  max_depth 5
-+  max_paths 256
-+  domains:
-+    highwater false, true
-+    methane false, true
-+  when highwater=true, methane=false
-+  then pump=true
-+
-+test random_stress_immediate_rules:
-+  kind state_sequence
-+  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=true, methane=true
-+    highwater=false, methane=true
-+    highwater=true, methane=false
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=true
-+    pump=false
-+    pump=false
-+    pump=true
-+    pump=false
 
 codex
-```text
-test_plan_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer\test-plan.rtest
-compiled_test_plan_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer\test-plan.json
-dsl_diagnostics_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer\dsl-diagnostics.json
-tests_planned: 8
-untestable_requirements: 1
-artifact_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer
-```
+test_plan_file: `C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer\test-plan.rtest`  
+compiled_test_plan_file: `C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer\test-plan.json`  
+dsl_diagnostics_file: `C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer\dsl-diagnostics.json`  
+tests_planned: `6`  
+untestable_requirements: `0`  
+artifact_dir: `C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-02\test-writer`
 
-DSL compilation succeeded with `compiled_tests: 8` and no errors. The untestable item is the environment assumption `pump -> next !highwater`, since controller tests can feed environment traces but cannot verify the environment’s own obligation as a system guarantee.
+DSL compilation succeeded with `compiled_tests: 6` and no diagnostics errors.
 diff --git a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..801c178048a73b40c2d1fb8b762af8b297d7e7c9
---- /dev/null
+index 801c178048a73b40c2d1fb8b762af8b297d7e7c9..12ce3c8df8a1621f8c7c61b54de62bf473ea529e
+--- a/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/TibiIC/SpecRepair/case_studies/mutated/minepump_fixed1_dropped1/model=qwen3/40fab1deaad6ac1456efb19a/branches/independent_test/round-02/test-writer/test-plan.rtest
-@@ -0,0 +1,100 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\spec-repair\synthesis\jit
-+spec_name Minepump
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\TibiIC\SpecRepair\case_studies\mutated\minepump_fixed1_dropped1\model=qwen3\40fab1deaad6ac1456efb19a\branches\independent_test\round-01\spec-repair\skill_artifacts\final.spectra
-+environment highwater, methane
-+system pump
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env highwater, methane
-+  sys pump
-+
-+test methane_forces_pump_off_next_trace:
-+  kind state_sequence
-+  requirement "If methane is true, then pump must be false in the next step."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=false, methane=true
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=false
-+    pump=false
-+
-+test highwater_safe_forces_pump_on_next_trace:
-+  kind state_sequence
-+  requirement "If highwater is true and methane is false, then pump must be true in the next step."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=true
-+    pump=false
-+
-+test methane_overrides_highwater_when_both_present:
+@@ -9,92 +9,61 @@
+   env highwater, methane
+   sys pump
+ 
+-test methane_forces_pump_off_next_trace:
+-  kind state_sequence
++test methane_forces_pump_off:
 +  kind always_implication
-+  requirement "If methane is true, then pump must be false in the next step."
-+  trace:
-+    highwater=true, methane=false
-+    highwater=true, methane=true
+   requirement "If methane is true, then pump must be false in the next step."
+   trace:
 +    highwater=false, methane=true
-+    highwater=true, methane=false
++    highwater=false, methane=true
+     highwater=false, methane=false
+-    highwater=false, methane=true
++    highwater=true, methane=true
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=false
+-    pump=false
 +  when methane=true
 +  then pump=false
-+
-+test highwater_safe_activation_alternating_trace:
-+  kind always_implication
-+  requirement "If highwater is true and methane is false, then pump must be true in the next step."
-+  trace:
-+    highwater=false, methane=true
+ 
+-test highwater_safe_forces_pump_on_next_trace:
+-  kind state_sequence
++test highwater_without_methane_turns_pump_on:
++  kind eventually_response
+   requirement "If highwater is true and methane is false, then pump must be true in the next step."
+   trace:
 +    highwater=true, methane=false
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=true, methane=true
-+    highwater=true, methane=false
+     highwater=false, methane=false
+-    highwater=true, methane=false
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=true
+-    pump=false
 +  when highwater=true, methane=false
-+  then pump=true
-+
-+test exhaustive_methane_blocks_pump:
-+  kind always_implication
-+  requirement "At all times, if methane is true, then pump must be false in the next step."
-+  mode exhaustive
-+  max_depth 5
-+  max_paths 256
-+  domains:
-+    highwater false, true
-+    methane false, true
++  eventually pump=true
++  within_steps 1
++  require_closed_obligations true
+ 
+-test methane_overrides_highwater_when_both_present:
++test methane_overrides_highwater:
+   kind always_implication
+-  requirement "If methane is true, then pump must be false in the next step."
++  requirement "If methane is true, then pump must be false in the next step, even when highwater is also true."
+   trace:
+-    highwater=true, methane=false
+     highwater=true, methane=true
++    highwater=true, methane=true
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=false
+   when methane=true
+   then pump=false
+ 
+-test highwater_safe_activation_alternating_trace:
+-  kind always_implication
+-  requirement "If highwater is true and methane is false, then pump must be true in the next step."
++test safe_highwater_repeated_after_clear:
++  kind eventually_response
++  requirement "The pump activates to clear water when highwater is true and methane is false."
+   trace:
+-    highwater=false, methane=true
+     highwater=true, methane=false
+     highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=false
+   when highwater=true, methane=false
+-  then pump=true
+-
+-test exhaustive_methane_blocks_pump:
+-  kind always_implication
+-  requirement "At all times, if methane is true, then pump must be false in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when methane=true
+-  then pump=false
++  eventually pump=true
++  within_steps 1
++  require_closed_obligations true
+ 
+-test exhaustive_safe_highwater_starts_pump:
++test methane_blocks_after_safe_request:
+   kind always_implication
+-  requirement "At all times, if highwater is true and methane is false, then pump must be true in the next step."
+-  mode exhaustive
+-  max_depth 5
+-  max_paths 256
+-  domains:
+-    highwater false, true
+-    methane false, true
+-  when highwater=true, methane=false
+-  then pump=true
+-
+-test random_stress_immediate_rules:
+-  kind state_sequence
+-  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
++  requirement "The pump deactivates when methane is detected."
+   trace:
+-    highwater=false, methane=false
+     highwater=true, methane=false
+-    highwater=true, methane=true
+     highwater=false, methane=true
+-    highwater=true, methane=false
++    highwater=false, methane=true
+     highwater=false, methane=false
+-  expect:
+-    pump=false
+-    pump=true
+-    pump=false
+-    pump=false
+-    pump=true
+-    pump=false
 +  when methane=true
 +  then pump=false
-+
-+test exhaustive_safe_highwater_starts_pump:
-+  kind always_implication
-+  requirement "At all times, if highwater is true and methane is false, then pump must be true in the next step."
-+  mode exhaustive
-+  max_depth 5
-+  max_paths 256
-+  domains:
-+    highwater false, true
-+    methane false, true
-+  when highwater=true, methane=false
-+  then pump=true
-+
-+test random_stress_immediate_rules:
-+  kind state_sequence
-+  requirement "The pump activates to clear water when safe and deactivates when methane is detected."
-+  trace:
-+    highwater=false, methane=false
-+    highwater=true, methane=false
-+    highwater=true, methane=true
-+    highwater=false, methane=true
-+    highwater=true, methane=false
-+    highwater=false, methane=false
-+  expect:
-+    pump=false
-+    pump=true
-+    pump=false
-+    pump=false
-+    pump=true
-+    pump=false
 
 tokens used
-18.726
+19.704

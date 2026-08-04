@@ -7,7 +7,7 @@ approval: never
 sandbox: danger-full-access
 reasoning effort: medium
 reasoning summaries: none
-session id: 019fc7f1-d41b-7161-9a30-f92e71436d7f
+session id: 019fcbff-9fae-7bc1-b4ce-c38bcc2959e8
 --------
 user
 Use $respect-test-writer.
@@ -80,78 +80,12 @@ Regarding the environment, the input `req` must be false infinitely often. The i
 Regarding the system, two guarantees must be maintained. First, as a safety requirement, whenever `cl` is true, the output `val` must be false. Second, as a liveness requirement, the condition where both `gr` and `val` are true must occur infinitely often.
 
 codex
-Using `respect-test-writer` for this turn. I’ll read the local DSL instructions, then write the independent `.rtest` plan without inspecting the generated Spectra or core artifacts.
+I’ll use `respect-test-writer` and stay within the anti-oracle boundaries: only the NL requirements, fixed signature, controller metadata, and the controller_tests DSL. Next I’m reading the skill file and DSL reference, without opening the generated Spectra or core artifacts.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\.agents\\skills\\respect-test-writer\\SKILL.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 570ms:
----
-name: respect-test-writer
-description: Independent ReSpect controller-test writer. Generate controller_tests .rtest plans from natural-language requirements plus a fixed env/sys signature and controller metadata, without reading generated Spectra contents or the specification agent's reasoning. Use for independent-test experiments that reduce self-testing bias.
----
-
-# ReSpect Test Writer
-
-## Research Role
-
-This skill writes independent bounded controller tests for a generated controller:
-
-- Input: natural-language requirements, fixed environment/system signature, `spec_name`, `controller_dir`, `spectra_file` path, and output directory.
-- Output: `.rtest` controller-test DSL plan plus optional DSL compile diagnostics.
-- Allowed sources: the natural-language requirements, fixed signature, controller metadata, and `controller_tests/DSL.md`.
-- Not allowed: reading generated Spectra contents, source/reference Spectra files, the specification agent's stdout/reasoning, repair logs, benchmark oracles, mutation checks, equivalence checks, or distance results.
-
-The goal is to test the natural-language requirements independently of the generated implementation.
-
-## Workflow
-
-1. Read `controller_tests/DSL.md`.
-2. Read the fixed signature from the prompt. Use exactly those environment and system variables.
-3. Derive tests only from the natural-language requirements.
-4. Use `spectra_file` only as a top-level DSL path. Do not open or inspect its contents.
-5. Prefer adversarial tests that could expose incomplete, over-permissive, over-restrictive, wrongly initialized, or unfair controllers. Do not write only happy-path tests.
-6. Include a `variable_ownership` test. Write it explicitly with `env ...` and
-   `sys ...` lists copied from the fixed signature, even though the DSL can infer
-   them from top-level `environment` and `system`. Avoid the compact form
-   `test declared_variables: kind variable_ownership` because it is hard for
-   humans to review.
-7. For every runtime test, include `requirement "<quote or close paraphrase from the NL description>"`.
-8. Use bounded trace, random, or exhaustive modes with conservative bounds. Prefer `max_depth <= 6`, `max_paths <= 256`, `runs <= 50`, and `within_steps <= 10` unless the description gives a bound.
-9. Save the plan as `test-plan.rtest` in the output directory supplied by the prompt.
-10. If asked to compile, run `python controller_tests\compile_test_plan.py <rtest> -o <json>` and repair only DSL/test-plan issues, not Spectra.
-
-## Test Selection
-
-Cover each clearly testable requirement at least once:
-
-- Ownership/signature declarations.
-- Initial output requirements.
-- Safety exclusions and invariants.
-- Immediate implications.
-- Bounded evidence for response/liveness requirements.
-- Small exhaustive exploration for Boolean or small finite input domains.
-
-Do not limit the plan to traces where the controller is expected to behave nicely. Include stress cases when supported by the natural-language requirements, such as simultaneous requests, no requests, persistent one-sided requests, alternating requests, rapid input changes, boundary enum values, and inputs that could reveal over-permissive behavior. Do not turn an unbounded liveness requirement into a hard bounded deadline unless the natural-language text gives that deadline.
-
-If a requirement cannot be tested soundly with bounded controller tests, record it in the final response under `untestable_requirements`.
-
-## Final Response Format
-
-Return a final JSON object or key-value block with:
-
-```text
-test_plan_file: <path>
-compiled_test_plan_file: <path or none>
-dsl_diagnostics_file: <path or none>
-tests_planned: <number>
-untestable_requirements: <number>
-artifact_dir: <path>
-```
-
-codex
-I’ve confirmed the skill constraints. Next I’m reading only `controller_tests/DSL.md` so the test syntax matches the repository’s supported runner.
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\.agents\\skills\\respect-test-writer\\SKILL.md\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\controller_tests\\DSL.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 605ms:
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\controller_tests\\DSL.md\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 677ms:
 # ReSpect Controller-Test DSL
 
 This document defines the `.rtest` language used to write Method-3 controller
@@ -850,445 +784,1027 @@ requirements:
 Do not assert a concrete output strategy when the natural-language requirement
 allows multiple valid strategies.
 
+
+ succeeded in 680ms:
+---
+name: respect-test-writer
+description: Independent ReSpect controller-test writer. Generate controller_tests .rtest plans from natural-language requirements plus a fixed env/sys signature and controller metadata, without reading generated Spectra contents or the specification agent's reasoning. Use for independent-test experiments that reduce self-testing bias.
+---
+
+# ReSpect Test Writer
+
+## Research Role
+
+This skill writes independent bounded controller tests for a generated controller:
+
+- Input: natural-language requirements, fixed environment/system signature, `spec_name`, `controller_dir`, `spectra_file` path, and output directory.
+- Output: `.rtest` controller-test DSL plan plus optional DSL compile diagnostics.
+- Allowed sources: the natural-language requirements, fixed signature, controller metadata, and `controller_tests/DSL.md`.
+- Not allowed: reading generated Spectra contents, source/reference Spectra files, the specification agent's stdout/reasoning, repair logs, benchmark oracles, mutation checks, equivalence checks, or distance results.
+
+The goal is to test the natural-language requirements independently of the generated implementation.
+
+## Workflow
+
+1. Read `controller_tests/DSL.md`.
+2. Read the fixed signature from the prompt. Use exactly those environment and system variables.
+3. Derive tests only from the natural-language requirements.
+4. Use `spectra_file` only as a top-level DSL path. Do not open or inspect its contents.
+5. Prefer adversarial tests that could expose incomplete, over-permissive, over-restrictive, wrongly initialized, or unfair controllers. Do not write only happy-path tests.
+6. Include a `variable_ownership` test. Write it explicitly with `env ...` and
+   `sys ...` lists copied from the fixed signature, even though the DSL can infer
+   them from top-level `environment` and `system`. Avoid the compact form
+   `test declared_variables: kind variable_ownership` because it is hard for
+   humans to review.
+7. For every runtime test, include `requirement "<quote or close paraphrase from the NL description>"`.
+8. Use bounded trace, random, or exhaustive modes with conservative bounds. Prefer `max_depth <= 6`, `max_paths <= 256`, `runs <= 50`, and `within_steps <= 10` unless the description gives a bound.
+9. Save the plan as `test-plan.rtest` in the output directory supplied by the prompt.
+10. If asked to compile, run `python controller_tests\compile_test_plan.py <rtest> -o <json>` and repair only DSL/test-plan issues, not Spectra.
+
+## Test Selection
+
+Cover each clearly testable requirement at least once:
+
+- Ownership/signature declarations.
+- Initial output requirements.
+- Safety exclusions and invariants.
+- Immediate implications.
+- Bounded evidence for response/liveness requirements.
+- Small exhaustive exploration for Boolean or small finite input domains.
+
+Do not limit the plan to traces where the controller is expected to behave nicely. Include stress cases when supported by the natural-language requirements, such as simultaneous requests, no requests, persistent one-sided requests, alternating requests, rapid input changes, boundary enum values, and inputs that could reveal over-permissive behavior. Do not turn an unbounded liveness requirement into a hard bounded deadline unless the natural-language text gives that deadline.
+
+If a requirement cannot be tested soundly with bounded controller tests, record it in the final response under `untestable_requirements`.
+
+## Final Response Format
+
+Return a final JSON object or key-value block with:
+
+```text
+test_plan_file: <path>
+compiled_test_plan_file: <path or none>
+dsl_diagnostics_file: <path or none>
+tests_planned: <number>
+untestable_requirements: <number>
+artifact_dir: <path>
+```
+
+
 codex
-The requirements give one directly testable system safety rule and one unbounded liveness rule. I’m going to keep the safety checks exhaustive over the small Boolean input space, and include bounded liveness smoke tests while recording that infinite recurrence itself is not soundly testable with finite traces.
+I have the DSL shape now. The strongest sound tests here are ownership plus safety traces for `cl -> !val`; the unbounded “infinitely often” guarantees and assumptions cannot be fully proven by finite controller tests without inventing a deadline.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "New-Item -ItemType Directory -Force \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\Noobcoder64\\interpolation-repair\\tests\\specifications\\RG_repair_core\\model=qwen3\\9e04b984cffbede8229a8776\\branches\\independent_test\\round-00\\test-writer\" | Out-Null" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 612ms:
+codex
+I’m writing the `.rtest` plan now. I’ll keep liveness out of bounded pass/fail assertions and record it as residual untestable scope in the final response.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Test-Path \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\Noobcoder64\\interpolation-repair\\tests\\specifications\\RG_repair_core\\model=qwen3\\9e04b984cffbede8229a8776\\branches\\independent_test\\round-00\\test-writer\\test-plan.rtest\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 668ms:
+True
+
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\Noobcoder64\\interpolation-repair\\tests\\specifications\\RG_repair_core\\model=qwen3\\9e04b984cffbede8229a8776\\branches\\independent_test\\round-00\\test-writer\\test-plan.rtest\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 639ms:
+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\synthesis\jit
+spec_name RG
+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\skill_artifacts\final.spectra
+environment req, cl
+system gr, val
+
+test declared_variables:
+  kind variable_ownership
+  env req, cl
+  sys gr, val
+
+test safety_cl_true_forces_val_false_exhaustive:
+  kind always_implication
+  requirement "Whenever cl is true, the output val must be false."
+  mode exhaustive
+  max_depth 6
+  max_paths 256
+  domains:
+    req false, true
+    cl false, true
+  when cl=true
+  then val=false
+
+test safety_never_cl_and_val_true_random:
+  kind exclusion
+  requirement "Whenever cl is true, the output val must be false."
+  mode random
+  runs 50
+  max_depth 6
+  seed 904
+  domains:
+    req false, true
+    cl false, true
+  forbidden cl=true, val=true
+
+test safety_concrete_clearance_pulses:
+  kind always_implication
+  requirement "Whenever cl is true, the output val must be false."
+  trace:
+    req=false, cl=false
+    req=true, cl=true
+    req=false, cl=false
+    req=true, cl=true
+    req=false, cl=false
+    req=false, cl=true
+  when cl=true
+  then val=false
+
+test liveness_bounded_witness_when_clear:
+  kind eventually_response
+  requirement "The condition where both gr and val are true must occur infinitely often."
+  trace:
+    req=false, cl=false
+    req=true, cl=false
+    req=false, cl=false
+    req=true, cl=false
+    req=false, cl=false
+    req=false, cl=false
+  eventually gr=true, val=true
+  within_steps 6
+  require_closed_obligations true
+
+test liveness_bounded_witness_after_clearance_releases:
+  kind eventually_response
+  requirement "The condition where both gr and val are true must occur infinitely often."
+  trace:
+    req=false, cl=false
+    req=true, cl=true
+    req=false, cl=false
+    req=true, cl=false
+    req=false, cl=false
+    req=false, cl=false
+  eventually gr=true, val=true
+  within_steps 6
+  require_closed_obligations true
+
+
+codex
+There was already a draft plan at the target path. I found it asserted bounded deadlines for the unbounded liveness clause, so I’m replacing those with safety-only runtime tests that stay justified by the natural-language requirements.
 apply patch
 patch: completed
 C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer\test-plan.rtest
 diff --git a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..305ab557d52b7056746f605fbc4d5f1f39ec4209
---- /dev/null
-+++ b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
-@@ -0,0 +1,75 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\synthesis\jit
-+spec_name RG
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\skill_artifacts\final.spectra
-+environment req, cl
-+system gr, val
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env req, cl
-+  sys gr, val
-+
-+test safety_cl_true_forces_val_false_exhaustive:
-+  kind always_implication
-+  requirement "Whenever cl is true, the output val must be false."
-+  mode exhaustive
-+  max_depth 6
-+  max_paths 256
-+  domains:
-+    req false, true
-+    cl false, true
-+  when cl=true
-+  then val=false
-+
-+test safety_never_cl_and_val_true_random:
-+  kind exclusion
-+  requirement "Whenever cl is true, the output val must be false."
-+  mode random
-+  runs 50
-+  max_depth 6
-+  seed 904
-+  domains:
-+    req false, true
-+    cl false, true
-+  forbidden cl=true, val=true
-+
-+test safety_concrete_clearance_pulses:
-+  kind always_implication
-+  requirement "Whenever cl is true, the output val must be false."
-+  trace:
-+    req=false, cl=false
-+    req=true, cl=true
-+    req=false, cl=false
-+    req=true, cl=true
-+    req=false, cl=false
-+    req=false, cl=true
-+  when cl=true
-+  then val=false
-+
-+test liveness_bounded_witness_when_clear:
-+  kind eventually_response
-+  requirement "The condition where both gr and val are true must occur infinitely often."
-+  trace:
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=false, cl=false
-+  eventually gr=true, val=true
-+  within_steps 6
-+  require_closed_obligations true
-+
-+test liveness_bounded_witness_after_clearance_releases:
-+  kind eventually_response
-+  requirement "The condition where both gr and val are true must occur infinitely often."
-+  trace:
-+    req=false, cl=false
-+    req=true, cl=true
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=false, cl=false
-+  eventually gr=true, val=true
-+  within_steps 6
-+  require_closed_obligations true
+deleted file mode 100644
+index 305ab557d52b7056746f605fbc4d5f1f39ec4209..0000000000000000000000000000000000000000
+--- a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
++++ /dev/null
+@@ -1,75 +0,0 @@
+-controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\synthesis\jit
+-spec_name RG
+-spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\skill_artifacts\final.spectra
+-environment req, cl
+-system gr, val
+-
+-test declared_variables:
+-  kind variable_ownership
+-  env req, cl
+-  sys gr, val
+-
+-test safety_cl_true_forces_val_false_exhaustive:
+-  kind always_implication
+-  requirement "Whenever cl is true, the output val must be false."
+-  mode exhaustive
+-  max_depth 6
+-  max_paths 256
+-  domains:
+-    req false, true
+-    cl false, true
+-  when cl=true
+-  then val=false
+-
+-test safety_never_cl_and_val_true_random:
+-  kind exclusion
+-  requirement "Whenever cl is true, the output val must be false."
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 904
+-  domains:
+-    req false, true
+-    cl false, true
+-  forbidden cl=true, val=true
+-
+-test safety_concrete_clearance_pulses:
+-  kind always_implication
+-  requirement "Whenever cl is true, the output val must be false."
+-  trace:
+-    req=false, cl=false
+-    req=true, cl=true
+-    req=false, cl=false
+-    req=true, cl=true
+-    req=false, cl=false
+-    req=false, cl=true
+-  when cl=true
+-  then val=false
+-
+-test liveness_bounded_witness_when_clear:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
+-  trace:
+-    req=false, cl=false
+-    req=true, cl=false
+-    req=false, cl=false
+-    req=true, cl=false
+-    req=false, cl=false
+-    req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
+-
+-test liveness_bounded_witness_after_clearance_releases:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
+-  trace:
+-    req=false, cl=false
+-    req=true, cl=true
+-    req=false, cl=false
+-    req=true, cl=false
+-    req=false, cl=false
+-    req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
 
 diff --git a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..305ab557d52b7056746f605fbc4d5f1f39ec4209
---- /dev/null
-+++ b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
-@@ -0,0 +1,75 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\synthesis\jit
-+spec_name RG
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\skill_artifacts\final.spectra
-+environment req, cl
-+system gr, val
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env req, cl
-+  sys gr, val
-+
-+test safety_cl_true_forces_val_false_exhaustive:
-+  kind always_implication
-+  requirement "Whenever cl is true, the output val must be false."
-+  mode exhaustive
-+  max_depth 6
-+  max_paths 256
-+  domains:
-+    req false, true
-+    cl false, true
-+  when cl=true
-+  then val=false
-+
-+test safety_never_cl_and_val_true_random:
-+  kind exclusion
-+  requirement "Whenever cl is true, the output val must be false."
-+  mode random
-+  runs 50
-+  max_depth 6
-+  seed 904
-+  domains:
-+    req false, true
-+    cl false, true
-+  forbidden cl=true, val=true
-+
-+test safety_concrete_clearance_pulses:
-+  kind always_implication
-+  requirement "Whenever cl is true, the output val must be false."
-+  trace:
-+    req=false, cl=false
-+    req=true, cl=true
-+    req=false, cl=false
-+    req=true, cl=true
-+    req=false, cl=false
-+    req=false, cl=true
-+  when cl=true
-+  then val=false
-+
-+test liveness_bounded_witness_when_clear:
-+  kind eventually_response
-+  requirement "The condition where both gr and val are true must occur infinitely often."
-+  trace:
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=false, cl=false
-+  eventually gr=true, val=true
-+  within_steps 6
-+  require_closed_obligations true
-+
-+test liveness_bounded_witness_after_clearance_releases:
-+  kind eventually_response
-+  requirement "The condition where both gr and val are true must occur infinitely often."
-+  trace:
-+    req=false, cl=false
-+    req=true, cl=true
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=false, cl=false
-+  eventually gr=true, val=true
-+  within_steps 6
-+  require_closed_obligations true
+deleted file mode 100644
+index 305ab557d52b7056746f605fbc4d5f1f39ec4209..0000000000000000000000000000000000000000
+--- a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
++++ /dev/null
+@@ -1,75 +0,0 @@
+-controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\synthesis\jit
+-spec_name RG
+-spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\skill_artifacts\final.spectra
+-environment req, cl
+-system gr, val
+-
+-test declared_variables:
+-  kind variable_ownership
+-  env req, cl
+-  sys gr, val
+-
+-test safety_cl_true_forces_val_false_exhaustive:
+-  kind always_implication
+-  requirement "Whenever cl is true, the output val must be false."
+-  mode exhaustive
+-  max_depth 6
+-  max_paths 256
+-  domains:
+-    req false, true
+-    cl false, true
+-  when cl=true
+-  then val=false
+-
+-test safety_never_cl_and_val_true_random:
+-  kind exclusion
+-  requirement "Whenever cl is true, the output val must be false."
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 904
+-  domains:
+-    req false, true
+-    cl false, true
+-  forbidden cl=true, val=true
+-
+-test safety_concrete_clearance_pulses:
+-  kind always_implication
+-  requirement "Whenever cl is true, the output val must be false."
+-  trace:
+-    req=false, cl=false
+-    req=true, cl=true
+-    req=false, cl=false
+-    req=true, cl=true
+-    req=false, cl=false
+-    req=false, cl=true
+-  when cl=true
+-  then val=false
+-
+-test liveness_bounded_witness_when_clear:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
+-  trace:
+-    req=false, cl=false
+-    req=true, cl=false
+-    req=false, cl=false
+-    req=true, cl=false
+-    req=false, cl=false
+-    req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
+-
+-test liveness_bounded_witness_after_clearance_releases:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
+-  trace:
+-    req=false, cl=false
+-    req=true, cl=true
+-    req=false, cl=false
+-    req=true, cl=false
+-    req=false, cl=false
+-    req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
 
 codex
-The `.rtest` plan is written. I’ll run the DSL compiler now to catch syntax or structural issues only; I won’t use any controller result as spec feedback.
+The old file has been removed; I’m adding the repaired plan in the same required location with explicit ownership and adversarial-but-admissible safety traces.
+apply patch
+patch: completed
+C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer\test-plan.rtest
+diff --git a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
+index 305ab557d52b7056746f605fbc4d5f1f39ec4209..cdcdcda2c185d98da5a2b54e96d8b12e58db8d3b
+--- a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
++++ b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
+@@ -9,67 +9,51 @@
+   env req, cl
+   sys gr, val
+ 
+-test safety_cl_true_forces_val_false_exhaustive:
++test clearance_pulse_forces_val_false:
+   kind always_implication
+   requirement "Whenever cl is true, the output val must be false."
+-  mode exhaustive
+-  max_depth 6
+-  max_paths 256
+-  domains:
+-    req false, true
+-    cl false, true
++  trace:
++    req=false, cl=false
++    req=true, cl=true
++    req=false, cl=false
++    req=true, cl=false
++    req=false, cl=false
+   when cl=true
+   then val=false
+ 
+-test safety_never_cl_and_val_true_random:
+-  kind exclusion
+-  requirement "Whenever cl is true, the output val must be false."
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 904
+-  domains:
+-    req false, true
+-    cl false, true
+-  forbidden cl=true, val=true
+-
+-test safety_concrete_clearance_pulses:
++test repeated_clearance_forces_val_false:
+   kind always_implication
+   requirement "Whenever cl is true, the output val must be false."
+   trace:
+     req=false, cl=false
+-    req=true, cl=true
++    req=false, cl=true
++    req=false, cl=true
++    req=true, cl=false
+     req=false, cl=false
+     req=true, cl=true
+-    req=false, cl=false
+-    req=false, cl=true
+   when cl=true
+   then val=false
+ 
+-test liveness_bounded_witness_when_clear:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
++test alternating_inputs_never_clearance_with_val:
++  kind exclusion
++  requirement "Whenever cl is true, the output val must be false."
+   trace:
+     req=false, cl=false
+     req=true, cl=false
+-    req=false, cl=false
++    req=false, cl=true
+     req=true, cl=false
++    req=false, cl=true
+     req=false, cl=false
+-    req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
++  forbidden cl=true, val=true
+ 
+-test liveness_bounded_witness_after_clearance_releases:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
++test request_variations_do_not_override_clearance_safety:
++  kind exclusion
++  requirement "Whenever cl is true, the output val must be false."
+   trace:
+     req=false, cl=false
+     req=true, cl=true
+-    req=false, cl=false
+-    req=true, cl=false
++    req=true, cl=true
+     req=false, cl=false
++    req=false, cl=true
+     req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
++  forbidden cl=true, val=true
+
+diff --git a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
+index 305ab557d52b7056746f605fbc4d5f1f39ec4209..cdcdcda2c185d98da5a2b54e96d8b12e58db8d3b
+--- a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
++++ b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
+@@ -9,67 +9,51 @@
+   env req, cl
+   sys gr, val
+ 
+-test safety_cl_true_forces_val_false_exhaustive:
++test clearance_pulse_forces_val_false:
+   kind always_implication
+   requirement "Whenever cl is true, the output val must be false."
+-  mode exhaustive
+-  max_depth 6
+-  max_paths 256
+-  domains:
+-    req false, true
+-    cl false, true
++  trace:
++    req=false, cl=false
++    req=true, cl=true
++    req=false, cl=false
++    req=true, cl=false
++    req=false, cl=false
+   when cl=true
+   then val=false
+ 
+-test safety_never_cl_and_val_true_random:
+-  kind exclusion
+-  requirement "Whenever cl is true, the output val must be false."
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 904
+-  domains:
+-    req false, true
+-    cl false, true
+-  forbidden cl=true, val=true
+-
+-test safety_concrete_clearance_pulses:
++test repeated_clearance_forces_val_false:
+   kind always_implication
+   requirement "Whenever cl is true, the output val must be false."
+   trace:
+     req=false, cl=false
+-    req=true, cl=true
++    req=false, cl=true
++    req=false, cl=true
++    req=true, cl=false
+     req=false, cl=false
+     req=true, cl=true
+-    req=false, cl=false
+-    req=false, cl=true
+   when cl=true
+   then val=false
+ 
+-test liveness_bounded_witness_when_clear:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
++test alternating_inputs_never_clearance_with_val:
++  kind exclusion
++  requirement "Whenever cl is true, the output val must be false."
+   trace:
+     req=false, cl=false
+     req=true, cl=false
+-    req=false, cl=false
++    req=false, cl=true
+     req=true, cl=false
++    req=false, cl=true
+     req=false, cl=false
+-    req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
++  forbidden cl=true, val=true
+ 
+-test liveness_bounded_witness_after_clearance_releases:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
++test request_variations_do_not_override_clearance_safety:
++  kind exclusion
++  requirement "Whenever cl is true, the output val must be false."
+   trace:
+     req=false, cl=false
+     req=true, cl=true
+-    req=false, cl=false
+-    req=true, cl=false
++    req=true, cl=true
+     req=false, cl=false
++    req=false, cl=true
+     req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
++  forbidden cl=true, val=true
+
+codex
+The test plan is in place. I’m compiling it through the DSL compiler now and will repair only plan syntax if the compiler reports DSL issues.
 exec
 "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\Noobcoder64\\interpolation-repair\\tests\\specifications\\RG_repair_core\\model=qwen3\\9e04b984cffbede8229a8776\\branches\\independent_test\\round-00\\test-writer\\test-plan.rtest\" -o \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\Noobcoder64\\interpolation-repair\\tests\\specifications\\RG_repair_core\\model=qwen3\\9e04b984cffbede8229a8776\\branches\\independent_test\\round-00\\test-writer\\test-plan.json\" --diagnostics-json \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\Noobcoder64\\interpolation-repair\\tests\\specifications\\RG_repair_core\\model=qwen3\\9e04b984cffbede8229a8776\\branches\\independent_test\\round-00\\test-writer\\dsl-diagnostics.json\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 1551ms:
+ succeeded in 1084ms:
 diff --git a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..305ab557d52b7056746f605fbc4d5f1f39ec4209
---- /dev/null
+index 305ab557d52b7056746f605fbc4d5f1f39ec4209..cdcdcda2c185d98da5a2b54e96d8b12e58db8d3b
+--- a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
-@@ -0,0 +1,75 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\synthesis\jit
-+spec_name RG
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\skill_artifacts\final.spectra
-+environment req, cl
-+system gr, val
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env req, cl
-+  sys gr, val
-+
-+test safety_cl_true_forces_val_false_exhaustive:
-+  kind always_implication
-+  requirement "Whenever cl is true, the output val must be false."
-+  mode exhaustive
-+  max_depth 6
-+  max_paths 256
-+  domains:
-+    req false, true
-+    cl false, true
-+  when cl=true
-+  then val=false
-+
-+test safety_never_cl_and_val_true_random:
+@@ -9,67 +9,51 @@
+   env req, cl
+   sys gr, val
+ 
+-test safety_cl_true_forces_val_false_exhaustive:
++test clearance_pulse_forces_val_false:
+   kind always_implication
+   requirement "Whenever cl is true, the output val must be false."
+-  mode exhaustive
+-  max_depth 6
+-  max_paths 256
+-  domains:
+-    req false, true
+-    cl false, true
++  trace:
++    req=false, cl=false
++    req=true, cl=true
++    req=false, cl=false
++    req=true, cl=false
++    req=false, cl=false
+   when cl=true
+   then val=false
+ 
+-test safety_never_cl_and_val_true_random:
+-  kind exclusion
+-  requirement "Whenever cl is true, the output val must be false."
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 904
+-  domains:
+-    req false, true
+-    cl false, true
+-  forbidden cl=true, val=true
+-
+-test safety_concrete_clearance_pulses:
++test repeated_clearance_forces_val_false:
+   kind always_implication
+   requirement "Whenever cl is true, the output val must be false."
+   trace:
+     req=false, cl=false
+-    req=true, cl=true
++    req=false, cl=true
++    req=false, cl=true
++    req=true, cl=false
+     req=false, cl=false
+     req=true, cl=true
+-    req=false, cl=false
+-    req=false, cl=true
+   when cl=true
+   then val=false
+ 
+-test liveness_bounded_witness_when_clear:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
++test alternating_inputs_never_clearance_with_val:
 +  kind exclusion
 +  requirement "Whenever cl is true, the output val must be false."
-+  mode random
-+  runs 50
-+  max_depth 6
-+  seed 904
-+  domains:
-+    req false, true
-+    cl false, true
-+  forbidden cl=true, val=true
-+
-+test safety_concrete_clearance_pulses:
-+  kind always_implication
-+  requirement "Whenever cl is true, the output val must be false."
-+  trace:
-+    req=false, cl=false
-+    req=true, cl=true
-+    req=false, cl=false
-+    req=true, cl=true
-+    req=false, cl=false
+   trace:
+     req=false, cl=false
+     req=true, cl=false
+-    req=false, cl=false
 +    req=false, cl=true
-+  when cl=true
-+  then val=false
-+
-+test liveness_bounded_witness_when_clear:
-+  kind eventually_response
-+  requirement "The condition where both gr and val are true must occur infinitely often."
-+  trace:
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=false, cl=false
-+  eventually gr=true, val=true
-+  within_steps 6
-+  require_closed_obligations true
-+
-+test liveness_bounded_witness_after_clearance_releases:
-+  kind eventually_response
-+  requirement "The condition where both gr and val are true must occur infinitely often."
-+  trace:
-+    req=false, cl=false
+     req=true, cl=false
++    req=false, cl=true
+     req=false, cl=false
+-    req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
++  forbidden cl=true, val=true
+ 
+-test liveness_bounded_witness_after_clearance_releases:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
++test request_variations_do_not_override_clearance_safety:
++  kind exclusion
++  requirement "Whenever cl is true, the output val must be false."
+   trace:
+     req=false, cl=false
+     req=true, cl=true
+-    req=false, cl=false
+-    req=true, cl=false
 +    req=true, cl=true
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=false, cl=false
-+  eventually gr=true, val=true
-+  within_steps 6
-+  require_closed_obligations true
+     req=false, cl=false
++    req=false, cl=true
+     req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
++  forbidden cl=true, val=true
 
-codex
-The DSL compiler completed without an error exit. I’m checking the generated diagnostics summary so the final report has the exact compiled count.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\Noobcoder64\\interpolation-repair\\tests\\specifications\\RG_repair_core\\model=qwen3\\9e04b984cffbede8229a8776\\branches\\independent_test\\round-00\\test-writer\\dsl-diagnostics.json\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 613ms:
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\Noobcoder64\\interpolation-repair\\tests\\specifications\\RG_repair_core\\model=qwen3\\9e04b984cffbede8229a8776\\branches\\independent_test\\round-00\\test-writer\\dsl-diagnostics.json\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\Noobcoder64\\interpolation-repair\\tests\\specifications\\RG_repair_core\\model=qwen3\\9e04b984cffbede8229a8776\\branches\\independent_test\\round-00\\test-writer\\test-plan.json\" | Select-String -Pattern '\"name\"'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 820ms:
 {
   "status": "success",
   "tool": "controller_tests.compile_test_plan",
   "file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\Noobcoder64\\interpolation-repair\\tests\\specifications\\RG_repair_core\\model=qwen3\\9e04b984cffbede8229a8776\\branches\\independent_test\\round-00\\test-writer\\test-plan.rtest",
   "errors": [],
-  "compiled_tests": 6
+  "compiled_tests": 5
 }
 
+
+ succeeded in 932ms:
+
+{
+  "tests": [
+    {
+      "name": "declared_variables",
+      "kind": "variable_ownership",
+      "env": [
+        "req",
+        "cl"
+      ],
+      "sys": [
+        "gr",
+        "val"
+      ]
+    },
+    {
+      "name": "clearance_pulse_forces_val_false",
+      "kind": "always_implication",
+      "requirement": "Whenever cl is true, the output val must be false.",
+      "trace": [
+        {
+          "req": "false",
+          "cl": "false"
+        },
+        {
+          "req": "true",
+          "cl": "true"
+        },
+        {
+          "req": "false",
+          "cl": "false"
+        },
+        {
+          "req": "true",
+          "cl": "false"
+        },
+        {
+          "req": "false",
+          "cl": "false"
+        }
+      ],
+      "when": {
+        "cl": "true"
+      },
+      "then": {
+        "val": "false"
+      }
+    },
+    {
+      "name": "repeated_clearance_forces_val_false",
+      "kind": "always_implication",
+      "requirement": "Whenever cl is true, the output val must be false.",
+      "trace": [
+        {
+          "req": "false",
+          "cl": "false"
+        },
+        {
+          "req": "false",
+          "cl": "true"
+        },
+        {
+          "req": "false",
+          "cl": "true"
+        },
+        {
+          "req": "true",
+          "cl": "false"
+        },
+        {
+          "req": "false",
+          "cl": "false"
+        },
+        {
+          "req": "true",
+          "cl": "true"
+        }
+      ],
+      "when": {
+        "cl": "true"
+      },
+      "then": {
+        "val": "false"
+      }
+    },
+    {
+      "name": "alternating_inputs_never_clearance_with_val",
+      "kind": "exclusion",
+      "requirement": "Whenever cl is true, the output val must be false.",
+      "trace": [
+        {
+          "req": "false",
+          "cl": "false"
+        },
+        {
+          "req": "true",
+          "cl": "false"
+        },
+        {
+          "req": "false",
+          "cl": "true"
+        },
+        {
+          "req": "true",
+          "cl": "false"
+        },
+        {
+          "req": "false",
+          "cl": "true"
+        },
+        {
+          "req": "false",
+          "cl": "false"
+        }
+      ],
+      "forbidden": {
+        "cl": "true",
+        "val": "true"
+      }
+    },
+    {
+      "name": "request_variations_do_not_override_clearance_safety",
+      "kind": "exclusion",
+      "requirement": "Whenever cl is true, the output val must be false.",
+      "trace": [
+        {
+          "req": "false",
+          "cl": "false"
+        },
+        {
+          "req": "true",
+          "cl": "true"
+        },
+        {
+          "req": "true",
+          "cl": "true"
+        },
+        {
+          "req": "false",
+          "cl": "false"
+        },
+        {
+          "req": "false",
+          "cl": "true"
+        },
+        {
+          "req": "false",
+          "cl": "false"
+        }
+      ],
+      "forbidden": {
+        "cl": "true",
+        "val": "true"
+      }
+    }
+  ],
+  "controller_dir": 
+"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\Noobcoder64\\interpolation-repair\\tests\\specifications\\RG_repair_core\\model=qwen3\\9e04b984cffbede8229a8776\\core\\synthesis\\jit",
+  "spec_name": "RG",
+  "spectra_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\Noobcoder64\\interpolation-repair\\tests\\specifications\\RG_repair_core\\model=qwen3\\9e04b984cffbede8229a8776\\core\\skill_artifa
+cts\\final.spectra",
+  "environment": [
+    "req",
+    "cl"
+  ],
+  "system": [
+    "gr",
+    "val"
+  ],
+  "outputs": [
+    "gr",
+    "val"
+  ]
+}
+
+
+
+
 diff --git a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..305ab557d52b7056746f605fbc4d5f1f39ec4209
---- /dev/null
+index 305ab557d52b7056746f605fbc4d5f1f39ec4209..cdcdcda2c185d98da5a2b54e96d8b12e58db8d3b
+--- a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
-@@ -0,0 +1,75 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\synthesis\jit
-+spec_name RG
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\skill_artifacts\final.spectra
-+environment req, cl
-+system gr, val
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env req, cl
-+  sys gr, val
-+
-+test safety_cl_true_forces_val_false_exhaustive:
-+  kind always_implication
-+  requirement "Whenever cl is true, the output val must be false."
-+  mode exhaustive
-+  max_depth 6
-+  max_paths 256
-+  domains:
-+    req false, true
-+    cl false, true
-+  when cl=true
-+  then val=false
-+
-+test safety_never_cl_and_val_true_random:
+@@ -9,67 +9,51 @@
+   env req, cl
+   sys gr, val
+ 
+-test safety_cl_true_forces_val_false_exhaustive:
++test clearance_pulse_forces_val_false:
+   kind always_implication
+   requirement "Whenever cl is true, the output val must be false."
+-  mode exhaustive
+-  max_depth 6
+-  max_paths 256
+-  domains:
+-    req false, true
+-    cl false, true
++  trace:
++    req=false, cl=false
++    req=true, cl=true
++    req=false, cl=false
++    req=true, cl=false
++    req=false, cl=false
+   when cl=true
+   then val=false
+ 
+-test safety_never_cl_and_val_true_random:
+-  kind exclusion
+-  requirement "Whenever cl is true, the output val must be false."
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 904
+-  domains:
+-    req false, true
+-    cl false, true
+-  forbidden cl=true, val=true
+-
+-test safety_concrete_clearance_pulses:
++test repeated_clearance_forces_val_false:
+   kind always_implication
+   requirement "Whenever cl is true, the output val must be false."
+   trace:
+     req=false, cl=false
+-    req=true, cl=true
++    req=false, cl=true
++    req=false, cl=true
++    req=true, cl=false
+     req=false, cl=false
+     req=true, cl=true
+-    req=false, cl=false
+-    req=false, cl=true
+   when cl=true
+   then val=false
+ 
+-test liveness_bounded_witness_when_clear:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
++test alternating_inputs_never_clearance_with_val:
 +  kind exclusion
 +  requirement "Whenever cl is true, the output val must be false."
-+  mode random
-+  runs 50
-+  max_depth 6
-+  seed 904
-+  domains:
-+    req false, true
-+    cl false, true
-+  forbidden cl=true, val=true
-+
-+test safety_concrete_clearance_pulses:
-+  kind always_implication
-+  requirement "Whenever cl is true, the output val must be false."
-+  trace:
-+    req=false, cl=false
-+    req=true, cl=true
-+    req=false, cl=false
-+    req=true, cl=true
-+    req=false, cl=false
+   trace:
+     req=false, cl=false
+     req=true, cl=false
+-    req=false, cl=false
 +    req=false, cl=true
-+  when cl=true
-+  then val=false
-+
-+test liveness_bounded_witness_when_clear:
-+  kind eventually_response
-+  requirement "The condition where both gr and val are true must occur infinitely often."
-+  trace:
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=false, cl=false
-+  eventually gr=true, val=true
-+  within_steps 6
-+  require_closed_obligations true
-+
-+test liveness_bounded_witness_after_clearance_releases:
-+  kind eventually_response
-+  requirement "The condition where both gr and val are true must occur infinitely often."
-+  trace:
-+    req=false, cl=false
+     req=true, cl=false
++    req=false, cl=true
+     req=false, cl=false
+-    req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
++  forbidden cl=true, val=true
+ 
+-test liveness_bounded_witness_after_clearance_releases:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
++test request_variations_do_not_override_clearance_safety:
++  kind exclusion
++  requirement "Whenever cl is true, the output val must be false."
+   trace:
+     req=false, cl=false
+     req=true, cl=true
+-    req=false, cl=false
+-    req=true, cl=false
 +    req=true, cl=true
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=false, cl=false
-+  eventually gr=true, val=true
-+  within_steps 6
-+  require_closed_obligations true
+     req=false, cl=false
++    req=false, cl=true
+     req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
++  forbidden cl=true, val=true
 
 codex
-test_plan_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer\test-plan.rtest
-compiled_test_plan_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer\test-plan.json
-dsl_diagnostics_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer\dsl-diagnostics.json
-tests_planned: 6
-untestable_requirements: 1
-artifact_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer
+test_plan_file: `C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer\test-plan.rtest`
+
+compiled_test_plan_file: `C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer\test-plan.json`
+
+dsl_diagnostics_file: `C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer\dsl-diagnostics.json`
+
+tests_planned: 5  
+untestable_requirements: 3  
+artifact_dir: `C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\branches\independent_test\round-00\test-writer`
+
+DSL compilation succeeded with `compiled_tests: 5` and no diagnostics errors.
 diff --git a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..305ab557d52b7056746f605fbc4d5f1f39ec4209
---- /dev/null
+index 305ab557d52b7056746f605fbc4d5f1f39ec4209..cdcdcda2c185d98da5a2b54e96d8b12e58db8d3b
+--- a/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/Noobcoder64/interpolation-repair/tests/specifications/RG_repair_core/model=qwen3/9e04b984cffbede8229a8776/branches/independent_test/round-00/test-writer/test-plan.rtest
-@@ -0,0 +1,75 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\synthesis\jit
-+spec_name RG
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\Noobcoder64\interpolation-repair\tests\specifications\RG_repair_core\model=qwen3\9e04b984cffbede8229a8776\core\skill_artifacts\final.spectra
-+environment req, cl
-+system gr, val
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env req, cl
-+  sys gr, val
-+
-+test safety_cl_true_forces_val_false_exhaustive:
-+  kind always_implication
-+  requirement "Whenever cl is true, the output val must be false."
-+  mode exhaustive
-+  max_depth 6
-+  max_paths 256
-+  domains:
-+    req false, true
-+    cl false, true
-+  when cl=true
-+  then val=false
-+
-+test safety_never_cl_and_val_true_random:
+@@ -9,67 +9,51 @@
+   env req, cl
+   sys gr, val
+ 
+-test safety_cl_true_forces_val_false_exhaustive:
++test clearance_pulse_forces_val_false:
+   kind always_implication
+   requirement "Whenever cl is true, the output val must be false."
+-  mode exhaustive
+-  max_depth 6
+-  max_paths 256
+-  domains:
+-    req false, true
+-    cl false, true
++  trace:
++    req=false, cl=false
++    req=true, cl=true
++    req=false, cl=false
++    req=true, cl=false
++    req=false, cl=false
+   when cl=true
+   then val=false
+ 
+-test safety_never_cl_and_val_true_random:
+-  kind exclusion
+-  requirement "Whenever cl is true, the output val must be false."
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 904
+-  domains:
+-    req false, true
+-    cl false, true
+-  forbidden cl=true, val=true
+-
+-test safety_concrete_clearance_pulses:
++test repeated_clearance_forces_val_false:
+   kind always_implication
+   requirement "Whenever cl is true, the output val must be false."
+   trace:
+     req=false, cl=false
+-    req=true, cl=true
++    req=false, cl=true
++    req=false, cl=true
++    req=true, cl=false
+     req=false, cl=false
+     req=true, cl=true
+-    req=false, cl=false
+-    req=false, cl=true
+   when cl=true
+   then val=false
+ 
+-test liveness_bounded_witness_when_clear:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
++test alternating_inputs_never_clearance_with_val:
 +  kind exclusion
 +  requirement "Whenever cl is true, the output val must be false."
-+  mode random
-+  runs 50
-+  max_depth 6
-+  seed 904
-+  domains:
-+    req false, true
-+    cl false, true
-+  forbidden cl=true, val=true
-+
-+test safety_concrete_clearance_pulses:
-+  kind always_implication
-+  requirement "Whenever cl is true, the output val must be false."
-+  trace:
-+    req=false, cl=false
-+    req=true, cl=true
-+    req=false, cl=false
-+    req=true, cl=true
-+    req=false, cl=false
+   trace:
+     req=false, cl=false
+     req=true, cl=false
+-    req=false, cl=false
 +    req=false, cl=true
-+  when cl=true
-+  then val=false
-+
-+test liveness_bounded_witness_when_clear:
-+  kind eventually_response
-+  requirement "The condition where both gr and val are true must occur infinitely often."
-+  trace:
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=false, cl=false
-+  eventually gr=true, val=true
-+  within_steps 6
-+  require_closed_obligations true
-+
-+test liveness_bounded_witness_after_clearance_releases:
-+  kind eventually_response
-+  requirement "The condition where both gr and val are true must occur infinitely often."
-+  trace:
-+    req=false, cl=false
+     req=true, cl=false
++    req=false, cl=true
+     req=false, cl=false
+-    req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
++  forbidden cl=true, val=true
+ 
+-test liveness_bounded_witness_after_clearance_releases:
+-  kind eventually_response
+-  requirement "The condition where both gr and val are true must occur infinitely often."
++test request_variations_do_not_override_clearance_safety:
++  kind exclusion
++  requirement "Whenever cl is true, the output val must be false."
+   trace:
+     req=false, cl=false
+     req=true, cl=true
+-    req=false, cl=false
+-    req=true, cl=false
 +    req=true, cl=true
-+    req=false, cl=false
-+    req=true, cl=false
-+    req=false, cl=false
-+    req=false, cl=false
-+  eventually gr=true, val=true
-+  within_steps 6
-+  require_closed_obligations true
+     req=false, cl=false
++    req=false, cl=true
+     req=false, cl=false
+-  eventually gr=true, val=true
+-  within_steps 6
+-  require_closed_obligations true
++  forbidden cl=true, val=true
 
 tokens used
-14.860
+37.825

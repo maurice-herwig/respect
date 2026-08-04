@@ -32,11 +32,14 @@
       },
       "for_steps": 1,
       "kind": "response_absence",
-      "name": "obstacle_at_zero_blocks_next_forward",
-      "requirement": "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition.",
+      "name": "next_after_zero_not_forward",
+      "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
       "trace": [
         {
           "distance": "0"
+        },
+        {
+          "distance": "100"
         },
         {
           "distance": "100"
@@ -53,11 +56,14 @@
       },
       "for_steps": 1,
       "kind": "response_absence",
-      "name": "boundary_twenty_blocks_next_forward",
-      "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
+      "name": "next_after_twenty_not_forward",
+      "requirement": "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition.",
       "trace": [
         {
           "distance": "20"
+        },
+        {
+          "distance": "100"
         },
         {
           "distance": "100"
@@ -74,41 +80,17 @@
       },
       "for_steps": 1,
       "kind": "response_absence",
-      "name": "just_below_boundary_blocks_next_forward",
+      "name": "persistent_near_distance_not_forward",
       "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
       "trace": [
+        {
+          "distance": "20"
+        },
         {
           "distance": "19"
         },
         {
-          "distance": "21"
-        },
-        {
-          "distance": "100"
-        }
-      ],
-      "when": {
-        "distance": "19"
-      }
-    },
-    {
-      "absent": {
-        "leftM": "FWD",
-        "rightM": "FWD"
-      },
-      "for_steps": 1,
-      "kind": "response_absence",
-      "name": "persistent_close_distance_never_leads_to_forward",
-      "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
-      "trace": [
-        {
-          "distance": "20"
-        },
-        {
-          "distance": "20"
-        },
-        {
-          "distance": "10"
+          "distance": "1"
         },
         {
           "distance": "0"
@@ -117,7 +99,7 @@
           "distance": "20"
         },
         {
-          "distance": "100"
+          "distance": "18"
         }
       ],
       "when": {
@@ -131,12 +113,9 @@
       },
       "for_steps": 1,
       "kind": "response_absence",
-      "name": "high_then_low_transition_blocks_next_forward",
+      "name": "alternating_boundary_distance_not_forward",
       "requirement": "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition.",
       "trace": [
-        {
-          "distance": "100"
-        },
         {
           "distance": "21"
         },
@@ -144,7 +123,16 @@
           "distance": "20"
         },
         {
+          "distance": "21"
+        },
+        {
+          "distance": "19"
+        },
+        {
           "distance": "100"
+        },
+        {
+          "distance": "0"
         }
       ],
       "when": {
@@ -159,21 +147,18 @@
       "env": {
         "distance": [
           "0",
-          "1",
           "19",
           "20",
-          "21",
-          "100"
+          "21"
         ]
       },
       "for_steps": 1,
       "kind": "response_absence",
-      "max_depth": 6,
-      "mode": "random",
-      "name": "random_threshold_safety_samples",
-      "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
-      "runs": 50,
-      "seed": 3,
+      "max_depth": 4,
+      "max_paths": 256,
+      "mode": "exhaustive",
+      "name": "sampled_exhaustive_near_boundary_not_forward",
+      "requirement": "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition.",
       "when": {
         "distance": "20"
       }

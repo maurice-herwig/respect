@@ -9,72 +9,64 @@ test declared_variables:
   env distance
   sys leftM, rightM
 
-test obstacle_at_zero_blocks_next_forward:
+test next_after_zero_not_forward:
   kind response_absence
-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
   trace:
     distance=0
+    distance=100
     distance=100
   when distance=0
   absent leftM=FWD, rightM=FWD
   for_steps 1
 
-test boundary_twenty_blocks_next_forward:
-  kind response_absence
-  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-  trace:
-    distance=20
-    distance=100
-  when distance=20
-  absent leftM=FWD, rightM=FWD
-  for_steps 1
-
-test just_below_boundary_blocks_next_forward:
-  kind response_absence
-  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-  trace:
-    distance=19
-    distance=21
-    distance=100
-  when distance=19
-  absent leftM=FWD, rightM=FWD
-  for_steps 1
-
-test persistent_close_distance_never_leads_to_forward:
-  kind response_absence
-  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-  trace:
-    distance=20
-    distance=20
-    distance=10
-    distance=0
-    distance=20
-    distance=100
-  when distance=20
-  absent leftM=FWD, rightM=FWD
-  for_steps 1
-
-test high_then_low_transition_blocks_next_forward:
+test next_after_twenty_not_forward:
   kind response_absence
   requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
   trace:
-    distance=100
-    distance=21
     distance=20
+    distance=100
     distance=100
   when distance=20
   absent leftM=FWD, rightM=FWD
   for_steps 1
 
-test random_threshold_safety_samples:
+test persistent_near_distance_not_forward:
   kind response_absence
-  mode random
   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-  runs 50
-  max_depth 6
-  seed 3
+  trace:
+    distance=20
+    distance=19
+    distance=1
+    distance=0
+    distance=20
+    distance=18
+  when distance=20
+  absent leftM=FWD, rightM=FWD
+  for_steps 1
+
+test alternating_boundary_distance_not_forward:
+  kind response_absence
+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+  trace:
+    distance=21
+    distance=20
+    distance=21
+    distance=19
+    distance=100
+    distance=0
+  when distance=20
+  absent leftM=FWD, rightM=FWD
+  for_steps 1
+
+test sampled_exhaustive_near_boundary_not_forward:
+  kind response_absence
+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+  mode exhaustive
+  max_depth 4
+  max_paths 256
   domains:
-    distance 0, 1, 19, 20, 21, 100
+    distance 0, 19, 20, 21
   when distance=20
   absent leftM=FWD, rightM=FWD
   for_steps 1

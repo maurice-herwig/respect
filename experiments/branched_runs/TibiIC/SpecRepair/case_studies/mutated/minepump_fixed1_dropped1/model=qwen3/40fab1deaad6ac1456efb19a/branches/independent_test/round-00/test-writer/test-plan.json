@@ -12,7 +12,7 @@
       ]
     },
     {
-      "name": "methane_turns_pump_off_next",
+      "name": "methane_forces_pump_off_next_step",
       "kind": "state_sequence",
       "requirement": "If methane is true, then pump must be false in the next step.",
       "trace": [
@@ -27,7 +27,7 @@
       ],
       "expect": [
         {
-          "pump": "false"
+          "methane": "true"
         },
         {
           "pump": "false"
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "name": "methane_overrides_highwater_next",
+      "name": "methane_overrides_simultaneous_highwater_next_step",
       "kind": "state_sequence",
       "requirement": "If methane is true, then pump must be false in the next step.",
       "trace": [
@@ -44,13 +44,14 @@
           "methane": "true"
         },
         {
-          "highwater": "true",
+          "highwater": "false",
           "methane": "false"
         }
       ],
       "expect": [
         {
-          "pump": "false"
+          "highwater": "true",
+          "methane": "true"
         },
         {
           "pump": "false"
@@ -58,7 +59,7 @@
       ]
     },
     {
-      "name": "safe_highwater_turns_pump_on_next",
+      "name": "safe_highwater_turns_pump_on_next_step",
       "kind": "state_sequence",
       "requirement": "If highwater is true and methane is false, then pump must be true in the next step.",
       "trace": [
@@ -73,7 +74,8 @@
       ],
       "expect": [
         {
-          "pump": "false"
+          "highwater": "true",
+          "methane": "false"
         },
         {
           "pump": "true"
@@ -81,13 +83,17 @@
       ]
     },
     {
-      "name": "safe_highwater_after_methane_clears",
+      "name": "repeated_safe_highwater_keeps_requesting_pump_next_step",
       "kind": "state_sequence",
       "requirement": "If highwater is true and methane is false, then pump must be true in the next step.",
       "trace": [
         {
           "highwater": "true",
-          "methane": "true"
+          "methane": "false"
+        },
+        {
+          "highwater": "false",
+          "methane": "false"
         },
         {
           "highwater": "true",
@@ -100,10 +106,15 @@
       ],
       "expect": [
         {
-          "pump": "false"
+          "highwater": "true",
+          "methane": "false"
         },
         {
-          "pump": "false"
+          "pump": "true"
+        },
+        {
+          "highwater": "true",
+          "methane": "false"
         },
         {
           "pump": "true"
@@ -111,12 +122,16 @@
       ]
     },
     {
-      "name": "methane_after_safe_pumping_turns_off",
+      "name": "alternating_safe_water_and_methane_next_step",
       "kind": "state_sequence",
-      "requirement": "If methane is true, then pump must be false in the next step.",
+      "requirement": "Pump activates to clear water when safe and deactivates when methane is detected.",
       "trace": [
         {
           "highwater": "true",
+          "methane": "false"
+        },
+        {
+          "highwater": "false",
           "methane": "false"
         },
         {
@@ -126,19 +141,90 @@
         {
           "highwater": "false",
           "methane": "false"
+        },
+        {
+          "highwater": "true",
+          "methane": "false"
+        },
+        {
+          "highwater": "false",
+          "methane": "false"
         }
       ],
       "expect": [
         {
-          "pump": "false"
+          "highwater": "true",
+          "methane": "false"
         },
         {
           "pump": "true"
         },
         {
+          "methane": "true"
+        },
+        {
           "pump": "false"
+        },
+        {
+          "highwater": "true",
+          "methane": "false"
+        },
+        {
+          "pump": "true"
         }
       ]
+    },
+    {
+      "name": "exhaustive_methane_requires_next_absence_of_pump",
+      "kind": "response_absence",
+      "mode": "exhaustive",
+      "requirement": "If methane is true, then pump must be false in the next step.",
+      "max_depth": 5,
+      "max_paths": 64,
+      "for_steps": 1,
+      "env": {
+        "highwater": [
+          "false",
+          "true"
+        ],
+        "methane": [
+          "false",
+          "true"
+        ]
+      },
+      "when": {
+        "methane": "true"
+      },
+      "absent": {
+        "pump": "true"
+      }
+    },
+    {
+      "name": "exhaustive_safe_highwater_gets_pump_response",
+      "kind": "eventually_response",
+      "mode": "exhaustive",
+      "requirement": "If highwater is true and methane is false, then pump must be true in the next step.",
+      "max_depth": 5,
+      "max_paths": 64,
+      "within_steps": 1,
+      "require_closed_obligations": true,
+      "env": {
+        "highwater": [
+          "false",
+          "true"
+        ],
+        "methane": [
+          "false",
+          "true"
+        ]
+      },
+      "when": {
+        "highwater": "true",
+        "methane": "false"
+      },
+      "eventually": {
+        "pump": "true"
+      }
     }
   ],
   "controller_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\core\\synthesis\\jit",

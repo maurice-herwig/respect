@@ -9,60 +9,12 @@ test declared_variables:
   env highwater, methane
   sys pump
 
-test pump_next_on_when_highwater_without_methane:
-  kind state_sequence
-  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
-  trace:
-    highwater=false, methane=true
-    highwater=true, methane=false
-    highwater=false, methane=false
-  expect:
-    pump=false
-    pump=false
-    pump=true
-
-test pump_next_off_when_methane:
-  kind state_sequence
-  requirement "Whenever methane is true, the pump must be off in the next step."
-  trace:
-    highwater=true, methane=false
-    highwater=false, methane=true
-    highwater=true, methane=true
-    highwater=true, methane=false
-  expect:
-    pump=false
-    pump=true
-    pump=false
-    pump=false
-
-test methane_priority_when_highwater_also_true:
-  kind state_sequence
-  requirement "Whenever methane is true, the pump must be off in the next step."
-  trace:
-    highwater=true, methane=true
-    highwater=true, methane=false
-  expect:
-    pump=false
-    pump=false
-
-test no_two_consecutive_pump_on_concrete:
-  kind response_absence
-  requirement "The pump is never on for two consecutive steps; either the pump is currently off or it was off in the previous step."
-  trace:
-    highwater=false, methane=false
-    highwater=true, methane=false
-    highwater=true, methane=false
-    highwater=false, methane=true
-  when pump=true
-  absent pump=true
-  for_steps 1
-
-test exhaustive_no_two_consecutive_pump_on:
+test exhaustive_no_consecutive_pump_on:
   kind response_absence
   mode exhaustive
-  requirement "The pump is never on for two consecutive steps; either the pump is currently off or it was off in the previous step."
-  max_depth 5
+  max_depth 6
   max_paths 256
+  requirement "The pump is never on for two consecutive steps; either the pump is currently off or it was off in the previous step."
   domains:
     highwater false, true
     methane false, true
@@ -70,32 +22,84 @@ test exhaustive_no_two_consecutive_pump_on:
   absent pump=true
   for_steps 1
 
-test exhaustive_methane_forces_next_off:
-  kind state_sequence
-  requirement "Whenever methane is true, the pump must be off in the next step."
+test highwater_without_methane_pump_next:
+  kind eventually_response
   trace:
-    highwater=false, methane=true
+    highwater=true, methane=false
+    highwater=true, methane=false
     highwater=false, methane=false
-    highwater=true, methane=true
-    highwater=true, methane=false
-  expect:
-    pump=false
-    pump=false
-    pump=false
-    pump=false
+  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
+  when highwater=true, methane=false
+  eventually pump=true
+  within_steps 1
+  require_closed_obligations true
 
-test alternating_inputs_next_step_obligations:
-  kind state_sequence
-  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step; whenever methane is true, the pump must be off in the next step."
+test methane_forces_pump_off_next:
+  kind eventually_response
   trace:
-    highwater=true, methane=false
+    highwater=false, methane=true
     highwater=true, methane=true
+    highwater=false, methane=true
+  requirement "Whenever methane is true, the pump must be off in the next step."
+  when methane=true
+  eventually pump=false
+  within_steps 1
+  require_closed_obligations true
+
+test methane_overrides_highwater:
+  kind eventually_response
+  trace:
+    highwater=true, methane=true
+    highwater=true, methane=true
+    highwater=true, methane=false
+  requirement "Whenever methane is true, the pump must be off in the next step."
+  when highwater=true, methane=true
+  eventually pump=false
+  within_steps 1
+  require_closed_obligations true
+
+test alternating_inputs_keep_required_next_pump_values:
+  kind state_sequence
+  trace:
     highwater=true, methane=false
     highwater=false, methane=true
     highwater=true, methane=false
+    highwater=true, methane=true
+    highwater=false, methane=false
+    highwater=true, methane=false
+  requirement "The next pump state must be on after highwater without methane and off after methane."
   expect:
-    pump=false
     pump=true
     pump=false
     pump=true
     pump=false
+    pump=false
+    pump=true
+
+test exhaustive_highwater_without_methane_pump_on:
+  kind eventually_response
+  mode exhaustive
+  max_depth 5
+  max_paths 256
+  requirement "Whenever methane is false and highwater is true, the pump must be on in the next step."
+  domains:
+    highwater false, true
+    methane false, true
+  when highwater=true, methane=false
+  eventually pump=true
+  within_steps 1
+  require_closed_obligations true
+
+test exhaustive_methane_pump_off:
+  kind eventually_response
+  mode exhaustive
+  max_depth 5
+  max_paths 256
+  requirement "Whenever methane is true, the pump must be off in the next step."
+  domains:
+    highwater false, true
+    methane false, true
+  when methane=true
+  eventually pump=false
+  within_steps 1
+  require_closed_obligations true

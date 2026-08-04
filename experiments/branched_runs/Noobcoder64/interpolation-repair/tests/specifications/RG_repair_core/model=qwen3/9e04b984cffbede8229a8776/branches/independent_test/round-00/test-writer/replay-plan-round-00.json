@@ -28,135 +28,118 @@
       ]
     },
     {
-      "env": {
-        "cl": [
-          "false",
-          "true"
-        ],
-        "req": [
-          "false",
-          "true"
-        ]
-      },
       "kind": "always_implication",
-      "max_depth": 6,
-      "max_paths": 256,
-      "mode": "exhaustive",
-      "name": "safety_cl_true_forces_val_false_exhaustive",
+      "name": "clearance_pulse_forces_val_false",
       "requirement": "Whenever cl is true, the output val must be false.",
       "then": {
         "val": "false"
       },
+      "trace": [
+        {
+          "cl": "false",
+          "req": "false"
+        },
+        {
+          "cl": "true",
+          "req": "true"
+        },
+        {
+          "cl": "false",
+          "req": "false"
+        },
+        {
+          "cl": "false",
+          "req": "true"
+        },
+        {
+          "cl": "false",
+          "req": "false"
+        }
+      ],
       "when": {
         "cl": "true"
       }
     },
     {
-      "env": {
-        "cl": [
-          "false",
-          "true"
-        ],
-        "req": [
-          "false",
-          "true"
-        ]
+      "kind": "always_implication",
+      "name": "repeated_clearance_forces_val_false",
+      "requirement": "Whenever cl is true, the output val must be false.",
+      "then": {
+        "val": "false"
       },
+      "trace": [
+        {
+          "cl": "false",
+          "req": "false"
+        },
+        {
+          "cl": "true",
+          "req": "false"
+        },
+        {
+          "cl": "true",
+          "req": "false"
+        },
+        {
+          "cl": "false",
+          "req": "true"
+        },
+        {
+          "cl": "false",
+          "req": "false"
+        },
+        {
+          "cl": "true",
+          "req": "true"
+        }
+      ],
+      "when": {
+        "cl": "true"
+      }
+    },
+    {
       "forbidden": {
         "cl": "true",
         "val": "true"
       },
       "kind": "exclusion",
-      "max_depth": 6,
-      "mode": "random",
-      "name": "safety_never_cl_and_val_true_random",
+      "name": "alternating_inputs_never_clearance_with_val",
       "requirement": "Whenever cl is true, the output val must be false.",
-      "runs": 50,
-      "seed": 904
-    },
-    {
-      "kind": "always_implication",
-      "name": "safety_concrete_clearance_pulses",
-      "requirement": "Whenever cl is true, the output val must be false.",
-      "then": {
-        "val": "false"
-      },
       "trace": [
         {
           "cl": "false",
           "req": "false"
         },
         {
-          "cl": "true",
+          "cl": "false",
           "req": "true"
         },
         {
-          "cl": "false",
+          "cl": "true",
           "req": "false"
         },
         {
-          "cl": "true",
+          "cl": "false",
           "req": "true"
         },
         {
-          "cl": "false",
+          "cl": "true",
           "req": "false"
         },
         {
-          "cl": "true",
+          "cl": "false",
           "req": "false"
         }
-      ],
-      "when": {
-        "cl": "true"
-      }
+      ]
     },
     {
-      "eventually": {
-        "gr": "true",
+      "forbidden": {
+        "cl": "true",
         "val": "true"
       },
-      "kind": "eventually_response",
-      "name": "liveness_bounded_witness_when_clear",
-      "require_closed_obligations": true,
-      "requirement": "The condition where both gr and val are true must occur infinitely often.",
-      "trace": [
-        {
-          "cl": "false",
-          "req": "false"
-        },
-        {
-          "cl": "false",
-          "req": "true"
-        },
-        {
-          "cl": "false",
-          "req": "false"
-        },
-        {
-          "cl": "false",
-          "req": "true"
-        },
-        {
-          "cl": "false",
-          "req": "false"
-        },
-        {
-          "cl": "false",
-          "req": "false"
-        }
-      ],
-      "within_steps": 6
-    },
-    {
-      "eventually": {
-        "gr": "true",
-        "val": "true"
-      },
-      "kind": "eventually_response",
-      "name": "liveness_bounded_witness_after_clearance_releases",
-      "require_closed_obligations": true,
-      "requirement": "The condition where both gr and val are true must occur infinitely often.",
+      "kind": "exclusion",
+      "name": "request_variations_do_not_override_clearance_safety",
+      "requirement": "Whenever cl is true, the output val must be false.",
       "trace": [
         {
           "cl": "false",
@@ -167,11 +150,7 @@
           "req": "true"
         },
         {
-          "cl": "false",
-          "req": "false"
-        },
-        {
-          "cl": "false",
+          "cl": "true",
           "req": "true"
         },
         {
@@ -179,11 +158,14 @@
           "req": "false"
         },
         {
+          "cl": "true",
+          "req": "false"
+        },
+        {
           "cl": "false",
           "req": "false"
         }
-      ],
-      "within_steps": 6
+      ]
     }
   ]
 }

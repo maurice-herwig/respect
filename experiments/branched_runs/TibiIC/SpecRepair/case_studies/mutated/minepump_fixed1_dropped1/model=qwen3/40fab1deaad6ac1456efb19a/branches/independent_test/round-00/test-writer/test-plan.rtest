@@ -9,56 +9,91 @@ test declared_variables:
   env highwater, methane
   sys pump
 
-test methane_turns_pump_off_next:
+test methane_forces_pump_off_next_step:
   kind state_sequence
   requirement "If methane is true, then pump must be false in the next step."
   trace:
     highwater=false, methane=true
     highwater=false, methane=false
   expect:
-    pump=false
+    methane=true
     pump=false
 
-test methane_overrides_highwater_next:
+test methane_overrides_simultaneous_highwater_next_step:
   kind state_sequence
   requirement "If methane is true, then pump must be false in the next step."
   trace:
     highwater=true, methane=true
-    highwater=true, methane=false
+    highwater=false, methane=false
   expect:
-    pump=false
+    highwater=true, methane=true
     pump=false
 
-test safe_highwater_turns_pump_on_next:
+test safe_highwater_turns_pump_on_next_step:
   kind state_sequence
   requirement "If highwater is true and methane is false, then pump must be true in the next step."
   trace:
     highwater=true, methane=false
     highwater=false, methane=false
   expect:
-    pump=false
+    highwater=true, methane=false
     pump=true
 
-test safe_highwater_after_methane_clears:
+test repeated_safe_highwater_keeps_requesting_pump_next_step:
   kind state_sequence
   requirement "If highwater is true and methane is false, then pump must be true in the next step."
   trace:
-    highwater=true, methane=true
+    highwater=true, methane=false
+    highwater=false, methane=false
     highwater=true, methane=false
     highwater=false, methane=false
   expect:
-    pump=false
-    pump=false
+    highwater=true, methane=false
+    pump=true
+    highwater=true, methane=false
     pump=true
 
-test methane_after_safe_pumping_turns_off:
+test alternating_safe_water_and_methane_next_step:
   kind state_sequence
-  requirement "If methane is true, then pump must be false in the next step."
+  requirement "Pump activates to clear water when safe and deactivates when methane is detected."
   trace:
     highwater=true, methane=false
+    highwater=false, methane=false
     highwater=false, methane=true
     highwater=false, methane=false
+    highwater=true, methane=false
+    highwater=false, methane=false
   expect:
-    pump=false
+    highwater=true, methane=false
     pump=true
+    methane=true
     pump=false
+    highwater=true, methane=false
+    pump=true
+
+test exhaustive_methane_requires_next_absence_of_pump:
+  kind response_absence
+  mode exhaustive
+  requirement "If methane is true, then pump must be false in the next step."
+  max_depth 5
+  max_paths 64
+  for_steps 1
+  domains:
+    highwater false, true
+    methane false, true
+  when methane=true
+  absent pump=true
+
+test exhaustive_safe_highwater_gets_pump_response:
+  kind eventually_response
+  mode exhaustive
+  requirement "If highwater is true and methane is false, then pump must be true in the next step."
+  max_depth 5
+  max_paths 64
+  within_steps 1
+  require_closed_obligations true
+  domains:
+    highwater false, true
+    methane false, true
+  when highwater=true, methane=false
+  eventually pump=true

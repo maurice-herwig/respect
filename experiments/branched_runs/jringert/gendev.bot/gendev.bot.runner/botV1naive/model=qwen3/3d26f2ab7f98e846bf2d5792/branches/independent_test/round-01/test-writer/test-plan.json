@@ -12,7 +12,49 @@
       ]
     },
     {
-      "name": "obstacle_zero_blocks_next_forward",
+      "name": "distance_20_blocks_next_forward",
+      "kind": "response_absence",
+      "requirement": "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition.",
+      "trace": [
+        {
+          "distance": "20"
+        },
+        {
+          "distance": "100"
+        }
+      ],
+      "when": {
+        "distance": "20"
+      },
+      "absent": {
+        "leftM": "FWD",
+        "rightM": "FWD"
+      },
+      "for_steps": 1
+    },
+    {
+      "name": "distance_19_blocks_next_forward",
+      "kind": "response_absence",
+      "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
+      "trace": [
+        {
+          "distance": "19"
+        },
+        {
+          "distance": "100"
+        }
+      ],
+      "when": {
+        "distance": "19"
+      },
+      "absent": {
+        "leftM": "FWD",
+        "rightM": "FWD"
+      },
+      "for_steps": 1
+    },
+    {
+      "name": "distance_0_blocks_next_forward",
       "kind": "response_absence",
       "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
       "trace": [
@@ -33,7 +75,7 @@
       "for_steps": 1
     },
     {
-      "name": "obstacle_boundary_twenty_blocks_next_forward",
+      "name": "repeated_low_distance_blocks_forward",
       "kind": "response_absence",
       "requirement": "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition.",
       "trace": [
@@ -41,7 +83,16 @@
           "distance": "20"
         },
         {
-          "distance": "21"
+          "distance": "19"
+        },
+        {
+          "distance": "0"
+        },
+        {
+          "distance": "20"
+        },
+        {
+          "distance": "100"
         }
       ],
       "when": {
@@ -54,15 +105,24 @@
       "for_steps": 1
     },
     {
-      "name": "obstacle_nineteen_blocks_next_forward",
+      "name": "alternating_safe_and_unsafe_boundary_19",
       "kind": "response_absence",
-      "requirement": "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition.",
+      "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
       "trace": [
+        {
+          "distance": "21"
+        },
+        {
+          "distance": "20"
+        },
+        {
+          "distance": "21"
+        },
         {
           "distance": "19"
         },
         {
-          "distance": "21"
+          "distance": "100"
         }
       ],
       "when": {
@@ -75,85 +135,18 @@
       "for_steps": 1
     },
     {
-      "name": "persistent_close_distance_blocks_forward",
+      "name": "exhaustive_boundary_distance_20",
       "kind": "response_absence",
-      "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
-      "trace": [
-        {
-          "distance": "20"
-        },
-        {
-          "distance": "19"
-        },
-        {
-          "distance": "1"
-        },
-        {
-          "distance": "0"
-        },
-        {
-          "distance": "20"
-        },
-        {
-          "distance": "18"
-        }
-      ],
-      "when": {
-        "distance": "20"
-      },
-      "absent": {
-        "leftM": "FWD",
-        "rightM": "FWD"
-      },
-      "for_steps": 1
-    },
-    {
-      "name": "alternating_close_and_clear_blocks_after_close",
-      "kind": "response_absence",
+      "mode": "exhaustive",
       "requirement": "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition.",
-      "trace": [
-        {
-          "distance": "100"
-        },
-        {
-          "distance": "20"
-        },
-        {
-          "distance": "100"
-        },
-        {
-          "distance": "0"
-        },
-        {
-          "distance": "21"
-        },
-        {
-          "distance": "20"
-        }
-      ],
-      "when": {
-        "distance": "20"
-      },
-      "absent": {
-        "leftM": "FWD",
-        "rightM": "FWD"
-      },
-      "for_steps": 1
-    },
-    {
-      "name": "representative_low_distance_random_safety",
-      "kind": "response_absence",
-      "mode": "random",
-      "runs": 50,
-      "max_depth": 6,
-      "seed": 7,
-      "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
+      "max_depth": 4,
+      "max_paths": 256,
       "env": {
         "distance": [
           "0",
-          "1",
           "19",
-          "20"
+          "20",
+          "21"
         ]
       },
       "when": {
@@ -166,17 +159,70 @@
       "for_steps": 1
     },
     {
-      "name": "representative_boundary_exhaustive_safety",
+      "name": "exhaustive_boundary_distance_19",
       "kind": "response_absence",
       "mode": "exhaustive",
+      "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
       "max_depth": 4,
       "max_paths": 256,
-      "requirement": "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition.",
       "env": {
         "distance": [
           "0",
+          "19",
+          "20",
+          "21"
+        ]
+      },
+      "when": {
+        "distance": "19"
+      },
+      "absent": {
+        "leftM": "FWD",
+        "rightM": "FWD"
+      },
+      "for_steps": 1
+    },
+    {
+      "name": "exhaustive_boundary_distance_0",
+      "kind": "response_absence",
+      "mode": "exhaustive",
+      "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
+      "max_depth": 4,
+      "max_paths": 256,
+      "env": {
+        "distance": [
+          "0",
+          "19",
+          "20",
+          "21"
+        ]
+      },
+      "when": {
+        "distance": "0"
+      },
+      "absent": {
+        "leftM": "FWD",
+        "rightM": "FWD"
+      },
+      "for_steps": 1
+    },
+    {
+      "name": "random_proximity_safety",
+      "kind": "response_absence",
+      "mode": "random",
+      "requirement": "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD.",
+      "runs": 50,
+      "max_depth": 6,
+      "seed": 26,
+      "env": {
+        "distance": [
+          "0",
+          "1",
+          "10",
+          "19",
           "20",
           "21",
+          "50",
           "100"
         ]
       },

@@ -7,7 +7,7 @@ approval: never
 sandbox: danger-full-access
 reasoning effort: medium
 reasoning summaries: none
-session id: 019fc811-181e-7c20-a846-5bc525a65e95
+session id: 019fcc05-3790-7743-adfb-bc4396787b26
 --------
 user
 Use $respect-test-writer.
@@ -83,12 +83,12 @@ The specification defines the condition "forward" as occurring when both `leftM`
 The system must satisfy the following guarantee regarding proximity safety: At all times, if the current `distance` value is less than or equal to 20, then in the immediately next state, the system must not be in the "forward" condition. This means that whenever the measured distance is 20 or less, the subsequent motor commands cannot have both `leftM` and `rightM` set to FWD.
 
 codex
-I’ll use `respect-test-writer` and keep the tests independent from the generated Spectra, as requested. I’m reading only the skill instructions and the controller test DSL before writing the plan.
+I’ll use `respect-test-writer` and keep the tests independent: only the DSL, fixed signature, controller metadata paths, and the natural-language requirement. I’ll first inspect the DSL reference, then write and compile the `.rtest` plan.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\.agents\\skills\\respect-test-writer\\SKILL.md'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw .agents\\skills\\respect-test-writer\\SKILL.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\controller_tests\\DSL.md'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 891ms:
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw controller_tests\\DSL.md" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 653ms:
 ---
 name: respect-test-writer
 description: Independent ReSpect controller-test writer. Generate controller_tests .rtest plans from natural-language requirements plus a fixed env/sys signature and controller metadata, without reading generated Spectra contents or the specification agent's reasoning. Use for independent-test experiments that reduce self-testing bias.
@@ -152,7 +152,8 @@ untestable_requirements: <number>
 artifact_dir: <path>
 ```
 
- succeeded in 974ms:
+
+ succeeded in 677ms:
 # ReSpect Controller-Test DSL
 
 This document defines the `.rtest` language used to write Method-3 controller
@@ -851,835 +852,1164 @@ requirements:
 Do not assert a concrete output strategy when the natural-language requirement
 allows multiple valid strategies.
 
-codex
-I have the DSL shape now. The main testable behavior is the one-step safety obligation after `distance <= 20`; I’m going to encode that with bounded absence tests around boundary and stress input traces, without asserting a particular motor command when the distance is safe.
-exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-ChildItem -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01' -Force | Select-Object FullName,Name,Mode" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 695ms:
-
-FullName                                                                                                                                                                               
---------                                                                                                                                                                               
-C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_t...
-
-
 
 codex
-I’m creating the `.rtest` file in the requested artifact directory now. The tests will include explicit ownership plus concrete boundary cases at `0`, `20`, `21`, and `100`, and a shallow finite exploration over representative distances.
+The requirement is an immediate next-state safety rule, so I’m avoiding tests that forbid forward in the same state as a low distance. The plan will target the one-step “after distance <= 20” obligation at representative boundary and stress traces.
+codex
+I’m going to create the output directory and write a focused plan: explicit ownership, concrete next-step absence checks for `0`, `19`, and `20`, plus bounded randomized/exhaustive coverage over representative distance values.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "New-Item -ItemType Directory -Force -Path 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer' | Select-Object -ExpandProperty FullName" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 907ms:
-C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer
-
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "New-Item -ItemType Directory -Force \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\" | Out-Null" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 536ms:
 apply patch
 patch: completed
 C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest
 diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..91d24bf20e48d9b70af75a1a145d219370da5fb2
---- /dev/null
+index 25f302313fd5a4aa498d2365362c75cf3c66a5e7..05e3c1823b1c872aaacc6d913b3b9d25a493ab46
+--- a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-@@ -0,0 +1,83 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
-+spec_name BotV1naive
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
-+environment distance
-+system leftM, rightM
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env distance
-+  sys leftM, rightM
-+
-+test obstacle_zero_blocks_next_forward:
-+  kind response_absence
+@@ -9,85 +9,79 @@
+   env distance
+   sys leftM, rightM
+ 
+-test obstacle_zero_blocks_next_forward:
+-  kind response_absence
+-  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+-  trace:
+-    distance=0
+-    distance=100
+-  when distance=0
+-  absent leftM=FWD, rightM=FWD
+-  for_steps 1
+-
+-test obstacle_boundary_twenty_blocks_next_forward:
++test distance_20_blocks_next_forward:
+   kind response_absence
+   requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   trace:
+     distance=20
+-    distance=21
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test obstacle_nineteen_blocks_next_forward:
++test distance_19_blocks_next_forward:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
-+    distance=0
+   trace:
+     distance=19
+-    distance=21
++    distance=100
+   when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test persistent_close_distance_blocks_forward:
++test distance_0_blocks_next_forward:
+   kind response_absence
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
+-    distance=20
+-    distance=19
+-    distance=1
+     distance=0
+-    distance=20
+-    distance=18
+-  when distance=20
 +    distance=100
 +  when distance=0
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test obstacle_boundary_twenty_blocks_next_forward:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
-+    distance=20
-+    distance=21
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test persistent_close_distance_blocks_forward:
-+  kind response_absence
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
-+    distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test alternating_close_and_clear_blocks_after_close:
++test repeated_low_distance_blocks_forward:
+   kind response_absence
+   requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   trace:
+-    distance=100
+     distance=20
+-    distance=100
 +    distance=19
-+    distance=1
-+    distance=0
-+    distance=20
-+    distance=18
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test alternating_close_and_clear_blocks_after_close:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+     distance=0
+-    distance=21
+     distance=20
+-  when distance=20
++    distance=100
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_low_distance_random_safety:
++test alternating_safe_and_unsafe_boundary:
+   kind response_absence
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 7
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+-  domains:
+-    distance 0, 1, 19, 20
+-  when distance=20
 +  trace:
-+    distance=100
-+    distance=20
-+    distance=100
-+    distance=0
 +    distance=21
 +    distance=20
-+  when distance=20
++    distance=21
++    distance=19
++    distance=100
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distances:
+   kind response_absence
+   mode exhaustive
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   max_depth 4
+   max_paths 256
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   domains:
+-    distance 0, 20, 21, 100
+-  when distance=20
++    distance 0, 19, 20, 21
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test representative_low_distance_random_safety:
++test random_proximity_safety:
 +  kind response_absence
 +  mode random
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
 +  runs 50
 +  max_depth 6
-+  seed 7
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  seed 26
 +  domains:
-+    distance 0, 1, 19, 20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_boundary_exhaustive_safety:
-+  kind response_absence
-+  mode exhaustive
-+  max_depth 4
-+  max_paths 256
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  domains:
-+    distance 0, 20, 21, 100
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
++    distance 0, 1, 10, 19, 20, 21, 50, 100
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
 
 diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..91d24bf20e48d9b70af75a1a145d219370da5fb2
---- /dev/null
+index 25f302313fd5a4aa498d2365362c75cf3c66a5e7..05e3c1823b1c872aaacc6d913b3b9d25a493ab46
+--- a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-@@ -0,0 +1,83 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
-+spec_name BotV1naive
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
-+environment distance
-+system leftM, rightM
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env distance
-+  sys leftM, rightM
-+
-+test obstacle_zero_blocks_next_forward:
-+  kind response_absence
+@@ -9,85 +9,79 @@
+   env distance
+   sys leftM, rightM
+ 
+-test obstacle_zero_blocks_next_forward:
+-  kind response_absence
+-  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+-  trace:
+-    distance=0
+-    distance=100
+-  when distance=0
+-  absent leftM=FWD, rightM=FWD
+-  for_steps 1
+-
+-test obstacle_boundary_twenty_blocks_next_forward:
++test distance_20_blocks_next_forward:
+   kind response_absence
+   requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   trace:
+     distance=20
+-    distance=21
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test obstacle_nineteen_blocks_next_forward:
++test distance_19_blocks_next_forward:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
-+    distance=0
+   trace:
+     distance=19
+-    distance=21
++    distance=100
+   when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test persistent_close_distance_blocks_forward:
++test distance_0_blocks_next_forward:
+   kind response_absence
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
+-    distance=20
+-    distance=19
+-    distance=1
+     distance=0
+-    distance=20
+-    distance=18
+-  when distance=20
 +    distance=100
 +  when distance=0
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test obstacle_boundary_twenty_blocks_next_forward:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
-+    distance=20
-+    distance=21
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test persistent_close_distance_blocks_forward:
-+  kind response_absence
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
-+    distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test alternating_close_and_clear_blocks_after_close:
++test repeated_low_distance_blocks_forward:
+   kind response_absence
+   requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   trace:
+-    distance=100
+     distance=20
+-    distance=100
 +    distance=19
-+    distance=1
-+    distance=0
-+    distance=20
-+    distance=18
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test alternating_close_and_clear_blocks_after_close:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+     distance=0
+-    distance=21
+     distance=20
+-  when distance=20
++    distance=100
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_low_distance_random_safety:
++test alternating_safe_and_unsafe_boundary:
+   kind response_absence
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 7
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+-  domains:
+-    distance 0, 1, 19, 20
+-  when distance=20
 +  trace:
-+    distance=100
-+    distance=20
-+    distance=100
-+    distance=0
 +    distance=21
 +    distance=20
-+  when distance=20
++    distance=21
++    distance=19
++    distance=100
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distances:
+   kind response_absence
+   mode exhaustive
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   max_depth 4
+   max_paths 256
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   domains:
+-    distance 0, 20, 21, 100
+-  when distance=20
++    distance 0, 19, 20, 21
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test representative_low_distance_random_safety:
++test random_proximity_safety:
 +  kind response_absence
 +  mode random
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
 +  runs 50
 +  max_depth 6
-+  seed 7
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  seed 26
 +  domains:
-+    distance 0, 1, 19, 20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_boundary_exhaustive_safety:
-+  kind response_absence
-+  mode exhaustive
-+  max_depth 4
-+  max_paths 256
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  domains:
-+    distance 0, 20, 21, 100
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
++    distance 0, 1, 10, 19, 20, 21, 50, 100
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
 
 codex
-The first draft is in place. I’m running the DSL compiler now to catch structural issues; this does not inspect the Spectra contents or evaluate the controller.
+The first draft is written. I’m compiling it now to catch DSL structural issues only; I won’t inspect the Spectra contents.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest' -o 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.json' --diagnostics-json 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\dsl-diagnostics.json'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 1607ms:
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest\" -o \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.json\" --diagnostics-json \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\dsl-diagnostics.json\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1116ms:
 diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..91d24bf20e48d9b70af75a1a145d219370da5fb2
---- /dev/null
+index 25f302313fd5a4aa498d2365362c75cf3c66a5e7..05e3c1823b1c872aaacc6d913b3b9d25a493ab46
+--- a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-@@ -0,0 +1,83 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
-+spec_name BotV1naive
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
-+environment distance
-+system leftM, rightM
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env distance
-+  sys leftM, rightM
-+
-+test obstacle_zero_blocks_next_forward:
-+  kind response_absence
+@@ -9,85 +9,79 @@
+   env distance
+   sys leftM, rightM
+ 
+-test obstacle_zero_blocks_next_forward:
+-  kind response_absence
+-  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+-  trace:
+-    distance=0
+-    distance=100
+-  when distance=0
+-  absent leftM=FWD, rightM=FWD
+-  for_steps 1
+-
+-test obstacle_boundary_twenty_blocks_next_forward:
++test distance_20_blocks_next_forward:
+   kind response_absence
+   requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   trace:
+     distance=20
+-    distance=21
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test obstacle_nineteen_blocks_next_forward:
++test distance_19_blocks_next_forward:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
-+    distance=0
+   trace:
+     distance=19
+-    distance=21
++    distance=100
+   when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test persistent_close_distance_blocks_forward:
++test distance_0_blocks_next_forward:
+   kind response_absence
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
+-    distance=20
+-    distance=19
+-    distance=1
+     distance=0
+-    distance=20
+-    distance=18
+-  when distance=20
 +    distance=100
 +  when distance=0
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test obstacle_boundary_twenty_blocks_next_forward:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
-+    distance=20
-+    distance=21
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test persistent_close_distance_blocks_forward:
-+  kind response_absence
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
-+    distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test alternating_close_and_clear_blocks_after_close:
++test repeated_low_distance_blocks_forward:
+   kind response_absence
+   requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   trace:
+-    distance=100
+     distance=20
+-    distance=100
 +    distance=19
-+    distance=1
-+    distance=0
-+    distance=20
-+    distance=18
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test alternating_close_and_clear_blocks_after_close:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+     distance=0
+-    distance=21
+     distance=20
+-  when distance=20
++    distance=100
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_low_distance_random_safety:
++test alternating_safe_and_unsafe_boundary:
+   kind response_absence
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 7
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+-  domains:
+-    distance 0, 1, 19, 20
+-  when distance=20
 +  trace:
-+    distance=100
-+    distance=20
-+    distance=100
-+    distance=0
 +    distance=21
 +    distance=20
-+  when distance=20
++    distance=21
++    distance=19
++    distance=100
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distances:
+   kind response_absence
+   mode exhaustive
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   max_depth 4
+   max_paths 256
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   domains:
+-    distance 0, 20, 21, 100
+-  when distance=20
++    distance 0, 19, 20, 21
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test representative_low_distance_random_safety:
++test random_proximity_safety:
 +  kind response_absence
 +  mode random
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
 +  runs 50
 +  max_depth 6
-+  seed 7
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  seed 26
 +  domains:
-+    distance 0, 1, 19, 20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_boundary_exhaustive_safety:
-+  kind response_absence
-+  mode exhaustive
-+  max_depth 4
-+  max_paths 256
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  domains:
-+    distance 0, 20, 21, 100
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
++    distance 0, 1, 10, 19, 20, 21, 50, 100
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
 
 codex
-The DSL compiled cleanly. I noticed the representative exploration focused on the `20` trigger, so I’m adding one more just-below-boundary case at `19` to better exercise the “less than” part without broadening the expected behavior at safe distances.
+Compilation passed, but I’m tightening the plan before calling it done: the DSL’s `response_absence` without a `when` means an immediate absence window, which would overstate the requirement on traces that start with `distance > 20`. I’m adding explicit triggers so each runtime test checks only justified low-distance states.
 apply patch
 patch: completed
 C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest
 diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..25f302313fd5a4aa498d2365362c75cf3c66a5e7
---- /dev/null
+index 25f302313fd5a4aa498d2365362c75cf3c66a5e7..80be91cad59487fd48dfc191342b4248b3df381d
+--- a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-@@ -0,0 +1,93 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
-+spec_name BotV1naive
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
-+environment distance
-+system leftM, rightM
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env distance
-+  sys leftM, rightM
-+
-+test obstacle_zero_blocks_next_forward:
-+  kind response_absence
+@@ -9,85 +9,107 @@
+   env distance
+   sys leftM, rightM
+ 
+-test obstacle_zero_blocks_next_forward:
+-  kind response_absence
+-  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+-  trace:
+-    distance=0
+-    distance=100
+-  when distance=0
+-  absent leftM=FWD, rightM=FWD
+-  for_steps 1
+-
+-test obstacle_boundary_twenty_blocks_next_forward:
++test distance_20_blocks_next_forward:
+   kind response_absence
+   requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   trace:
+     distance=20
+-    distance=21
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test obstacle_nineteen_blocks_next_forward:
++test distance_19_blocks_next_forward:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
+   trace:
+     distance=19
+-    distance=21
++    distance=100
+   when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test persistent_close_distance_blocks_forward:
++test distance_0_blocks_next_forward:
+   kind response_absence
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
 +    distance=0
 +    distance=100
 +  when distance=0
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test obstacle_boundary_twenty_blocks_next_forward:
++test repeated_low_distance_blocks_forward:
 +  kind response_absence
 +  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  trace:
-+    distance=20
+     distance=20
+     distance=19
+-    distance=1
+     distance=0
+     distance=20
+-    distance=18
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test alternating_close_and_clear_blocks_after_close:
++test alternating_safe_and_unsafe_boundary_19:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
+-    distance=100
 +    distance=21
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test obstacle_nineteen_blocks_next_forward:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
+     distance=20
++    distance=21
 +    distance=19
-+    distance=21
+     distance=100
+-    distance=0
+-    distance=21
+-    distance=20
 +  when distance=19
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test persistent_close_distance_blocks_forward:
-+  kind response_absence
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
-+    distance=20
-+    distance=19
-+    distance=1
-+    distance=0
-+    distance=20
-+    distance=18
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test alternating_close_and_clear_blocks_after_close:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
-+    distance=100
-+    distance=20
-+    distance=100
-+    distance=0
-+    distance=21
-+    distance=20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_low_distance_random_safety:
-+  kind response_absence
-+  mode random
-+  runs 50
-+  max_depth 6
-+  seed 7
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  domains:
-+    distance 0, 1, 19, 20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distance_20:
 +  kind response_absence
 +  mode exhaustive
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  max_depth 4
 +  max_paths 256
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  domains:
-+    distance 0, 20, 21, 100
-+  when distance=20
++    distance 0, 19, 20, 21
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_low_distance_random_safety:
++test exhaustive_boundary_distance_19:
+   kind response_absence
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 7
++  mode exhaustive
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  max_depth 4
++  max_paths 256
+   domains:
+-    distance 0, 1, 19, 20
+-  when distance=20
++    distance 0, 19, 20, 21
++  when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distance_0:
+   kind response_absence
+   mode exhaustive
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   max_depth 4
+   max_paths 256
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   domains:
+-    distance 0, 20, 21, 100
++    distance 0, 19, 20, 21
++  when distance=0
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
++
++test random_proximity_safety:
++  kind response_absence
++  mode random
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  runs 50
++  max_depth 6
++  seed 26
++  domains:
++    distance 0, 1, 10, 19, 20, 21, 50, 100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
 
 diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..25f302313fd5a4aa498d2365362c75cf3c66a5e7
---- /dev/null
+index 25f302313fd5a4aa498d2365362c75cf3c66a5e7..80be91cad59487fd48dfc191342b4248b3df381d
+--- a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-@@ -0,0 +1,93 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
-+spec_name BotV1naive
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
-+environment distance
-+system leftM, rightM
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env distance
-+  sys leftM, rightM
-+
-+test obstacle_zero_blocks_next_forward:
-+  kind response_absence
+@@ -9,85 +9,107 @@
+   env distance
+   sys leftM, rightM
+ 
+-test obstacle_zero_blocks_next_forward:
+-  kind response_absence
+-  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+-  trace:
+-    distance=0
+-    distance=100
+-  when distance=0
+-  absent leftM=FWD, rightM=FWD
+-  for_steps 1
+-
+-test obstacle_boundary_twenty_blocks_next_forward:
++test distance_20_blocks_next_forward:
+   kind response_absence
+   requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   trace:
+     distance=20
+-    distance=21
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test obstacle_nineteen_blocks_next_forward:
++test distance_19_blocks_next_forward:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
+   trace:
+     distance=19
+-    distance=21
++    distance=100
+   when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test persistent_close_distance_blocks_forward:
++test distance_0_blocks_next_forward:
+   kind response_absence
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
 +    distance=0
 +    distance=100
 +  when distance=0
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test obstacle_boundary_twenty_blocks_next_forward:
++test repeated_low_distance_blocks_forward:
 +  kind response_absence
 +  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  trace:
-+    distance=20
+     distance=20
+     distance=19
+-    distance=1
+     distance=0
+     distance=20
+-    distance=18
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test alternating_close_and_clear_blocks_after_close:
++test alternating_safe_and_unsafe_boundary_19:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
+-    distance=100
 +    distance=21
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test obstacle_nineteen_blocks_next_forward:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
+     distance=20
++    distance=21
 +    distance=19
-+    distance=21
+     distance=100
+-    distance=0
+-    distance=21
+-    distance=20
 +  when distance=19
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test persistent_close_distance_blocks_forward:
-+  kind response_absence
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
-+    distance=20
-+    distance=19
-+    distance=1
-+    distance=0
-+    distance=20
-+    distance=18
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test alternating_close_and_clear_blocks_after_close:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
-+    distance=100
-+    distance=20
-+    distance=100
-+    distance=0
-+    distance=21
-+    distance=20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_low_distance_random_safety:
-+  kind response_absence
-+  mode random
-+  runs 50
-+  max_depth 6
-+  seed 7
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  domains:
-+    distance 0, 1, 19, 20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distance_20:
 +  kind response_absence
 +  mode exhaustive
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  max_depth 4
 +  max_paths 256
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  domains:
-+    distance 0, 20, 21, 100
-+  when distance=20
++    distance 0, 19, 20, 21
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_low_distance_random_safety:
++test exhaustive_boundary_distance_19:
+   kind response_absence
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 7
++  mode exhaustive
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  max_depth 4
++  max_paths 256
+   domains:
+-    distance 0, 1, 19, 20
+-  when distance=20
++    distance 0, 19, 20, 21
++  when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distance_0:
+   kind response_absence
+   mode exhaustive
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   max_depth 4
+   max_paths 256
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   domains:
+-    distance 0, 20, 21, 100
++    distance 0, 19, 20, 21
++  when distance=0
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
++
++test random_proximity_safety:
++  kind response_absence
++  mode random
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  runs 50
++  max_depth 6
++  seed 26
++  domains:
++    distance 0, 1, 10, 19, 20, 21, 50, 100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
 
 codex
-I’m recompiling after that small coverage edit so the JSON artifact and diagnostics match the final `.rtest` file.
+The plan now has explicit `when distance=...` triggers for every absence check. I’m recompiling and keeping the diagnostics artifact alongside the JSON output.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest' -o 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.json' --diagnostics-json 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\dsl-diagnostics.json'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 1211ms:
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python controller_tests\\compile_test_plan.py \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest\" -o \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.json\" --diagnostics-json \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\dsl-diagnostics.json\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 1004ms:
 diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..25f302313fd5a4aa498d2365362c75cf3c66a5e7
---- /dev/null
+index 25f302313fd5a4aa498d2365362c75cf3c66a5e7..80be91cad59487fd48dfc191342b4248b3df381d
+--- a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-@@ -0,0 +1,93 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
-+spec_name BotV1naive
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
-+environment distance
-+system leftM, rightM
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env distance
-+  sys leftM, rightM
-+
-+test obstacle_zero_blocks_next_forward:
-+  kind response_absence
+@@ -9,85 +9,107 @@
+   env distance
+   sys leftM, rightM
+ 
+-test obstacle_zero_blocks_next_forward:
+-  kind response_absence
+-  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+-  trace:
+-    distance=0
+-    distance=100
+-  when distance=0
+-  absent leftM=FWD, rightM=FWD
+-  for_steps 1
+-
+-test obstacle_boundary_twenty_blocks_next_forward:
++test distance_20_blocks_next_forward:
+   kind response_absence
+   requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   trace:
+     distance=20
+-    distance=21
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test obstacle_nineteen_blocks_next_forward:
++test distance_19_blocks_next_forward:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
+   trace:
+     distance=19
+-    distance=21
++    distance=100
+   when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test persistent_close_distance_blocks_forward:
++test distance_0_blocks_next_forward:
+   kind response_absence
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
 +    distance=0
 +    distance=100
 +  when distance=0
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test obstacle_boundary_twenty_blocks_next_forward:
++test repeated_low_distance_blocks_forward:
 +  kind response_absence
 +  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  trace:
-+    distance=20
+     distance=20
+     distance=19
+-    distance=1
+     distance=0
+     distance=20
+-    distance=18
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test alternating_close_and_clear_blocks_after_close:
++test alternating_safe_and_unsafe_boundary_19:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
+-    distance=100
 +    distance=21
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test obstacle_nineteen_blocks_next_forward:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
+     distance=20
++    distance=21
 +    distance=19
-+    distance=21
+     distance=100
+-    distance=0
+-    distance=21
+-    distance=20
 +  when distance=19
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test persistent_close_distance_blocks_forward:
-+  kind response_absence
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
-+    distance=20
-+    distance=19
-+    distance=1
-+    distance=0
-+    distance=20
-+    distance=18
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test alternating_close_and_clear_blocks_after_close:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
-+    distance=100
-+    distance=20
-+    distance=100
-+    distance=0
-+    distance=21
-+    distance=20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_low_distance_random_safety:
-+  kind response_absence
-+  mode random
-+  runs 50
-+  max_depth 6
-+  seed 7
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  domains:
-+    distance 0, 1, 19, 20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distance_20:
 +  kind response_absence
 +  mode exhaustive
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  max_depth 4
 +  max_paths 256
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  domains:
-+    distance 0, 20, 21, 100
-+  when distance=20
++    distance 0, 19, 20, 21
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_low_distance_random_safety:
++test exhaustive_boundary_distance_19:
+   kind response_absence
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 7
++  mode exhaustive
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  max_depth 4
++  max_paths 256
+   domains:
+-    distance 0, 1, 19, 20
+-  when distance=20
++    distance 0, 19, 20, 21
++  when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distance_0:
+   kind response_absence
+   mode exhaustive
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   max_depth 4
+   max_paths 256
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   domains:
+-    distance 0, 20, 21, 100
++    distance 0, 19, 20, 21
++  when distance=0
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
++
++test random_proximity_safety:
++  kind response_absence
++  mode random
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  runs 50
++  max_depth 6
++  seed 26
++  domains:
++    distance 0, 1, 10, 19, 20, 21, 50, 100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
 
+codex
+The second compile succeeded. I’m reading the compiler diagnostics JSON now to report the exact compiled test count and artifact paths.
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\dsl-diagnostics.json'" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Raw \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\dsl-diagnostics.json\"" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
 exec
-"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -LiteralPath 'C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest' -Pattern '"'^test '"' | Measure-Object | Select-Object -ExpandProperty Count" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
- succeeded in 833ms:
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path \"C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest\" -Pattern '"'^test '"' | Measure-Object | Select-Object -ExpandProperty Count" in C:\Users\mauri\OneDrive\Desktop\Repos\respect
+ succeeded in 840ms:
 {
   "status": "success",
   "tool": "controller_tests.compile_test_plan",
   "file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\jringert\\gendev.bot\\gendev.bot.runner\\botV1naive\\model=qwen3\\3d26f2ab7f98e846bf2d5792\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest",
   "errors": [],
-  "compiled_tests": 8
+  "compiled_tests": 10
 }
 
- succeeded in 911ms:
-8
+
+ succeeded in 881ms:
+10
 
 diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..25f302313fd5a4aa498d2365362c75cf3c66a5e7
---- /dev/null
+index 25f302313fd5a4aa498d2365362c75cf3c66a5e7..80be91cad59487fd48dfc191342b4248b3df381d
+--- a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-@@ -0,0 +1,93 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
-+spec_name BotV1naive
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
-+environment distance
-+system leftM, rightM
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env distance
-+  sys leftM, rightM
-+
-+test obstacle_zero_blocks_next_forward:
-+  kind response_absence
+@@ -9,85 +9,107 @@
+   env distance
+   sys leftM, rightM
+ 
+-test obstacle_zero_blocks_next_forward:
+-  kind response_absence
+-  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+-  trace:
+-    distance=0
+-    distance=100
+-  when distance=0
+-  absent leftM=FWD, rightM=FWD
+-  for_steps 1
+-
+-test obstacle_boundary_twenty_blocks_next_forward:
++test distance_20_blocks_next_forward:
+   kind response_absence
+   requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   trace:
+     distance=20
+-    distance=21
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test obstacle_nineteen_blocks_next_forward:
++test distance_19_blocks_next_forward:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
+   trace:
+     distance=19
+-    distance=21
++    distance=100
+   when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test persistent_close_distance_blocks_forward:
++test distance_0_blocks_next_forward:
+   kind response_absence
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
 +    distance=0
 +    distance=100
 +  when distance=0
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test obstacle_boundary_twenty_blocks_next_forward:
++test repeated_low_distance_blocks_forward:
 +  kind response_absence
 +  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  trace:
-+    distance=20
+     distance=20
+     distance=19
+-    distance=1
+     distance=0
+     distance=20
+-    distance=18
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test alternating_close_and_clear_blocks_after_close:
++test alternating_safe_and_unsafe_boundary_19:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
+-    distance=100
 +    distance=21
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test obstacle_nineteen_blocks_next_forward:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
+     distance=20
++    distance=21
 +    distance=19
-+    distance=21
+     distance=100
+-    distance=0
+-    distance=21
+-    distance=20
 +  when distance=19
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test persistent_close_distance_blocks_forward:
-+  kind response_absence
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
-+    distance=20
-+    distance=19
-+    distance=1
-+    distance=0
-+    distance=20
-+    distance=18
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test alternating_close_and_clear_blocks_after_close:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
-+    distance=100
-+    distance=20
-+    distance=100
-+    distance=0
-+    distance=21
-+    distance=20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_low_distance_random_safety:
-+  kind response_absence
-+  mode random
-+  runs 50
-+  max_depth 6
-+  seed 7
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  domains:
-+    distance 0, 1, 19, 20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distance_20:
 +  kind response_absence
 +  mode exhaustive
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  max_depth 4
 +  max_paths 256
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  domains:
-+    distance 0, 20, 21, 100
-+  when distance=20
++    distance 0, 19, 20, 21
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_low_distance_random_safety:
++test exhaustive_boundary_distance_19:
+   kind response_absence
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 7
++  mode exhaustive
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  max_depth 4
++  max_paths 256
+   domains:
+-    distance 0, 1, 19, 20
+-  when distance=20
++    distance 0, 19, 20, 21
++  when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distance_0:
+   kind response_absence
+   mode exhaustive
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   max_depth 4
+   max_paths 256
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   domains:
+-    distance 0, 20, 21, 100
++    distance 0, 19, 20, 21
++  when distance=0
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
++
++test random_proximity_safety:
++  kind response_absence
++  mode random
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  runs 50
++  max_depth 6
++  seed 26
++  domains:
++    distance 0, 1, 10, 19, 20, 21, 50, 100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
 
 codex
 test_plan_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.rtest
 compiled_test_plan_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\test-plan.json
 dsl_diagnostics_file: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer\dsl-diagnostics.json
-tests_planned: 8
+tests_planned: 10
 untestable_requirements: 0
 artifact_dir: C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-01\test-writer
 diff --git a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-new file mode 100644
-index 0000000000000000000000000000000000000000..25f302313fd5a4aa498d2365362c75cf3c66a5e7
---- /dev/null
+index 25f302313fd5a4aa498d2365362c75cf3c66a5e7..80be91cad59487fd48dfc191342b4248b3df381d
+--- a/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
 +++ b/experiments/branched_runs/jringert/gendev.bot/gendev.bot.runner/botV1naive/model=qwen3/3d26f2ab7f98e846bf2d5792/branches/independent_test/round-01/test-writer/test-plan.rtest
-@@ -0,0 +1,93 @@
-+controller_dir C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\synthesis\jit
-+spec_name BotV1naive
-+spectra_file C:\Users\mauri\OneDrive\Desktop\Repos\respect\experiments\branched_runs\jringert\gendev.bot\gendev.bot.runner\botV1naive\model=qwen3\3d26f2ab7f98e846bf2d5792\branches\independent_test\round-00\spec-repair\skill_artifacts\final.spectra
-+environment distance
-+system leftM, rightM
-+
-+test declared_variables:
-+  kind variable_ownership
-+  env distance
-+  sys leftM, rightM
-+
-+test obstacle_zero_blocks_next_forward:
-+  kind response_absence
+@@ -9,85 +9,107 @@
+   env distance
+   sys leftM, rightM
+ 
+-test obstacle_zero_blocks_next_forward:
+-  kind response_absence
+-  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+-  trace:
+-    distance=0
+-    distance=100
+-  when distance=0
+-  absent leftM=FWD, rightM=FWD
+-  for_steps 1
+-
+-test obstacle_boundary_twenty_blocks_next_forward:
++test distance_20_blocks_next_forward:
+   kind response_absence
+   requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   trace:
+     distance=20
+-    distance=21
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test obstacle_nineteen_blocks_next_forward:
++test distance_19_blocks_next_forward:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
+   trace:
+     distance=19
+-    distance=21
++    distance=100
+   when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test persistent_close_distance_blocks_forward:
++test distance_0_blocks_next_forward:
+   kind response_absence
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
 +    distance=0
 +    distance=100
 +  when distance=0
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test obstacle_boundary_twenty_blocks_next_forward:
++test repeated_low_distance_blocks_forward:
 +  kind response_absence
 +  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  trace:
-+    distance=20
+     distance=20
+     distance=19
+-    distance=1
+     distance=0
+     distance=20
+-    distance=18
++    distance=100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test alternating_close_and_clear_blocks_after_close:
++test alternating_safe_and_unsafe_boundary_19:
+   kind response_absence
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   trace:
+-    distance=100
 +    distance=21
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test obstacle_nineteen_blocks_next_forward:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
+     distance=20
++    distance=21
 +    distance=19
-+    distance=21
+     distance=100
+-    distance=0
+-    distance=21
+-    distance=20
 +  when distance=19
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
 +
-+test persistent_close_distance_blocks_forward:
-+  kind response_absence
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  trace:
-+    distance=20
-+    distance=19
-+    distance=1
-+    distance=0
-+    distance=20
-+    distance=18
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test alternating_close_and_clear_blocks_after_close:
-+  kind response_absence
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
-+  trace:
-+    distance=100
-+    distance=20
-+    distance=100
-+    distance=0
-+    distance=21
-+    distance=20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_low_distance_random_safety:
-+  kind response_absence
-+  mode random
-+  runs 50
-+  max_depth 6
-+  seed 7
-+  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
-+  domains:
-+    distance 0, 1, 19, 20
-+  when distance=20
-+  absent leftM=FWD, rightM=FWD
-+  for_steps 1
-+
-+test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distance_20:
 +  kind response_absence
 +  mode exhaustive
++  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  max_depth 4
 +  max_paths 256
-+  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
 +  domains:
-+    distance 0, 20, 21, 100
-+  when distance=20
++    distance 0, 19, 20, 21
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_low_distance_random_safety:
++test exhaustive_boundary_distance_19:
+   kind response_absence
+-  mode random
+-  runs 50
+-  max_depth 6
+-  seed 7
++  mode exhaustive
+   requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  max_depth 4
++  max_paths 256
+   domains:
+-    distance 0, 1, 19, 20
+-  when distance=20
++    distance 0, 19, 20, 21
++  when distance=19
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
+ 
+-test representative_boundary_exhaustive_safety:
++test exhaustive_boundary_distance_0:
+   kind response_absence
+   mode exhaustive
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
+   max_depth 4
+   max_paths 256
+-  requirement "At all times, if the current distance value is less than or equal to 20, then in the immediately next state, the system must not be in the forward condition."
+   domains:
+-    distance 0, 20, 21, 100
++    distance 0, 19, 20, 21
++  when distance=0
 +  absent leftM=FWD, rightM=FWD
 +  for_steps 1
++
++test random_proximity_safety:
++  kind response_absence
++  mode random
++  requirement "Whenever the measured distance is 20 or less, the subsequent motor commands cannot have both leftM and rightM set to FWD."
++  runs 50
++  max_depth 6
++  seed 26
++  domains:
++    distance 0, 1, 10, 19, 20, 21, 50, 100
+   when distance=20
+   absent leftM=FWD, rightM=FWD
+   for_steps 1
 
 tokens used
-32.255
+35.421

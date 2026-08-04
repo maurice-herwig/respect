@@ -65,20 +65,57 @@
         {
           "aggregate_test_result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\test-writer\\test-results-aggregate.json",
           "compile_exit_code": 0,
-          "ignored_invalid_test_count": 0,
-          "ignored_invalid_tests": [],
-          "raw_tests_failed": 1,
+          "compiled_test_plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\test-writer\\test-plan.json",
+          "dsl_diagnostics_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\test-writer\\dsl-diagnostics-00.json",
+          "ignored_invalid_test_count": 2,
+          "ignored_invalid_tests": [
+            {
+              "details": {
+                "exception_type": "java.lang.IllegalArgumentException",
+                "failure_code": "test_execution_error",
+                "kind": "state_sequence",
+                "message": "The inputs are a safety violation for the environment",
+                "test_name": "repeated_safe_highwater_keeps_requesting_pump_next_step"
+              },
+              "ignored_reason": "environment_safety_violation",
+              "kind": "state_sequence",
+              "name": "repeated_safe_highwater_keeps_requesting_pump_next_step",
+              "passed": false,
+              "reason": "Test execution failed: IllegalArgumentException",
+              "requirement": "If highwater is true and methane is false, then pump must be true in the next step.",
+              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\test-writer\\test-results-round-00.json",
+              "source_test_round": 0
+            },
+            {
+              "details": {
+                "exception_type": "java.lang.IllegalArgumentException",
+                "failure_code": "test_execution_error",
+                "kind": "response_absence",
+                "message": "The inputs are a safety violation for the environment",
+                "test_name": "exhaustive_methane_requires_next_absence_of_pump"
+              },
+              "ignored_reason": "environment_safety_violation",
+              "kind": "response_absence",
+              "name": "exhaustive_methane_requires_next_absence_of_pump",
+              "passed": false,
+              "reason": "Test execution failed: IllegalArgumentException",
+              "requirement": "If methane is true, then pump must be false in the next step.",
+              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\test-writer\\test-results-round-00.json",
+              "source_test_round": 0
+            }
+          ],
+          "raw_tests_failed": 3,
           "raw_tests_passed": 5,
-          "raw_tests_total": 6,
+          "raw_tests_total": 8,
           "replayed_test_plans": [
             {
               "exit_code": 1,
               "plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\test-writer\\replay-plan-round-00.json",
               "result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\test-writer\\test-results-round-00.json",
               "source_test_round": 0,
-              "tests_failed": 1,
+              "tests_failed": 3,
               "tests_passed": 5,
-              "tests_total": 6
+              "tests_total": 8
             }
           ],
           "round": 0,
@@ -109,21 +146,21 @@
               "blocked_by_nl_conflict": false,
               "cli_status": "synthesized",
               "controller_output_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\spec-repair\\synthesis",
-              "diagnostic_file": "none",
+              "diagnostic_file": null,
               "independent_test_repair_loops": 0,
               "invalid_test_names": [
-                "methane_turns_pump_off_next"
+                "exhaustive_safe_highwater_gets_pump_response"
               ],
-              "invalid_test_reason": "The failing test checks pump=false in the same single state where methane=true, but the requirement constrains next(pump), not current pump without a preceding state.",
+              "invalid_test_reason": "The failing trace ends in the same state that triggers the next-step highwater response, leaving no following state where next(pump) can be checked.",
               "repair_log_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\spec-repair\\repair_log.jsonl",
               "repair_loops": 0,
               "spectra_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\spec-repair\\final.spectra",
               "syntax_repair_loops": 0,
               "test_feedback_decision": "rejected_invalid_test",
               "timeout_seconds": 7200,
-              "unrealizable_core_file": "none",
+              "unrealizable_core_file": null,
               "unrealizable_core_lines": [],
-              "unrealizable_core_size": "none",
+              "unrealizable_core_size": null,
               "unrealizable_repair_loops": 0,
               "used_counter_strategy": false,
               "used_unrealizable_core": false,
@@ -137,13 +174,15 @@
           },
           "test_agent_error": null,
           "test_agent_exit_code": 0,
+          "test_plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\test-writer\\test-plan.rtest",
+          "test_plan_repair_attempts": [],
           "test_result": {
             "artifact_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\test-writer",
             "compiled_test_plan_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\test-writer\\test-plan.json",
             "dsl_diagnostics_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\test-writer\\dsl-diagnostics.json",
             "test_plan_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-00\\test-writer\\test-plan.rtest",
-            "tests_planned": 6,
-            "untestable_requirements": 0
+            "tests_planned": 8,
+            "untestable_requirements": 1
           },
           "tests_failed": 1,
           "tests_passed": 5,
@@ -152,38 +191,74 @@
         {
           "aggregate_test_result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\test-results-aggregate.json",
           "compile_exit_code": 0,
-          "ignored_invalid_test_count": 1,
+          "compiled_test_plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\test-plan.json",
+          "dsl_diagnostics_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\dsl-diagnostics-00.json",
+          "ignored_invalid_test_count": 3,
           "ignored_invalid_tests": [
             {
               "details": {
                 "exception_type": "java.lang.IllegalArgumentException",
                 "failure_code": "test_execution_error",
-                "kind": "always_implication",
+                "kind": "state_sequence",
                 "message": "The inputs are a safety violation for the environment",
-                "test_name": "highwater_without_methane_forces_pump_on_exhaustive"
+                "test_name": "repeated_safe_highwater_keeps_requesting_pump_next_step"
               },
               "ignored_reason": "environment_safety_violation",
-              "kind": "always_implication",
-              "name": "highwater_without_methane_forces_pump_on_exhaustive",
+              "kind": "state_sequence",
+              "name": "repeated_safe_highwater_keeps_requesting_pump_next_step",
               "passed": false,
               "reason": "Test execution failed: IllegalArgumentException",
               "requirement": "If highwater is true and methane is false, then pump must be true in the next step.",
-              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\test-results-round-01.json",
-              "source_test_round": 1
+              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\test-results-round-00.json",
+              "source_test_round": 0
+            },
+            {
+              "details": {
+                "exception_type": "java.lang.IllegalArgumentException",
+                "failure_code": "test_execution_error",
+                "kind": "response_absence",
+                "message": "The inputs are a safety violation for the environment",
+                "test_name": "exhaustive_methane_requires_next_absence_of_pump"
+              },
+              "ignored_reason": "environment_safety_violation",
+              "kind": "response_absence",
+              "name": "exhaustive_methane_requires_next_absence_of_pump",
+              "passed": false,
+              "reason": "Test execution failed: IllegalArgumentException",
+              "requirement": "If methane is true, then pump must be false in the next step.",
+              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\test-results-round-00.json",
+              "source_test_round": 0
+            },
+            {
+              "details": {
+                "exception_type": "java.lang.IllegalArgumentException",
+                "failure_code": "test_execution_error",
+                "kind": "eventually_response",
+                "message": "The inputs are a safety violation for the environment",
+                "test_name": "exhaustive_safe_highwater_gets_pump_response"
+              },
+              "ignored_reason": "environment_safety_violation",
+              "kind": "eventually_response",
+              "name": "exhaustive_safe_highwater_gets_pump_response",
+              "passed": false,
+              "reason": "Test execution failed: IllegalArgumentException",
+              "requirement": "If highwater is true and methane is false, then pump must be true in the next step.",
+              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\test-results-round-00.json",
+              "source_test_round": 0
             }
           ],
-          "raw_tests_failed": 11,
-          "raw_tests_passed": 2,
-          "raw_tests_total": 13,
+          "raw_tests_failed": 9,
+          "raw_tests_passed": 7,
+          "raw_tests_total": 16,
           "replayed_test_plans": [
             {
               "exit_code": 1,
               "plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\replay-plan-round-00.json",
               "result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\test-results-round-00.json",
               "source_test_round": 0,
-              "tests_failed": 5,
-              "tests_passed": 1,
-              "tests_total": 6
+              "tests_failed": 3,
+              "tests_passed": 5,
+              "tests_total": 8
             },
             {
               "exit_code": 1,
@@ -191,8 +266,8 @@
               "result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\test-results-round-01.json",
               "source_test_round": 1,
               "tests_failed": 6,
-              "tests_passed": 1,
-              "tests_total": 7
+              "tests_passed": 2,
+              "tests_total": 8
             }
           ],
           "round": 1,
@@ -227,19 +302,14 @@
               "diagnostic_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\spec-repair\\diagnostics\\validation-0.json",
               "independent_test_repair_loops": 0,
               "invalid_test_names": [
-                "methane_turns_pump_off_next",
-                "methane_overrides_highwater_next",
-                "safe_highwater_turns_pump_on_next",
-                "safe_highwater_after_methane_clears",
-                "methane_after_safe_pumping_turns_off",
-                "methane_forces_pump_off_exhaustive",
-                "methane_priority_over_highwater_trace",
-                "safe_highwater_activation_trace",
-                "no_highwater_no_methane_does_not_force_pump",
-                "alternating_inputs_respect_immediate_rules",
-                "highwater_without_methane_forces_pump_on_exhaustive"
+                "methane_forces_pump_off_single_step",
+                "highwater_without_methane_activates_pump",
+                "methane_clears_then_safe_highwater_activates",
+                "safe_pump_then_methane_shutdown",
+                "exhaustive_one_step_methane_shutdown",
+                "exhaustive_one_step_safe_highwater_activation"
               ],
-              "invalid_test_reason": "Rejected because the failing tests assert same-state outputs or do not observe the next state required by the NL next-step guarantees; the no-highwater/no-methane absence check adds an unstated prohibition, and one ignored test violates the environment assumption.",
+              "invalid_test_reason": "Rejected because each failing check asserts same-state output values or uses a one-step trace that cannot observe the next-state obligation stated in the natural-language requirements.",
               "repair_log_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\spec-repair\\repair_log.jsonl",
               "repair_loops": 0,
               "spectra_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\spec-repair\\final.spectra",
@@ -262,122 +332,126 @@
           },
           "test_agent_error": null,
           "test_agent_exit_code": 0,
+          "test_plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest",
+          "test_plan_repair_attempts": [],
           "test_result": {
             "artifact_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer",
             "compiled_test_plan_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\test-plan.json",
             "dsl_diagnostics_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\dsl-diagnostics.json",
             "test_plan_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-01\\test-writer\\test-plan.rtest",
-            "tests_planned": 7,
+            "tests_planned": 8,
             "untestable_requirements": 0
           },
-          "tests_failed": 10,
-          "tests_passed": 2,
-          "tests_total": 12
+          "tests_failed": 6,
+          "tests_passed": 7,
+          "tests_total": 13
         },
         {
           "aggregate_test_result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-results-aggregate.json",
           "compile_exit_code": 0,
+          "compiled_test_plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-plan.json",
+          "dsl_diagnostics_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\dsl-diagnostics-00.json",
           "ignored_invalid_test_count": 4,
           "ignored_invalid_tests": [
             {
               "details": {
                 "exception_type": "java.lang.IllegalArgumentException",
                 "failure_code": "test_execution_error",
-                "kind": "always_implication",
+                "kind": "state_sequence",
                 "message": "The inputs are a safety violation for the environment",
-                "test_name": "highwater_without_methane_forces_pump_on_exhaustive"
+                "test_name": "repeated_safe_highwater_keeps_requesting_pump_next_step"
               },
               "ignored_reason": "environment_safety_violation",
-              "kind": "always_implication",
-              "name": "highwater_without_methane_forces_pump_on_exhaustive",
+              "kind": "state_sequence",
+              "name": "repeated_safe_highwater_keeps_requesting_pump_next_step",
               "passed": false,
               "reason": "Test execution failed: IllegalArgumentException",
               "requirement": "If highwater is true and methane is false, then pump must be true in the next step.",
-              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-results-round-01.json",
-              "source_test_round": 1
+              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-results-round-00.json",
+              "source_test_round": 0
             },
             {
               "details": {
                 "exception_type": "java.lang.IllegalArgumentException",
                 "failure_code": "test_execution_error",
-                "kind": "always_implication",
+                "kind": "response_absence",
                 "message": "The inputs are a safety violation for the environment",
-                "test_name": "highwater_safe_activation_alternating_trace"
+                "test_name": "exhaustive_methane_requires_next_absence_of_pump"
               },
               "ignored_reason": "environment_safety_violation",
-              "kind": "always_implication",
-              "name": "highwater_safe_activation_alternating_trace",
+              "kind": "response_absence",
+              "name": "exhaustive_methane_requires_next_absence_of_pump",
+              "passed": false,
+              "reason": "Test execution failed: IllegalArgumentException",
+              "requirement": "If methane is true, then pump must be false in the next step.",
+              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-results-round-00.json",
+              "source_test_round": 0
+            },
+            {
+              "details": {
+                "exception_type": "java.lang.IllegalArgumentException",
+                "failure_code": "test_execution_error",
+                "kind": "eventually_response",
+                "message": "The inputs are a safety violation for the environment",
+                "test_name": "exhaustive_safe_highwater_gets_pump_response"
+              },
+              "ignored_reason": "environment_safety_violation",
+              "kind": "eventually_response",
+              "name": "exhaustive_safe_highwater_gets_pump_response",
               "passed": false,
               "reason": "Test execution failed: IllegalArgumentException",
               "requirement": "If highwater is true and methane is false, then pump must be true in the next step.",
-              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-results-round-02.json",
-              "source_test_round": 2
+              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-results-round-00.json",
+              "source_test_round": 0
             },
             {
               "details": {
                 "exception_type": "java.lang.IllegalArgumentException",
                 "failure_code": "test_execution_error",
-                "kind": "always_implication",
+                "kind": "eventually_response",
                 "message": "The inputs are a safety violation for the environment",
-                "test_name": "exhaustive_methane_blocks_pump"
+                "test_name": "safe_highwater_repeated_after_clear"
               },
               "ignored_reason": "environment_safety_violation",
-              "kind": "always_implication",
-              "name": "exhaustive_methane_blocks_pump",
+              "kind": "eventually_response",
+              "name": "safe_highwater_repeated_after_clear",
               "passed": false,
               "reason": "Test execution failed: IllegalArgumentException",
-              "requirement": "At all times, if methane is true, then pump must be false in the next step.",
-              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-results-round-02.json",
-              "source_test_round": 2
-            },
-            {
-              "details": {
-                "exception_type": "java.lang.IllegalArgumentException",
-                "failure_code": "test_execution_error",
-                "kind": "always_implication",
-                "message": "The inputs are a safety violation for the environment",
-                "test_name": "exhaustive_safe_highwater_starts_pump"
-              },
-              "ignored_reason": "environment_safety_violation",
-              "kind": "always_implication",
-              "name": "exhaustive_safe_highwater_starts_pump",
-              "passed": false,
-              "reason": "Test execution failed: IllegalArgumentException",
-              "requirement": "At all times, if highwater is true and methane is false, then pump must be true in the next step.",
+              "requirement": "The pump activates to clear water when highwater is true and methane is false.",
               "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-results-round-02.json",
               "source_test_round": 2
             }
           ],
-          "raw_tests_failed": 14,
-          "raw_tests_passed": 7,
-          "raw_tests_total": 21,
+          "raw_tests_failed": 10,
+          "raw_tests_passed": 12,
+          "raw_tests_total": 22,
           "replayed_test_plans": [
             {
               "exit_code": 1,
               "plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\replay-plan-round-00.json",
               "result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-results-round-00.json",
               "source_test_round": 0,
-              "tests_failed": 1,
+              "tests_failed": 3,
               "tests_passed": 5,
-              "tests_total": 6
+              "tests_total": 8
             },
             {
               "exit_code": 1,
               "plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\replay-plan-round-01.json",
               "result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-results-round-01.json",
               "source_test_round": 1,
-              "tests_failed": 6,
-              "tests_passed": 1,
-              "tests_total": 7
+              "tests_failed": 4,
+              "tests_passed": 4,
+              "tests_total": 8
             },
             {
               "exit_code": 1,
               "plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\replay-plan-round-02.json",
               "result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-results-round-02.json",
               "source_test_round": 2,
-              "tests_failed": 7,
-              "tests_passed": 1,
-              "tests_total": 8
+              "tests_failed": 3,
+              "tests_passed": 3,
+              "tests_total": 6
             }
           ],
           "round": 2,
@@ -411,22 +485,18 @@
               "diagnostic_file": null,
               "independent_test_repair_loops": 0,
               "invalid_test_names": [
-                "methane_turns_pump_off_next",
-                "methane_forces_pump_off_exhaustive",
-                "methane_priority_over_highwater_trace",
-                "safe_highwater_activation_trace",
-                "no_highwater_no_methane_does_not_force_pump",
-                "alternating_inputs_respect_immediate_rules",
-                "methane_forces_pump_off_next_trace",
-                "highwater_safe_forces_pump_on_next_trace",
-                "methane_overrides_highwater_when_both_present",
-                "random_stress_immediate_rules",
-                "highwater_without_methane_forces_pump_on_exhaustive",
-                "highwater_safe_activation_alternating_trace",
-                "exhaustive_methane_blocks_pump",
-                "exhaustive_safe_highwater_starts_pump"
+                "highwater_without_methane_activates_pump",
+                "methane_clears_then_safe_highwater_activates",
+                "safe_pump_then_methane_shutdown",
+                "exhaustive_one_step_methane_shutdown",
+                "methane_forces_pump_off",
+                "methane_blocks_after_safe_request",
+                "repeated_safe_highwater_keeps_requesting_pump_next_step",
+                "exhaustive_methane_requires_next_absence_of_pump",
+                "exhaustive_safe_highwater_gets_pump_response",
+                "safe_highwater_repeated_after_clear"
               ],
-              "invalid_test_reason": "active failures assert same-state outputs for next-step guarantees, add unsupported idle pump=false behavior, mismatch antecedents, or are already aggregate-marked environment-safety violations",
+              "invalid_test_reason": "six active failures assert same-state pump values at the triggering step, while the natural-language guarantees require next-step pump values; four aggregate-ignored failures are environment-safety violations",
               "repair_log_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\spec-repair\\repair_log.jsonl",
               "repair_loops": 0,
               "spectra_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\spec-repair\\final.spectra",
@@ -449,54 +519,58 @@
           },
           "test_agent_error": null,
           "test_agent_exit_code": 0,
+          "test_plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-plan.rtest",
+          "test_plan_repair_attempts": [],
           "test_result": {
-            "artifact_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer",
-            "compiled_test_plan_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-plan.json",
-            "dsl_diagnostics_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\dsl-diagnostics.json",
-            "test_plan_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-plan.rtest",
-            "tests_planned": 8,
-            "untestable_requirements": 1
+            "artifact_dir": "`C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer`",
+            "compiled_test_plan_file": "`C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-plan.json`",
+            "dsl_diagnostics_file": "`C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\dsl-diagnostics.json`",
+            "test_plan_file": "`C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-02\\test-writer\\test-plan.rtest`",
+            "tests_planned": "`6`",
+            "untestable_requirements": "`0`"
           },
-          "tests_failed": 10,
-          "tests_passed": 7,
-          "tests_total": 17
+          "tests_failed": 6,
+          "tests_passed": 12,
+          "tests_total": 18
         },
         {
           "aggregate_test_result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-results-aggregate.json",
           "compile_exit_code": 0,
-          "ignored_invalid_test_count": 3,
+          "compiled_test_plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-plan.json",
+          "dsl_diagnostics_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\dsl-diagnostics-00.json",
+          "ignored_invalid_test_count": 5,
           "ignored_invalid_tests": [
             {
               "details": {
                 "exception_type": "java.lang.IllegalArgumentException",
                 "failure_code": "test_execution_error",
-                "kind": "always_implication",
+                "kind": "state_sequence",
                 "message": "The inputs are a safety violation for the environment",
-                "test_name": "exhaustive_methane_blocks_pump"
+                "test_name": "repeated_safe_highwater_keeps_requesting_pump_next_step"
               },
               "ignored_reason": "environment_safety_violation",
-              "kind": "always_implication",
-              "name": "exhaustive_methane_blocks_pump",
+              "kind": "state_sequence",
+              "name": "repeated_safe_highwater_keeps_requesting_pump_next_step",
               "passed": false,
               "reason": "Test execution failed: IllegalArgumentException",
-              "requirement": "At all times, if methane is true, then pump must be false in the next step.",
-              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-results-round-02.json",
-              "source_test_round": 2
+              "requirement": "If highwater is true and methane is false, then pump must be true in the next step.",
+              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-results-round-00.json",
+              "source_test_round": 0
             },
             {
               "details": {
                 "exception_type": "java.lang.IllegalArgumentException",
                 "failure_code": "test_execution_error",
-                "kind": "always_implication",
+                "kind": "eventually_response",
                 "message": "The inputs are a safety violation for the environment",
-                "test_name": "exhaustive_safe_highwater_starts_pump"
+                "test_name": "safe_highwater_repeated_after_clear"
               },
               "ignored_reason": "environment_safety_violation",
-              "kind": "always_implication",
-              "name": "exhaustive_safe_highwater_starts_pump",
+              "kind": "eventually_response",
+              "name": "safe_highwater_repeated_after_clear",
               "passed": false,
               "reason": "Test execution failed: IllegalArgumentException",
-              "requirement": "At all times, if highwater is true and methane is false, then pump must be true in the next step.",
+              "requirement": "The pump activates to clear water when highwater is true and methane is false.",
               "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-results-round-02.json",
               "source_test_round": 2
             },
@@ -506,11 +580,45 @@
                 "failure_code": "test_execution_error",
                 "kind": "eventually_response",
                 "message": "The inputs are a safety violation for the environment",
-                "test_name": "repeated_safe_highwater_requests_are_served"
+                "test_name": "methane_overrides_highwater_bounded"
               },
               "ignored_reason": "environment_safety_violation",
               "kind": "eventually_response",
-              "name": "repeated_safe_highwater_requests_are_served",
+              "name": "methane_overrides_highwater_bounded",
+              "passed": false,
+              "reason": "Test execution failed: IllegalArgumentException",
+              "requirement": "If methane is true, then pump must be false in the next step.",
+              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-results-round-03.json",
+              "source_test_round": 3
+            },
+            {
+              "details": {
+                "exception_type": "java.lang.IllegalArgumentException",
+                "failure_code": "test_execution_error",
+                "kind": "eventually_response",
+                "message": "The inputs are a safety violation for the environment",
+                "test_name": "exhaustive_methane_shutdown"
+              },
+              "ignored_reason": "environment_safety_violation",
+              "kind": "eventually_response",
+              "name": "exhaustive_methane_shutdown",
+              "passed": false,
+              "reason": "Test execution failed: IllegalArgumentException",
+              "requirement": "If methane is true, then pump must be false in the next step.",
+              "source_result_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-results-round-03.json",
+              "source_test_round": 3
+            },
+            {
+              "details": {
+                "exception_type": "java.lang.IllegalArgumentException",
+                "failure_code": "test_execution_error",
+                "kind": "eventually_response",
+                "message": "The inputs are a safety violation for the environment",
+                "test_name": "exhaustive_safe_highwater_activation"
+              },
+              "ignored_reason": "environment_safety_violation",
+              "kind": "eventually_response",
+              "name": "exhaustive_safe_highwater_activation",
               "passed": false,
               "reason": "Test execution failed: IllegalArgumentException",
               "requirement": "If highwater is true and methane is false, then pump must be true in the next step.",
@@ -518,8 +626,8 @@
               "source_test_round": 3
             }
           ],
-          "raw_tests_failed": 20,
-          "raw_tests_passed": 9,
+          "raw_tests_failed": 15,
+          "raw_tests_passed": 14,
           "raw_tests_total": 29,
           "replayed_test_plans": [
             {
@@ -527,9 +635,9 @@
               "plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\replay-plan-round-00.json",
               "result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-results-round-00.json",
               "source_test_round": 0,
-              "tests_failed": 4,
-              "tests_passed": 2,
-              "tests_total": 6
+              "tests_failed": 3,
+              "tests_passed": 5,
+              "tests_total": 8
             },
             {
               "exit_code": 1,
@@ -537,43 +645,45 @@
               "result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-results-round-01.json",
               "source_test_round": 1,
               "tests_failed": 5,
-              "tests_passed": 2,
-              "tests_total": 7
+              "tests_passed": 3,
+              "tests_total": 8
             },
             {
               "exit_code": 1,
               "plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\replay-plan-round-02.json",
               "result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-results-round-02.json",
               "source_test_round": 2,
-              "tests_failed": 7,
-              "tests_passed": 1,
-              "tests_total": 8
+              "tests_failed": 4,
+              "tests_passed": 2,
+              "tests_total": 6
             },
             {
               "exit_code": 1,
               "plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\replay-plan-round-03.json",
               "result_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-results-round-03.json",
               "source_test_round": 3,
-              "tests_failed": 4,
+              "tests_failed": 3,
               "tests_passed": 4,
-              "tests_total": 8
+              "tests_total": 7
             }
           ],
           "round": 3,
           "stop_reason": "max_feedback_rounds_reached",
           "test_agent_error": null,
           "test_agent_exit_code": 0,
+          "test_plan_file": "experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-plan.rtest",
+          "test_plan_repair_attempts": [],
           "test_result": {
             "artifact_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer",
             "compiled_test_plan_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-plan.json",
             "dsl_diagnostics_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\dsl-diagnostics.json",
             "test_plan_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\branches\\independent_test\\round-03\\test-writer\\test-plan.rtest",
-            "tests_planned": 8,
+            "tests_planned": 7,
             "untestable_requirements": 1
           },
-          "tests_failed": 17,
-          "tests_passed": 9,
-          "tests_total": 26
+          "tests_failed": 10,
+          "tests_passed": 14,
+          "tests_total": 24
         }
       ],
       "start_source": "core_final",
@@ -667,14 +777,15 @@
   "description_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\dataset\\nl_descriptions\\responses\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3.5-397b-a17b__prompt=spectra_to_english_v1__tag=sig__temperature=default__top_p=default__max_tokens=default__id=04d53b58858b.txt",
   "description_id": "04d53b58858b860005b465e5",
   "dry_run": false,
-  "duration_ms": 1890976,
+  "duration_ms": 919215,
   "error": null,
   "max_feedback_rounds": 3,
+  "max_test_plan_repair_attempts": 3,
   "run_dir": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a",
-  "run_finished_at": "2026-08-03T15:34:54.093346+00:00",
+  "run_finished_at": "2026-08-04T09:35:53.706171+00:00",
   "run_id": "40fab1deaad6ac1456efb19a",
-  "run_key": "40fab1deaad6ac1456efb19af27ce65d907da1f0ba83d6aa37186de5b96b682c",
-  "run_started_at": "2026-08-03T15:03:23.117194+00:00",
+  "run_key": "04c1a98f80d39ac5b4f2493443af6b879c590ba599405c72ae102109c55917b1",
+  "run_started_at": "2026-08-04T09:20:34.490199+00:00",
   "runs_manifest": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\runs.jsonl",
   "self_test_skill": "respect-self-test-from-core",
   "signature_file": "C:\\Users\\mauri\\OneDrive\\Desktop\\Repos\\respect\\experiments\\branched_runs\\TibiIC\\SpecRepair\\case_studies\\mutated\\minepump_fixed1_dropped1\\model=qwen3\\40fab1deaad6ac1456efb19a\\signature.json",
